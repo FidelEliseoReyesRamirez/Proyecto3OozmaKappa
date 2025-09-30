@@ -12,7 +12,7 @@ Route::get('/', function () {
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
     ]);
-});
+})->name('welcome');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
@@ -28,15 +28,15 @@ Route::group([], function(){
     Route::get('/proyectos', function () {
         return Inertia::render('Public/Projects'); 
     })->name('projects'); 
-    Route::get('/Career', function () {
-        return Inertia::render('Contact'); 
-    })->name('contact'); 
-    Route::get('/Services', function () {
-        return Inertia::render('Contact'); 
-    })->name('contact'); 
-    Route::get('/AboutUs', function () {
-        return Inertia::render('Contact'); 
-    })->name('contact'); 
+    Route::get('/carreras', function () {
+        return Inertia::render('Public/Career'); 
+    })->name('career'); 
+    Route::get('/servicios', function () {
+        return Inertia::render('Public/Services'); 
+    })->name('services'); 
+    Route::get('/acercadenosotros', function () {
+        return Inertia::render('Public/AboutUs'); 
+    })->name('aboutus'); 
 });
 
 require __DIR__.'/auth.php';
