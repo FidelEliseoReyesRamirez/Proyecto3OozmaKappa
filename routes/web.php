@@ -24,4 +24,19 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+Route::group([], function(){
+    Route::get('/proyectos', function () {
+        return Inertia::render('Public/Projects'); 
+    })->name('projects'); 
+    Route::get('/Career', function () {
+        return Inertia::render('Contact'); 
+    })->name('contact'); 
+    Route::get('/Services', function () {
+        return Inertia::render('Contact'); 
+    })->name('contact'); 
+    Route::get('/AboutUs', function () {
+        return Inertia::render('Contact'); 
+    })->name('contact'); 
+});
+
 require __DIR__.'/auth.php';

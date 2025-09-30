@@ -3,7 +3,6 @@
 import { Link, Head } from '@inertiajs/react';
 import React from 'react';
 
-// Define la interfaz de las props (datos pasados desde Laravel)
 interface WelcomeProps {
     auth: {
         user: any;
@@ -15,7 +14,6 @@ interface WelcomeProps {
 const Welcome: React.FC<WelcomeProps> = ({ auth }) => {
 
     return (
-        // Contenedor principal: Dark mode - Fondo: #121212
         <div className="min-h-screen bg-[#121212] text-white antialiased">
             <Head title="DEVELARQ | Transformación BIM y Outsourcing" />
             
@@ -23,15 +21,15 @@ const Welcome: React.FC<WelcomeProps> = ({ auth }) => {
             <header className="py-6 px-4 sm:px-6 lg:px-8 border-b border-gray-800 sticky top-0 z-10 bg-[#121212]/95 backdrop-blur-sm">
                 <nav className="flex justify-between items-center max-w-7xl mx-auto">
                     {/* Logo*/}
-                    <div className="text-2xl font-bold text-[#2970E8] flex items-center">
+                    <div className="text-2xl font-bold text-[#B3E10F] flex items-center">
                         <img src="/images/logo-develarq.png" alt="Logo" className="mr-2 p-2 w-32 h-32" />
                         DEVELARQ
                     </div>
                     
                     <div className="flex items-center space-x-6">
                         {/* Enlaces de Navegación */}
-                        <a href="#hero" className="font-medium text-gray-400 hover:text-[#2970E8] hidden sm:inline">Inicio</a>
-                        <a href="#proyectos" className="font-medium text-gray-400 hover:text-[#2970E8] hidden sm:inline">Proyectos</a>
+                        <a href="/" className="font-medium text-gray-400 hover:text-[#2970E8] hidden sm:inline">Inicio</a>
+                        <a href="/proyectos" className="font-medium text-gray-400 hover:text-[#2970E8] hidden sm:inline">Proyectos</a>
                         <a href="#servicios" className="font-medium text-gray-400 hover:text-[#2970E8] hidden sm:inline">Servicios</a>
                         <a href="#quienes-somos" className="font-medium text-gray-400 hover:text-[#2970E8] hidden sm:inline">Nosotros</a>
                         <a href="#contacto" className="font-medium text-gray-400 hover:text-[#2970E8] hidden sm:inline">Contacto</a>
@@ -132,9 +130,9 @@ const Welcome: React.FC<WelcomeProps> = ({ auth }) => {
                             <div className="p-6 text-left">
                                 <h3 className="text-xl font-bold text-white mb-4">Torre Residencial Moderna</h3>
                                 <div className="flex justify-between border-t border-gray-700 pt-4">
-                                    <div className="text-center"><p className="text-lg font-bold text-[#B3E10F]">15,000 m²</p><p className="text-sm text-gray-400">Área</p></div> {/* Acento #B3E10F */}
-                                    <div className="text-center"><p className="text-lg font-bold text-[#2970E8]">25 pisos</p><p className="text-sm text-gray-400">Pisos</p></div> {/* Primario #2970E8 */}
-                                    <div className="text-center"><p className="text-lg font-bold text-[#B3E10F]">65%</p><p className="text-sm text-gray-400">Ahorro</p></div> {/* Acento #B3E10F */}
+                                    <div className="text-center"><p className="text-lg font-bold text-[#B3E10F]">15,000 m²</p><p className="text-sm text-gray-400">Área</p></div>
+                                    <div className="text-center"><p className="text-lg font-bold text-[#2970E8]">25 pisos</p><p className="text-sm text-gray-400">Pisos</p></div>
+                                    <div className="text-center"><p className="text-lg font-bold text-[#B3E10F]">65%</p><p className="text-sm text-gray-400">Ahorro</p></div> 
                                 </div>
                             </div>
                         </div>
@@ -289,7 +287,7 @@ const Welcome: React.FC<WelcomeProps> = ({ auth }) => {
                         </span>
                         
                         <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-6 leading-tight">
-                            Transformamos la industria con <span className="text-[#2970E8]">soluciones inteligentes</span> {/* Primario #2970E8 */}
+                            Transformamos la industria con <span className="text-[#2970E8]">soluciones inteligentes</span> 
                         </h2>
                         
                         <p className="text-lg text-gray-400 max-w-lg mb-8">
@@ -410,7 +408,7 @@ const Welcome: React.FC<WelcomeProps> = ({ auth }) => {
                             Contacto
                         </span>
                         <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4 text-white">
-                            ¿Listo para <span className="text-[#2970E8]">transformar</span> tu proyecto? {/* Primario #2970E8 */}
+                            ¿Listo para <span className="text-[#2970E8]">transformar</span> tu proyecto? 
                         </h2>
                         <p className="text-lg text-gray-400 max-w-3xl mx-auto">
                             Contáctanos hoy mismo y descubre cómo podemos optimizar tu proyecto con la metodología BIM más avanzada del mercado.
