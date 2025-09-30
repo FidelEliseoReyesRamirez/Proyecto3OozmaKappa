@@ -1,0 +1,45 @@
+# Dependencias de Node
+/node_modules
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Dependencias de PHP
+/vendor
+composer.lock
+
+# Archivos de entorno
+.env.backup
+.env.local
+.env.testing
+.env.staging
+
+
+# Archivos de build
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+
+# Logs y cachés
+/storage/logs
+/storage/framework/cache
+/storage/framework/sessions
+/storage/framework/views
+/storage/framework/testing
+
+# Archivos de cobertura de tests
+/coverage
+
+# Archivos de IDE/OS
+/.idea
+/.vscode
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# Archivos de testing temporales
+phpunit.xml.cache
+.phpunit.result.cache
+.phpunit.cache
