@@ -11,7 +11,7 @@ class RoleMiddleware
     public function handle(Request $request, Closure $next, ...$roles)
     {
         if (!Auth::check() || !in_array(Auth::user()->rol, $roles)) {
-            abort(403, 'Acceso denegado.');
+            return redirect()->route('welcome');
         }
         return $next($request);
     }
