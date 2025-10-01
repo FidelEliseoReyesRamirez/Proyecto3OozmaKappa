@@ -5,13 +5,10 @@ const Footer: React.FC = () => {
     return (
         <footer className="bg-black text-white pt-12 pb-6 border-t border-gray-800/50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                
-                {/* 1. SECCIÓN PRINCIPAL: Info y Links */}
+                {/* 1. LOGO Y DESCRIPCIÓN */}
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-8 mb-10">
                     
-                    {/* Columna 1: Info General / Slogan */}
                     <div className="col-span-2 md:col-span-1">
-                        {/* Nombre de la empresa con color de acento (simulando un logo simple) */}
                         <div className="text-2xl font-bold text-[#B3E10F] mb-4">
                             DEVELARQ
                         </div>
