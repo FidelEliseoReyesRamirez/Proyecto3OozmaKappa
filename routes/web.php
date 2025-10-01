@@ -24,8 +24,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
 
-    // CRUD usuarios
+//  solo los admins pueden ver y gestionar usuarios
+Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/usuarios', [UserController::class, 'index'])->name('users.index');
     Route::get('/usuarios/eliminados', [UserController::class, 'eliminados'])->name('users.eliminados');
     Route::get('/usuarios/create', [UserController::class, 'create'])->name('users.create');
@@ -54,3 +56,11 @@ Route::group([], function(){
 });
 
 require __DIR__.'/auth.php';
+
+
+Route::fallback(function () {
+    return Inertia::render('Errors/NotFound', [
+        'title' => 'Página no encontrada',
+        'message' => 'La página que buscas no existe.',
+    ])->toResponse(request())->setStatusCode(404);
+});
