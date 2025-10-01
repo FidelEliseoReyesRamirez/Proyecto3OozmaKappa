@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 01-10-2025 a las 04:13:53
+-- Tiempo de generación: 01-10-2025 a las 05:20:08
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -40,6 +40,16 @@ CREATE TABLE `auditoria_logs` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Volcado de datos para la tabla `auditoria_logs`
+--
+
+INSERT INTO `auditoria_logs` (`id`, `user_id`, `accion`, `tabla_afectada`, `id_registro_afectado`, `fecha_accion`, `ip_usuario`, `eliminado`, `created_at`, `updated_at`) VALUES
+(1, 1, 'Cierre de sesión', 'users', 1, '2025-10-01 02:38:02', '127.0.0.1', 0, '2025-10-01 06:38:02', NULL),
+(2, 1, 'Cierre de sesión', 'users', 1, '2025-10-01 03:12:19', '127.0.0.1', 0, '2025-10-01 07:12:19', NULL),
+(3, 1, 'Cierre de sesión', 'users', 1, '2025-10-01 03:15:01', '127.0.0.1', 0, '2025-10-01 07:15:01', NULL),
+(4, 1, 'Inicio de sesión', 'users', 1, '2025-10-01 03:15:09', '127.0.0.1', 0, '2025-10-01 07:15:09', NULL);
+
 -- --------------------------------------------------------
 
 --
@@ -51,6 +61,14 @@ CREATE TABLE `cache` (
   `value` mediumtext NOT NULL,
   `expiration` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `cache`
+--
+
+INSERT INTO `cache` (`key`, `value`, `expiration`) VALUES
+('laravel-cache-356a192b7913b04c54574d18c28d46e6395428ab', 'i:2;', 1759288334),
+('laravel-cache-356a192b7913b04c54574d18c28d46e6395428ab:timer', 'i:1759288333;', 1759288333);
 
 -- --------------------------------------------------------
 
@@ -87,6 +105,57 @@ CREATE TABLE `documentos` (
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `failed_jobs`
+--
+
+CREATE TABLE `failed_jobs` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `uuid` varchar(255) NOT NULL,
+  `connection` text NOT NULL,
+  `queue` text NOT NULL,
+  `payload` longtext NOT NULL,
+  `exception` longtext NOT NULL,
+  `failed_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `jobs`
+--
+
+CREATE TABLE `jobs` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `queue` varchar(255) NOT NULL,
+  `payload` longtext NOT NULL,
+  `attempts` tinyint(3) UNSIGNED NOT NULL,
+  `reserved_at` int(10) UNSIGNED DEFAULT NULL,
+  `available_at` int(10) UNSIGNED NOT NULL,
+  `created_at` int(10) UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `job_batches`
+--
+
+CREATE TABLE `job_batches` (
+  `id` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `total_jobs` int(11) NOT NULL,
+  `pending_jobs` int(11) NOT NULL,
+  `failed_jobs` int(11) NOT NULL,
+  `failed_job_ids` longtext NOT NULL,
+  `options` mediumtext DEFAULT NULL,
+  `cancelled_at` int(11) DEFAULT NULL,
+  `created_at` int(11) NOT NULL,
+  `finished_at` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `migrations`
 --
 
@@ -101,17 +170,20 @@ CREATE TABLE `migrations` (
 --
 
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
-(1, '2025_10_01_004131_create_users_table', 1),
-(2, '2025_10_01_004132_create_proyectos_table', 1),
-(3, '2025_10_01_004133_create_proyectos_usuarios_table', 1),
-(4, '2025_10_01_004134_create_planos_bim_table', 1),
-(5, '2025_10_01_004135_create_documentos_table', 1),
-(6, '2025_10_01_004136_create_tareas_table', 1),
-(7, '2025_10_01_004137_create_reuniones_table', 1),
-(8, '2025_10_01_004138_create_notificaciones_table', 1),
-(9, '2025_10_01_004138_create_reuniones_usuarios_table', 1),
-(10, '2025_10_01_004139_create_auditoria_logs_table', 1),
-(11, '0001_01_01_000001_create_cache_table', 2);
+(1, '0001_01_01_000001_create_cache_table', 1),
+(2, '2025_10_01_004131_create_users_table', 1),
+(3, '2025_10_01_004132_create_proyectos_table', 1),
+(4, '2025_10_01_004133_create_proyectos_usuarios_table', 1),
+(5, '2025_10_01_004134_create_planos_bim_table', 1),
+(6, '2025_10_01_004135_create_documentos_table', 1),
+(7, '2025_10_01_004136_create_tareas_table', 1),
+(8, '2025_10_01_004137_create_reuniones_table', 1),
+(9, '2025_10_01_004138_create_notificaciones_table', 1),
+(10, '2025_10_01_004138_create_reuniones_usuarios_table', 1),
+(11, '2025_10_01_004139_create_auditoria_logs_table', 1),
+(12, '2025_10_01_023858_create_password_reset_tokens_table', 2),
+(13, '0001_01_01_000002_create_jobs_table', 3),
+(14, '2025_10_01_030337_create_personal_access_tokens_table', 4);
 
 -- --------------------------------------------------------
 
@@ -127,6 +199,37 @@ CREATE TABLE `notificaciones` (
   `fecha_envio` timestamp NOT NULL DEFAULT current_timestamp(),
   `leida` tinyint(1) NOT NULL DEFAULT 0,
   `eliminado` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `password_reset_tokens`
+--
+
+CREATE TABLE `password_reset_tokens` (
+  `email` varchar(255) NOT NULL,
+  `token` varchar(255) NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `personal_access_tokens`
+--
+
+CREATE TABLE `personal_access_tokens` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `tokenable_type` varchar(255) NOT NULL,
+  `tokenable_id` bigint(20) UNSIGNED NOT NULL,
+  `name` text NOT NULL,
+  `token` varchar(64) NOT NULL,
+  `abilities` text DEFAULT NULL,
+  `last_used_at` timestamp NULL DEFAULT NULL,
+  `expires_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -257,6 +360,7 @@ CREATE TABLE `users` (
   `telefono` varchar(20) DEFAULT NULL,
   `rol` enum('admin','arquitecto','ingeniero','cliente') NOT NULL,
   `estado` enum('activo','inactivo') NOT NULL DEFAULT 'activo',
+  `intentos_fallidos` tinyint(3) UNSIGNED NOT NULL DEFAULT 0,
   `eliminado` tinyint(1) NOT NULL DEFAULT 0,
   `email_verified_at` timestamp NULL DEFAULT NULL,
   `remember_token` varchar(100) DEFAULT NULL,
@@ -268,8 +372,8 @@ CREATE TABLE `users` (
 -- Volcado de datos para la tabla `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `apellido`, `email`, `password`, `telefono`, `rol`, `estado`, `eliminado`, `email_verified_at`, `remember_token`, `created_at`, `updated_at`) VALUES
-(1, 'Fidel', 'Reyes', 'fideleliseoreyesramirez@gmail.com', '$2y$12$HTc89fEiYapIuUMzDh1J5O5QhwcUi582LSqr7byzoK8XeCUbgjD8.', '73223555', 'admin', 'activo', 0, NULL, NULL, NULL, NULL);
+INSERT INTO `users` (`id`, `name`, `apellido`, `email`, `password`, `telefono`, `rol`, `estado`, `intentos_fallidos`, `eliminado`, `email_verified_at`, `remember_token`, `created_at`, `updated_at`) VALUES
+(1, 'Fidel Eliseo Reyes Ramirez', 'Reyes', 'fideleliseoreyesramirez@gmail.com', '$2y$12$Rd9we06d7agfsR6igzzApuZ9U6SVIA2eLGsbeCyPbBTcnCoNyLs82', '73223555', 'ingeniero', 'activo', 0, 0, '2025-10-01 07:11:31', 'OZbmkdUwcjCF1fsxKrBDn45SmWyadmeJNySG7uAMtxSp4HNyK9UJWt2BMS70', '2025-10-01 06:16:51', '2025-10-01 07:11:31');
 
 --
 -- Índices para tablas volcadas
@@ -303,6 +407,26 @@ ALTER TABLE `documentos`
   ADD KEY `documentos_subido_por_foreign` (`subido_por`);
 
 --
+-- Indices de la tabla `failed_jobs`
+--
+ALTER TABLE `failed_jobs`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `failed_jobs_uuid_unique` (`uuid`);
+
+--
+-- Indices de la tabla `jobs`
+--
+ALTER TABLE `jobs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `jobs_queue_index` (`queue`);
+
+--
+-- Indices de la tabla `job_batches`
+--
+ALTER TABLE `job_batches`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indices de la tabla `migrations`
 --
 ALTER TABLE `migrations`
@@ -314,6 +438,21 @@ ALTER TABLE `migrations`
 ALTER TABLE `notificaciones`
   ADD PRIMARY KEY (`id`),
   ADD KEY `notificaciones_user_id_foreign` (`user_id`);
+
+--
+-- Indices de la tabla `password_reset_tokens`
+--
+ALTER TABLE `password_reset_tokens`
+  ADD PRIMARY KEY (`email`);
+
+--
+-- Indices de la tabla `personal_access_tokens`
+--
+ALTER TABLE `personal_access_tokens`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `personal_access_tokens_token_unique` (`token`),
+  ADD KEY `personal_access_tokens_tokenable_type_tokenable_id_index` (`tokenable_type`,`tokenable_id`),
+  ADD KEY `personal_access_tokens_expires_at_index` (`expires_at`);
 
 --
 -- Indices de la tabla `planos_bim`
@@ -379,7 +518,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT de la tabla `auditoria_logs`
 --
 ALTER TABLE `auditoria_logs`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT de la tabla `documentos`
@@ -388,15 +527,33 @@ ALTER TABLE `documentos`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT de la tabla `failed_jobs`
+--
+ALTER TABLE `failed_jobs`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `jobs`
+--
+ALTER TABLE `jobs`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de la tabla `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT de la tabla `notificaciones`
 --
 ALTER TABLE `notificaciones`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `personal_access_tokens`
+--
+ALTER TABLE `personal_access_tokens`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
