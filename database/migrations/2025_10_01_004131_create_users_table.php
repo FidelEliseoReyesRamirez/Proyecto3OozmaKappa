@@ -16,6 +16,7 @@ return new class extends Migration {
             $table->string('telefono', 20)->nullable();
             $table->enum('rol', ['admin','arquitecto','ingeniero','cliente']);
             $table->enum('estado', ['activo','inactivo'])->default('activo');
+            $table->unsignedTinyInteger('intentos_fallidos')->default(0);
             $table->boolean('eliminado')->default(0);
             $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
