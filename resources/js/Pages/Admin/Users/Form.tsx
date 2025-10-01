@@ -61,13 +61,13 @@ export default function UserForm({ isEdit = false }: { isEdit?: boolean }) {
     const isSelf = isEdit && auth.user.id === user?.id;
 
     return (
-        <AuthenticatedLayout header={<h2 className="text-xl font-semibold leading-tight text-gray-800">{isEdit ? 'Editar usuario' : 'Crear usuario'}</h2>}>
+        <AuthenticatedLayout header={<h2 className="text-xl font-semibold leading-tight text-white">{isEdit ? 'Editar usuario' : 'Crear usuario'}</h2>}>
             <Head title={isEdit ? "Editar usuario" : "Crear usuario"} />
 
             <div className="py-6 max-w-4xl mx-auto sm:px-4 lg:px-8">
-                <div className="bg-white p-6 shadow rounded">
+                <div className="bg-[#2970E8] border border-white p-6 shadow rounded">
                     <form onSubmit={submit} className="space-y-3">
-                        <input type="text" value={data.name} onChange={e => setData('name', e.target.value)} placeholder="Nombre" className="border rounded p-2 w-full"/>
+                        <input type="text" value={data.name} onChange={e => setData('name', e.target.value)} placeholder="Nombre" className="border rounded p-2 w-full "/>
                         <input type="text" value={data.apellido} onChange={e => setData('apellido', e.target.value)} placeholder="Apellido" className="border rounded p-2 w-full"/>
                         <input type="email" value={data.email} onChange={e => setData('email', e.target.value)} placeholder="Correo (Gmail o Hotmail)" className="border rounded p-2 w-full"/>
                         <input type="text" value={data.telefono} onChange={e => setData('telefono', e.target.value.replace(/\D/g, ''))} placeholder="Teléfono" maxLength={10} className="border rounded p-2 w-full"/>
@@ -76,7 +76,7 @@ export default function UserForm({ isEdit = false }: { isEdit?: boolean }) {
                             value={data.rol}
                             onChange={e => setData('rol', e.target.value)}
                             className="border rounded p-2 w-full"
-                            disabled={isSelf} // 🚨 bloqueo si soy yo mismo
+                            disabled={isSelf} //  bloqueo si soy yo mismo
                         >
                             <option value="">Seleccionar rol</option>
                             <option value="admin">Admin</option>
@@ -87,7 +87,7 @@ export default function UserForm({ isEdit = false }: { isEdit?: boolean }) {
                         {isSelf && <p className="text-sm text-gray-500">⚠️ No puedes cambiar tu propio rol.</p>}
 
                         <div className="flex gap-2">
-                            <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+                            <button type="submit" className="bg-[#B3E10F] text-black px-4 py-2 rounded hover:bg-[#8aab13]">
                                 {isEdit ? 'Actualizar' : 'Registrar'}
                             </button>
                             <Link href={route('users.index')} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">

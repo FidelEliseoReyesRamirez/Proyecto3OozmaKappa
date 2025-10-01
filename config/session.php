@@ -26,7 +26,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Here you may specify the number of minutes that you wish the session
-    | to be allowed to remain idle before it expires. If you want them
+    | to be allowed to remain idle before it expires. u want them
     | to expire immediately when the browser is closed then you may
     | indicate that via the expire_on_close configuration option.
     |

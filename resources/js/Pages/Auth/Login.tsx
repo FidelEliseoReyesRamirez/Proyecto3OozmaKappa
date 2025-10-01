@@ -41,17 +41,16 @@ export default function Login({
             <div className="text-center mb-6">
                 <Link href={route('welcome')} className="inline-flex flex-col items-center">
                     <div className="flex items-center space-x-2">
-                        <img src="/images/logo-develarq.png" alt="Logo DEVELARQ" className="w-10 h-10" />
                         <span className="text-3xl font-extrabold text-[#B3E10F]">DEVELARQ</span>
                     </div>
-                    <span className="mt-1 px-2 py-0.5 bg-black text-[#B3E10F] text-xs font-semibold rounded border border-[#B3E10F]/50">
+                    <span className="mt-1 px-2 py-0.5 bg-black text-[#2970E8] text-xs font-semibold rounded border border-[#2970E8]/50">
                         BIM Management Office
                     </span>
                 </Link>
             </div>
             
             {/* CONTENEDOR DE FORMULARIO OSCURO */}
-            <div className="bg-black p-8 rounded-xl shadow-2xl border border-white">
+            <div className="p-8 rounded-xl shadow-2xl ">
 
                 {status && (
                     <div className="mb-4 text-sm font-medium text-green-400">
@@ -143,19 +142,6 @@ export default function Login({
                         >
                             <i className="fa-solid fa-arrow-right mr-2 ml-auto"></i> Iniciar Sesión <span className="ml-auto"></span>
                         </button>
-                    </div>
-                    
-                    {/* Enlace de Registro */}
-                    <div className="flex flex-col items-center mt-8 space-y-4">
-                        <p className="text-sm text-gray-400">
-                            ¿No tienes cuenta?{' '}
-                            <Link
-                                href={route('register')} 
-                                className="font-semibold text-[#B3E10F] hover:text-lime-300 transition duration-150"
-                            >
-                                Regístrate aquí
-                            </Link>
-                        </p>
                     </div>
 
                 </form>

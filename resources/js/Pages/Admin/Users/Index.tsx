@@ -37,49 +37,83 @@ export default function UsersIndex() {
     };
 
     return (
-        <AuthenticatedLayout header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Usuarios</h2>}>
+        <AuthenticatedLayout header={<h2 className="text-xl font-semibold leading-tight text-white">Usuarios</h2>}>
             <Head title="Usuarios" />
 
             <div className="py-6 max-w-7xl mx-auto sm:px-4 lg:px-8">
-                <div className="bg-white p-4 sm:p-6 shadow rounded">
+                <div className="bg-black p-4 sm:p-6 shadow-2xl rounded-xl border border-gray-800">
                     <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
-                        <h3 className="font-bold text-lg">Lista de usuarios</h3>
+                        <h3 className="font-bold text-lg text-white">Lista de usuarios</h3>
                         <div className="flex gap-2">
-                            <Link href={route('users.create')} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-sm">
+                            <Link 
+                                href={route('users.create')} 
+                                className="bg-[#2970E8] text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-150 text-sm font-semibold shadow-md"
+                            >
                                 Crear nuevo usuario
                             </Link>
-                            <Link href={route('users.eliminados')} className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 text-sm">
+                            <Link 
+                                href={route('users.eliminados')} 
+                                className="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-150 text-sm font-semibold shadow-md"
+                            >
                                 Ver eliminados
                             </Link>
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full border-collapse border text-sm">
+                    <div className="overflow-x-auto bg-gray-900 border border-gray-700 rounded-lg">
+                        <table className="w-full border-collapse text-sm text-gray-200">
                             <thead>
-                                <tr className="bg-gray-200 text-center">
-                                    <th className="p-2 border">Nombre</th>
-                                    <th className="p-2 border">Correo</th>
-                                    <th className="p-2 border">Rol</th>
-                                    <th className="p-2 border">Estado</th>
-                                    <th className="p-2 border">Acciones</th>
+                                <tr className="bg-[#2970E8] text-white text-center shadow-lg">
+                                    <th className="p-3 border border-blue-700">Nombre</th>
+                                    <th className="p-3 border border-blue-700">Correo</th>
+                                    <th className="p-3 border border-blue-700">Rol</th>
+                                    <th className="p-3 border border-blue-700">Estado</th>
+                                    <th className="p-3 border border-blue-700">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {usuarios.map((u: any) => (
-                                    <tr key={u.id} className="text-center hover:bg-gray-50">
-                                        <td className="p-2 border">{u.name} {u.apellido}</td>
-                                        <td className="p-2 border">{u.email}</td>
-                                        <td className="p-2 border">{u.rol}</td>
-                                        <td className="p-2 border">{u.estado}</td>
-                                        <td className="p-2 border space-x-1 sm:space-x-2">
-                                            <Link href={route('users.edit', u.id)} className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 text-xs sm:text-sm">
+                                    <tr 
+                                        key={u.id} 
+                                        className="text-center bg-gray-900 hover:bg-gray-800 transition duration-150"
+                                    >
+                                        <td className="p-2 border border-gray-800">{u.name} {u.apellido}</td>
+                                        <td className="p-2 border border-gray-800">{u.email}</td>
+                                        <td className="p-2 border border-gray-800">
+                                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                                u.rol === 'admin' ? 'bg-red-800 text-red-100' : 
+                                                u.rol === 'cliente' ? 'bg-[#B3E10F]/20 text-[#B3E10F]' :
+                                                'bg-indigo-800 text-indigo-100' 
+                                            }`}>
+                                                {u.rol}
+                                            </span>
+                                        </td>
+                                        <td className="p-2 border border-gray-800">
+                                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                                u.estado === 'activo' ? 'bg-green-700 text-green-100' : 'bg-gray-500 text-white'
+                                            }`}>
+                                                {u.estado}
+                                            </span>
+                                        </td>
+                                        <td className="p-2 border border-gray-800 space-x-1 sm:space-x-2">
+                                            <Link 
+                                                href={route('users.edit', u.id)} 
+                                                className="bg-[#B3E10F] text-black px-2 py-1 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-medium"
+                                            >
                                                 Editar
                                             </Link>
-                                            <button onClick={() => openModal('estado', u)} className={`px-2 py-1 rounded text-xs sm:text-sm ${u.estado === 'activo' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white`}>
+                                            <button 
+                                                onClick={() => openModal('estado', u)} 
+                                                className={`px-2 py-1 rounded-md text-xs sm:text-sm font-medium transition duration-150 ${
+                                                    u.estado === 'activo' ? 'bg-red-700 hover:bg-red-600' : 'bg-green-700 hover:bg-green-600'
+                                                } text-white`}
+                                            >
                                                 {u.estado === 'activo' ? 'Desactivar' : 'Activar'}
                                             </button>
-                                            <button onClick={() => openModal('eliminar', u)} className="bg-gray-700 text-white px-2 py-1 rounded hover:bg-gray-800 text-xs sm:text-sm">
+                                            <button 
+                                                onClick={() => openModal('eliminar', u)} 
+                                                className="bg-gray-700 text-red-400 px-2 py-1 rounded-md hover:bg-gray-600 transition duration-150 text-xs sm:text-sm font-medium border border-transparent hover:border-red-400"
+                                            >
                                                 Eliminar
                                             </button>
                                         </td>
@@ -89,44 +123,65 @@ export default function UsersIndex() {
                         </table>
                     </div>
                 </div>
-
-                {/* Modales */}
+                {/* Modal de Confirmación Genérica */}
                 {modal.type && modal.type !== 'error' && modal.type !== 'errorSelf' && (
-                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-                        <div className="bg-white rounded shadow-lg max-w-md w-full p-6">
-                            <h2 className="text-lg font-bold mb-4">
+                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
+                        <div className="bg-gray-900 rounded-xl shadow-2xl max-w-md w-full p-6 text-white border border-gray-700">
+                            <h2 className="text-xl font-bold mb-4 text-[#2970E8]">
                                 {modal.type === 'estado' ? 'Cambiar estado' : 'Eliminar usuario'}
                             </h2>
-                            <p className="mb-4 text-sm text-gray-700">
-                                ¿Seguro que deseas {modal.type === 'estado' ? 'cambiar el estado de' : 'eliminar'} <strong>{modal.user?.email}</strong>?
+                            <p className="mb-6 text-gray-300">
+                                ¿Seguro que deseas {modal.type === 'estado' ? 'cambiar el estado de' : 'eliminar'} <strong className="text-white">{modal.user?.email}</strong>?
                             </p>
-                            <div className="flex justify-end gap-2">
-                                <button onClick={closeModal} className="px-3 py-1 bg-gray-300 rounded hover:bg-gray-400">Cancelar</button>
-                                <button onClick={confirmAction} className="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700">Confirmar</button>
+                            <div className="flex justify-end gap-3">
+                                <button 
+                                    onClick={closeModal} 
+                                    className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition duration-150 font-semibold"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    onClick={confirmAction} 
+                                    className="px-4 py-2 bg-[#2970E8] text-white rounded-lg hover:bg-blue-600 transition duration-150 font-semibold"
+                                >
+                                    Confirmar
+                                </button>
                             </div>
                         </div>
                     </div>
                 )}
 
+                {/* Modal de Error: Último Administrador */}
                 {modal.type === 'error' && (
-                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-                        <div className="bg-white rounded shadow-lg max-w-md w-full p-6">
-                            <h2 className="text-lg font-bold mb-4">Acción no permitida</h2>
-                            <p className="mb-4 text-sm text-gray-700">No se puede eliminar o desactivar al último administrador activo.</p>
+                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
+                        <div className="bg-gray-900 rounded-xl shadow-2xl max-w-md w-full p-6 text-white border border-red-700">
+                            <h2 className="text-xl font-bold mb-4 text-red-500">Acción no permitida</h2>
+                            <p className="mb-6 text-gray-300">No se puede eliminar o desactivar al último administrador activo.</p>
                             <div className="flex justify-end">
-                                <button onClick={closeModal} className="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700">Cerrar</button>
+                                <button 
+                                    onClick={closeModal} 
+                                    className="px-4 py-2 bg-[#2970E8] text-white rounded-lg hover:bg-blue-600 transition duration-150 font-semibold"
+                                >
+                                    Cerrar
+                                </button>
                             </div>
                         </div>
                     </div>
                 )}
 
+                {/* Modal de Error: Auto-Desactivación/Eliminación */}
                 {modal.type === 'errorSelf' && (
-                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-                        <div className="bg-white rounded shadow-lg max-w-md w-full p-6">
-                            <h2 className="text-lg font-bold mb-4">Acción no permitida</h2>
-                            <p className="mb-4 text-sm text-gray-700">No puedes desactivar ni eliminar tu propio usuario de administrador.</p>
+                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
+                        <div className="bg-gray-900 rounded-xl shadow-2xl max-w-md w-full p-6 text-white border border-red-700">
+                            <h2 className="text-xl font-bold mb-4 text-red-500">Acción no permitida</h2>
+                            <p className="mb-6 text-gray-300">No puedes desactivar ni eliminar tu propio usuario de administrador.</p>
                             <div className="flex justify-end">
-                                <button onClick={closeModal} className="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700">Cerrar</button>
+                                <button 
+                                    onClick={closeModal} 
+                                    className="px-4 py-2 bg-[#2970E8] text-white rounded-lg hover:bg-blue-600 transition duration-150 font-semibold"
+                                >
+                                    Cerrar
+                                </button>
                             </div>
                         </div>
                     </div>

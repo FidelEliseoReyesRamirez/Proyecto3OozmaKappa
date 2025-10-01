@@ -2,7 +2,7 @@ import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, Link } from '@inertiajs/react'; // Importar Link
 import { FormEventHandler } from 'react';
 
 export default function ForgotPassword({ status }: { status?: string }) {
@@ -20,10 +20,11 @@ export default function ForgotPassword({ status }: { status?: string }) {
         <GuestLayout>
             <Head title="Forgot Password" />
 
-            <div className="mb-4 text-sm text-gray-600">
-                Forgot your password? No problem. Just let us know your email
-                address and we will email you a password reset link that will
-                allow you to choose a new one.
+            <div className="mb-4 text-sm text-[#B3E10F]">
+                Olvidaste tu contraseña? No hay problema. Simplemente
+                ingresa tu dirección de correo electrónico a continuación y te
+                enviaremos un enlace para restablecer tu contraseña que te
+                permitirá elegir una nueva.
             </div>
 
             {status && (
@@ -45,11 +46,20 @@ export default function ForgotPassword({ status }: { status?: string }) {
 
                 <InputError message={errors.email} className="mt-2" />
 
-                <div className="mt-4 flex items-center justify-end">
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Email Password Reset Link
+                <div className="mt-4 flex items-center justify-between"> 
+                    {/* Botón de Cancelar / Volver */}
+                    <Link
+                        href={route('login')}
+                        className="text-sm text-[#2970E8] hover:text-[#B3E10F] transition duration-150 underline"
+                    >
+                        Cancelar
+                    </Link>
+
+                    <PrimaryButton disabled={processing}>
+                        Enviar enlace de restablecimiento
                     </PrimaryButton>
                 </div>
+                
             </form>
         </GuestLayout>
     );
