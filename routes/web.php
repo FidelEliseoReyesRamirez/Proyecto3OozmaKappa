@@ -24,6 +24,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+//Rutas Publicas
 Route::group([], function(){
     Route::get('/proyectos', function () {
         return Inertia::render('Public/Projects'); 

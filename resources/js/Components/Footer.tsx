@@ -5,7 +5,7 @@ const Footer: React.FC = () => {
     return (
         <footer className="bg-black text-white pt-12 pb-6 border-t border-gray-800/50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* 1. LOGO Y DESCRIPCIÓN */}
+                {/* LOGO Y DESCRIPCIÓN */}
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-8 mb-10">
                     
                     <div className="col-span-2 md:col-span-1">
@@ -21,7 +21,7 @@ const Footer: React.FC = () => {
                     <div>
                         <h4 className="text-lg font-semibold text-white mb-4">Servicios</h4>
                         <ul className="space-y-2 text-sm">
-                            <li><Link href={route('services') + '#servicios'}className="text-gray-400 hover:text-white transition duration-200">Modelado BIM/MEP</Link></li>
+                            <li><Link href={route('services') + '#servicios'} className="text-gray-400 hover:text-white transition duration-200">Modelado BIM/MEP</Link></li>
                             <li><Link href={route('services') + '#servicios'} className="text-gray-400 hover:text-white transition duration-200">Análisis de Datos</Link></li>
                             <li><Link href={route('services') + '#servicios'} className="text-gray-400 hover:text-white transition duration-200">Planificación 4D</Link></li>
                             <li><Link href={route('services') + '#servicios'} className="text-gray-400 hover:text-white transition duration-200">Consultoría Internacional</Link></li>
@@ -32,10 +32,10 @@ const Footer: React.FC = () => {
                     <div>
                         <h4 className="text-lg font-semibold text-white mb-4">Empresa</h4>
                         <ul className="space-y-2 text-sm">
-                            <li><a href="acercadenosotros" className="text-gray-400 hover:text-white transition duration-200">Quiénes Somos</a></li>
-                            <li><a href="/valores" className="text-gray-400 hover:text-white transition duration-200">Nuestros Valores</a></li>
-                            <li><a href="/casos-exito" className="text-gray-400 hover:text-white transition duration-200">Casos de Éxito</a></li>
-                            <li><a href="/carreras" className="text-gray-400 hover:text-white transition duration-200">Carreras</a></li>
+                            <li><Link href={route('aboutus')} className="text-gray-400 hover:text-white transition duration-200">Quiénes Somos</Link></li>
+                            <li><Link href={route('aboutus') + '#valores'} className="text-gray-400 hover:text-white transition duration-200">Nuestros Valores</Link></li>
+                            <li><Link href={route('aboutus') + '#mision-vision'} className="text-gray-400 hover:text-white transition duration-200">Mision y Vision</Link></li>
+                            <li><Link href={route('career')} className="text-gray-400 hover:text-white transition duration-200">Carreras</Link></li>
                         </ul>
                     </div>
 
@@ -53,7 +53,7 @@ const Footer: React.FC = () => {
                 </div>
                 <hr className="border-gray-800" />
                 
-                {/* 3. COPYRIGHT Y LEGAL */}
+                {/* COPYRIGHT Y LEGAL */}
                 <div className="mt-6 text-center text-sm text-gray-500 flex flex-col md:flex-row justify-center md:justify-center items-center">
                     <p className="mb-2 md:mb-0">
                         © 2024 DEVELARQ. Todos los derechos reservados.

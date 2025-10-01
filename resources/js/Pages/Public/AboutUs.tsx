@@ -11,7 +11,7 @@ interface AboutUsProps {
 const AboutUs: React.FC<AboutUsProps> = ({auth}) => {
     return (
         <div className="min-h-screen bg-[#121212] text-white antialiased">
-            <Head title="DEVELARQ | Transformación BIM y Outsourcing" />
+            <Head title="DEVELARQ |Acerca de Nosotros Transformación BIM y Outsourcing" />
             <Header auth={auth}/>
 
             <section id="quienes-somos" className="py-20 px-4 sm:px-6 lg:px-8 bg-[#121212]">
@@ -82,7 +82,8 @@ const AboutUs: React.FC<AboutUsProps> = ({auth}) => {
                             <h3 className="text-3xl font-extrabold text-white">Nuestra Misión</h3>
                         </div>
                         <p className="text-lg text-gray-300 leading-relaxed">
-                            <span className="text-[#2970E8] font-bold">Digitalizar</span> y <span className="text-[#2970E8] font-bold">optimizar</span> la ejecución de proyectos de construcción a nivel global, aplicando la metodología BIM como el estándar de eficiencia. Nos enfocamos en proveer soluciones de outsourcing especializadas que minimicen errores y maximicen el retorno de inversión para nuestros clientes.
+                            Transformar la industria ofreciendo soluciones arquitectónicas más inteligentes, eficientes y sostenibles. Democratizando la nueva tecnología para
+                            que nuestros clientes desarrollen y ejecuten sus proyectos de manera responsable, sostenible y de calidad.
                         </p>
                     </div>
                     {/* Tarjeta de Visión */}
@@ -92,14 +93,61 @@ const AboutUs: React.FC<AboutUsProps> = ({auth}) => {
                             <h3 className="text-3xl font-extrabold text-white">Nuestra Visión</h3>
                         </div>
                         <p className="text-lg text-gray-300 leading-relaxed">
-                            Ser reconocidos como el líder indiscutible en el outsourcing y la consultoría BIM, redefiniendo la colaboración internacional en el sector. Buscamos ser el socio de confianza que permite a las empresas alcanzar la máxima precisión y escalabilidad en la era digital de la construcción.
+                            Ser líderes en la industria de la construcción en la región mediante la integración de tecnología avanzada y prácticas innovadoras para el rubro, así mismo
+                            democratizar el acceso a la arquitectura. Buscamos desarrollar proyectos sostenibles, eficientes y accesibles, posicionando a Bolivia como referente en la
+                            gestión de proyectos BIM con calidad internacional en Latinoamérica.
                         </p>
                     </div>
                 </div>
             </section>
 
-            <section id="cta" className="py-20 px-4 sm:px-6 lg:px-8 bg-[#121212]">
-                <div className="max-w-5xl mx-auto p-10 md:p-12 rounded-2xl text-center bg-gray-900 border border-gray-700 shadow-3xl">
+            <section id="valores" className="py-20 px-4 sm:px-6 lg:px-8 bg-[#121212]">
+                <div className="max-w-7xl mx-auto text-center mb-12">
+                    <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white">
+                        Nuestros <span className="text-[#2970E8]">Valores</span>
+                    </h2>
+                </div>
+                <div className="max-w-7xl mx-auto grid grid-cols-1 gap-8">
+                    <div className="bg-gray-900 p-8 md:p-12 rounded-2xl border-t-8 border-[#2970E8] shadow-2xl transition duration-300 hover:shadow-3xl transform hover:-translate-y-1">
+                        <div className="flex items-start mb-6 space-x-4">
+                            <i className="fa-solid fa-star text-[#2970E8] text-4xl flex-shrink-0"></i>
+                            <h3 className="text-3xl font-extrabold text-white">Nuestros importantes valores</h3>
+                        </div>
+                        <ul className="space-y-12">
+                            {/* Valor 1 */}
+                            <li className="relative">
+                                <div className="bg-gray-900 p-6 rounded-xl shadow-xl ml-4 border border-gray-700 hover:border-[#B3E10F] transition duration-300">
+                                    <h2 className="text-xl font-bold text-[#B3E10F] mb-1">Inovacion constante</h2>
+                                    <p className="text-md text-white">Nos comprometemos a estar a la vanguardia de la tecnología en la construcción, utilizando herramientas y prácticas avanzadas
+                                        para optimizar cada proyecto. Fomentamos la mejora continua y la innovación, buscando siempre nuevas formas de hacer la
+                                        arquitectura más accesible, eficiente y sostenible.</p>
+                                </div>
+                            </li>
+                            {/* Valor 2 */}
+                            <li className="relative">
+                                <div className="bg-gray-900 p-6 rounded-xl shadow-xl ml-4 border border-gray-700 hover:border-[#2970E8] transition duration-300">
+                                    <h2 className="text-xl font-bold text-[#2970E8] mb-1">Compromiso con la eficiencia</h2>
+                                        <p className="text-md text-white">Valoramos el tiempo y los recursos de nuestros clientes, nos enfocamos en optimizar cada etapa del proceso constructivo
+                                            para reducir costos y plazos, mejorando la calidad de sus proyectos. La eficiencia es un pilar fundamental de nuestra propuesta de valor.
+                                        </p>
+                                </div>
+                            </li>
+                            {/* Valor 3 */}
+                            <li className="relative">
+                                <div className="bg-gray-900 p-6 rounded-xl shadow-xl ml-4 border border-gray-700 hover:border-[#B3E10F] transition duration-300">
+                                    <h2 className="text-xl font-bold text-[#B3E10F] mb-1">Calidad y precisión</h2>
+                                        <p className="text-md text-white">Nos comprometemos a entregar resultados que superen las expectativas, cuidando cada detalle para garantizar precisión y
+                                            durabilidad. La calidad es esencial en todas las fases del proyecto.
+                                        </p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="cta" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900">
+                <div className="max-w-5xl mx-auto p-10 md:p-12 rounded-2xl text-center bg-[#121212] border border-gray-700 shadow-3xl">
                     <h3 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
                         ¿Listo para trabajar con un equipo <span className="text-[#B3E10F]">experto en BIM</span> y <span className="text-[#2970E8]">comprometido </span>con sus <span className="text-[#B3E10F]">clientes</span> y el <span className="text-[#B3E10F]">exito</span> de sus proyectos?
                     </h3>
