@@ -51,13 +51,12 @@ export default function UpdatePasswordForm({
     return (
         <section className={className}>
             <header>
-                <h2 className="text-lg font-medium text-gray-900">
-                    Update Password
+                <h2 className="text-lg font-medium text-[#2970E8]">
+                    Actualiza la Contraseña
                 </h2>
 
-                <p className="mt-1 text-sm text-gray-600">
-                    Ensure your account is using a long, random password to stay
-                    secure.
+                <p className="mt-1 text-sm text-[#B3E10F]">
+                    Asegurate de que tu cuenta esté usando una contraseña larga y aleatoria para mantenerse seguro.
                 </p>
             </header>
 
@@ -65,7 +64,8 @@ export default function UpdatePasswordForm({
                 <div>
                     <InputLabel
                         htmlFor="current_password"
-                        value="Current Password"
+                        value="Contraseña actual"
+                        className="text-white"
                     />
 
                     <TextInput
@@ -87,7 +87,7 @@ export default function UpdatePasswordForm({
                 </div>
 
                 <div>
-                    <InputLabel htmlFor="password" value="New Password" />
+                    <InputLabel htmlFor="password" value="Nueva contraseña" className="text-white"/>
 
                     <TextInput
                         id="password"
@@ -97,6 +97,7 @@ export default function UpdatePasswordForm({
                         type="password"
                         className="mt-1 block w-full"
                         autoComplete="new-password"
+                        
                     />
 
                     <InputError message={errors.password} className="mt-2" />
@@ -105,7 +106,8 @@ export default function UpdatePasswordForm({
                 <div>
                     <InputLabel
                         htmlFor="password_confirmation"
-                        value="Confirm Password"
+                        value="Confirmar contraseña"
+                        className="text-white"
                     />
 
                     <TextInput
@@ -126,7 +128,7 @@ export default function UpdatePasswordForm({
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>Save</PrimaryButton>
+                    <PrimaryButton disabled={processing}>Guardar</PrimaryButton>
 
                     <Transition
                         show={recentlySuccessful}
@@ -136,7 +138,7 @@ export default function UpdatePasswordForm({
                         leaveTo="opacity-0"
                     >
                         <p className="text-sm text-gray-600">
-                            Saved.
+                            Guardado
                         </p>
                     </Transition>
                 </div>

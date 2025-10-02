@@ -28,7 +28,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Victor Santiago',
                 'apellido' => 'Albarracin Miranda',
-                'email' => 'victorsantiagoalbarracinmiranda@gmail.com',
+                'email' => 'albarracinvictor251@gmail.com',
                 'password' => '$2y$12$K65t8D3vpNupwSO.4DZKguOE87p4CpqdFW5GT.V8SrU0Egli6.U5u',
                 'telefono' => null,
                 'rol' => 'ingeniero',

@@ -2,28 +2,32 @@ import { Link } from '@inertiajs/react';
 
 export default function NotFound({ title, message }: { title: string; message: string }) {
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-6">
-            {/* Icono SVG en círculo */}
-            <div className="bg-red-100 p-6 rounded-full shadow-md mb-6">
+        // Fondo oscuro para toda la página
+        <div className="flex flex-col items-center justify-center min-h-screen bg-black p-6">
+            
+            {/* Icono SVG en círculo (Usando el acento B3E10F y fondo oscuro) */}
+            <div className="bg-gray-900 p-6 rounded-full shadow-2xl mb-6 border border-[#B3E10F]/50">
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-16 w-16 text-red-600"
+                    // Color del icono: el lima de DEVELARQ
+                    className="h-16 w-16 text-[#B3E10F]" 
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
-                    strokeWidth={2}
+                    strokeWidth={1.5} // strokeWidth 2 es un poco grueso, bajamos a 1.5
                 >
+                    {/* Icono de advertencia/información */}
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />
                 </svg>
             </div>
 
-            {/* Título */}
-            <h1 className="text-5xl font-extrabold text-gray-800 mb-3 tracking-tight">
+            {/* Título (Texto blanco) */}
+            <h1 className="text-5xl font-extrabold text-white mb-3 tracking-tight text-center">
                 {title}
             </h1>
 
-            {/* Mensaje */}
-            <p className="text-lg text-gray-600 mb-8 max-w-md text-center">
+            {/* Mensaje (Texto gris claro) */}
+            <p className="text-lg text-gray-400 mb-8 max-w-lg text-center">
                 {message}
             </p>
 
@@ -31,22 +35,24 @@ export default function NotFound({ title, message }: { title: string; message: s
             <div className="flex flex-col sm:flex-row gap-4">
                 <Link
                     href={route('welcome')}
-                    className="bg-indigo-600 text-white px-6 py-3 rounded-lg shadow hover:bg-indigo-700 transition-all text-center"
+                    // Botón principal: Azul DEVELARQ
+                    className="bg-[#2970E8] text-white px-6 py-3 rounded-lg shadow-xl hover:bg-blue-600 transition-all text-center font-bold"
                 >
                     Volver al inicio
                 </Link>
                 <button
                     onClick={() => window.history.back()}
-                    className="bg-gray-300 text-gray-800 px-6 py-3 rounded-lg shadow hover:bg-gray-400 transition-all"
+                    // Botón secundario: Gris oscuro con borde para contraste
+                    className="bg-gray-800 text-gray-300 px-6 py-3 rounded-lg shadow hover:bg-gray-700 transition-all border border-gray-700 font-medium"
                 >
                     Regresar atrás
                 </button>
             </div>
 
-            {/* Extra decorativo */}
-            <div className="mt-12 text-sm text-gray-400">
+            {/* Extra decorativo (Texto gris sutil) */}
+            <div className="mt-12 text-sm text-gray-600">
                 <br />
-                <p> Verifica la URL o navega desde el menú principal.</p>
+                <p>Verifica la URL o navega desde el menú principal.</p>
             </div>
         </div>
     );

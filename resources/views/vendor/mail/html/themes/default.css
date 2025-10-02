@@ -1,0 +1,327 @@
+/* Base */
+
+body,
+body *:not(html):not(style):not(br):not(tr):not(code) {
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    position: relative;
+}
+
+body {
+    -webkit-text-size-adjust: none;
+    /* CAMBIO: Fondo principal negro */
+    background-color: #000000;
+    /* CAMBIO: Color del texto principal a gris claro */
+    color: #a0aec0;
+    height: 100%;
+    line-height: 1.4;
+    margin: 0;
+    padding: 0;
+    width: 100% !important;
+}
+
+p,
+ul,
+ol,
+blockquote {
+    line-height: 1.4;
+    text-align: left;
+}
+
+a {
+    /* CAMBIO: Enlaces a azul primario de DEVELARQ */
+    color: #2970E8;
+}
+
+a img {
+    border: none;
+}
+
+/* Typography */
+
+h1 {
+    /* CAMBIO: Encabezados a blanco */
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 0;
+    text-align: left;
+}
+
+h2 {
+    /* CAMBIO: Encabezados a blanco */
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 0;
+    text-align: left;
+}
+
+h3 {
+    /* CAMBIO: Encabezados a blanco */
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 0;
+    text-align: left;
+}
+
+p {
+    /* CAMBIO: Texto del cuerpo a gris claro */
+    color: #a0aec0;
+    font-size: 16px;
+    line-height: 1.5em;
+    margin-top: 0;
+    text-align: left;
+}
+
+p.sub {
+    font-size: 12px;
+}
+
+img {
+    max-width: 100%;
+}
+
+/* Layout */
+
+.wrapper {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 100%;
+    /* CAMBIO: Fondo del wrapper a negro */
+    background-color: #000000;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+.content {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 100%;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+/* Header */
+
+.header {
+    padding: 25px 0;
+    text-align: center;
+}
+
+.header a {
+    /* CAMBIO: Enlaces del header a blanco */
+    color: #ffffff;
+    font-size: 19px;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+/* Logo */
+
+.logo {
+    height: 75px;
+    max-height: 75px;
+    width: 75px;
+}
+
+/* Body */
+
+.body {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 100%;
+    /* CAMBIO: Fondo del body a negro */
+    background-color: #000000;
+    /* Quitamos el borde, ya que el fondo es negro */
+    border-bottom: none; 
+    border-top: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+.inner-body {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 570px;
+    /* CAMBIO: Contenedor principal a gris muy oscuro */
+    background-color: #1a1a1a;
+    /* CAMBIO: Borde azul primario de DEVELARQ */
+    border-color: #2970E8;
+    border-radius: 8px; /* Borde más redondeado */
+    border-width: 1px;
+    /* Sombra más sutil */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); 
+    margin: 0 auto;
+    padding: 0;
+    width: 570px;
+}
+
+.inner-body a {
+    word-break: break-all;
+}
+
+/* Subcopy */
+
+.subcopy {
+    /* CAMBIO: Borde superior a gris oscuro */
+    border-top: 1px solid #333333;
+    margin-top: 25px;
+    padding-top: 25px;
+}
+
+.subcopy p {
+    /* CAMBIO: Texto subcopy a gris claro */
+    color: #a0aec0;
+    font-size: 14px;
+}
+
+/* Footer */
+
+.footer {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 570px;
+    margin: 0 auto;
+    padding: 0;
+    text-align: center;
+    width: 570px;
+}
+
+.footer p {
+    /* CAMBIO: Texto del footer a gris sutil */
+    color: #6b7280;
+    font-size: 12px;
+    text-align: center;
+}
+
+.footer a {
+    /* CAMBIO: Enlaces del footer a gris sutil */
+    color: #6b7280;
+    text-decoration: underline;
+}
+
+/* Tables */
+
+.table table {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 100%;
+    margin: 30px auto;
+    width: 100%;
+}
+
+.table th {
+    /* CAMBIO: Borde de tabla a gris oscuro */
+    border-bottom: 1px solid #333333;
+    margin: 0;
+    padding-bottom: 8px;
+}
+
+.table td {
+    /* CAMBIO: Texto de tabla a gris claro */
+    color: #a0aec0;
+    font-size: 15px;
+    line-height: 18px;
+    margin: 0;
+    padding: 10px 0;
+}
+
+.content-cell {
+    max-width: 100vw;
+    padding: 32px;
+}
+
+/* Buttons */
+
+.action {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 100%;
+    margin: 30px auto;
+    padding: 0;
+    text-align: center;
+    width: 100%;
+    float: unset;
+}
+
+.button {
+    -webkit-text-size-adjust: none;
+    border-radius: 6px; /* Ajuste para un look más moderno */
+    color: #fff;
+    display: inline-block;
+    overflow: hidden;
+    text-decoration: none;
+    font-weight: bold; /* Hacer el texto del botón más notable */
+}
+
+/* CAMBIO: Botones principales a azul de DEVELARQ */
+.button-blue,
+.button-primary {
+    background-color: #2970E8;
+    border-bottom: 8px solid #2970E8;
+    border-left: 18px solid #2970E8;
+    border-right: 18px solid #2970E8;
+    border-top: 8px solid #2970E8;
+}
+
+/* Botón de éxito (verde) */
+.button-green,
+.button-success {
+    background-color: #48bb78; /* Mantenemos un verde contrastante */
+    border-bottom: 8px solid #48bb78;
+    border-left: 18px solid #48bb78;
+    border-right: 18px solid #48bb78;
+    border-top: 8px solid #48bb78;
+}
+
+/* Botón de error (rojo) */
+.button-red,
+.button-error {
+    background-color: #e53e3e; /* Mantenemos un rojo contrastante */
+    border-bottom: 8px solid #e53e3e;
+    border-left: 18px solid #e53e3e;
+    border-right: 18px solid #e53e3e;
+    border-top: 8px solid #e53e3e;
+}
+
+/* Panels */
+
+.panel {
+    /* CAMBIO: Borde del panel a azul primario */
+    border-left: #2970E8 solid 4px;
+    margin: 21px 0;
+}
+
+.panel-content {
+    /* CAMBIO: Fondo del panel a gris oscuro */
+    background-color: #1a1a1a; 
+    /* CAMBIO: Texto del panel a gris claro */
+    color: #a0aec0;
+    padding: 16px;
+}
+
+.panel-content p {
+    /* CAMBIO: Texto del panel a gris claro */
+    color: #a0aec0;
+}
+
+.panel-item {
+    padding: 0;
+}
+
+.panel-item p:last-of-type {
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Utilities */
+
+.break-all {
+    word-break: break-all;
+}

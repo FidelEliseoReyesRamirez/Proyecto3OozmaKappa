@@ -13,8 +13,7 @@ Route::get('/', function () {
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
     ]);
-})->name('welcome');   
-
+})->name('welcome');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
@@ -38,6 +37,22 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::patch('/usuarios/{user}/estado', [UserController::class, 'updateEstado'])->name('users.updateEstado');
     Route::patch('/usuarios/{user}/eliminar', [UserController::class, 'eliminar'])->name('users.eliminar');
     Route::patch('/usuarios/{user}/restaurar', [UserController::class, 'restaurar'])->name('users.restaurar');
+});
+
+//Rutas Publicas
+Route::group([], function(){
+    Route::get('/proyectos', function () {
+        return Inertia::render('Public/Projects'); 
+    })->name('projects'); 
+    Route::get('/carreras', function () {
+        return Inertia::render('Public/Career'); 
+    })->name('career'); 
+    Route::get('/servicios', function () {
+        return Inertia::render('Public/Services'); 
+    })->name('services'); 
+    Route::get('/acercadenosotros', function () {
+        return Inertia::render('Public/AboutUs'); 
+    })->name('aboutus'); 
 });
 
 require __DIR__.'/auth.php';
