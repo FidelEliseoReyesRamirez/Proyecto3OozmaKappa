@@ -58,9 +58,9 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Erick Alan',
                 'apellido' => 'Paniagua Berrios',
-                'email' => 'erickalanpaniaguaberrios@gmail.com',
+                'email' => 'epaniaguaberrios@gmail.com',
                 'password' => '$2y$12$K65t8D3vpNupwSO.4DZKguOE87p4CpqdFW5GT.V8SrU0Egli6.U5u',
-                'telefono' => null,
+                'telefono' => '70430818',
                 'rol' => 'ingeniero',
                 'estado' => 'activo',
                 'intentos_fallidos' => 0,

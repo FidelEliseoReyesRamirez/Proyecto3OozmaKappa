@@ -3,7 +3,7 @@ import InputError from '@/Components/InputError';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { FormEventHandler, useState } from 'react'; 
+import { FormEventHandler, useState } from 'react';
 
 // Se elimina la interfaz UserTypeSelectorProps
 
@@ -22,12 +22,26 @@ export default function Login({
         password: '',
         remember: false as boolean,
     });
-    
+
     const [showPassword, setShowPassword] = useState(false);
+
+    const [emailError, setEmailError] = useState<string | null>(null);
 
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
+
+        // Limpia errores previos
+        setEmailError(null);
+
+        // Expresión regular para correos válidos y dominios comunes
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@(gmail\.com|outlook\.com|hotmail\.com|yahoo\.com|icloud\.com)$/;
+
+        if (!emailRegex.test(data.email)) {
+            setEmailError('El correo ingresado no es válido o contiene caracteres no permitidos.');
+            return;
+        }
+
         post(route('login'), {
             onFinish: () => reset('password'),
         });
@@ -36,7 +50,7 @@ export default function Login({
     return (
         <GuestLayout>
             <Head title="DEVELARQ | Iniciar Sesión" />
-            
+
             {/* LOGO Y TAGLINE */}
             <div className="text-center mb-6">
                 <Link href={route('welcome')} className="inline-flex flex-col items-center">
@@ -48,7 +62,7 @@ export default function Login({
                     </span>
                 </Link>
             </div>
-            
+
             {/* CONTENEDOR DE FORMULARIO OSCURO */}
             <div className="p-8 rounded-xl shadow-2xl ">
 
@@ -57,7 +71,7 @@ export default function Login({
                         {status}
                     </div>
                 )}
-                
+
                 {/* Título y Subtítulo */}
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-extrabold text-white">Iniciar Sesión</h1>
@@ -80,7 +94,7 @@ export default function Login({
                             placeholder="tu@email.com"
                             onChange={(e) => setData('email', e.target.value)}
                         />
-                        <InputError message={errors.email} className="mt-2" />
+                        <InputError message={emailError || errors.email} className="mt-2" />
                     </div>
 
                     {/* Campo de Contraseña con Control de Visibilidad */}
@@ -89,7 +103,7 @@ export default function Login({
                         <div className="relative">
                             <TextInput
                                 id="password"
-                                type={showPassword ? 'text' : 'password'} 
+                                type={showPassword ? 'text' : 'password'}
                                 name="password"
                                 value={data.password}
                                 className="block w-full bg-black border-white text-white placeholder-gray-500 focus:border-[#2970E8] focus:ring-[#2970E8] pr-10 rounded-md"
@@ -97,7 +111,7 @@ export default function Login({
                                 placeholder="******"
                                 onChange={(e) => setData('password', e.target.value)}
                             />
-                            <i 
+                            <i
                                 className={`fa-regular absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 cursor-pointer hover:text-[#B3E10F] transition duration-150 ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}
                                 onClick={() => setShowPassword(!showPassword)}
                                 aria-label="Mostrar contraseña"
@@ -122,7 +136,7 @@ export default function Login({
                             />
                             <span className="ms-2">Recordarme</span>
                         </label>
-                        
+
                         {canResetPassword && (
                             <Link
                                 href={route('password.request')}
@@ -135,9 +149,9 @@ export default function Login({
 
                     {/* Botón de Iniciar Sesión */}
                     <div className="mt-6">
-                        <button 
+                        <button
                             type="submit"
-                            className="w-full justify-center py-3 bg-[#2970E8] text-white rounded-md hover:bg-blue-600 transition duration-150 text-lg font-bold flex items-center shadow-lg" 
+                            className="w-full justify-center py-3 bg-[#2970E8] text-white rounded-md hover:bg-blue-600 transition duration-150 text-lg font-bold flex items-center shadow-lg"
                             disabled={processing}
                         >
                             <i className="fa-solid fa-arrow-right mr-2 ml-auto"></i> Iniciar Sesión <span className="ml-auto"></span>
@@ -149,7 +163,7 @@ export default function Login({
             </div>
             {/* Enlace Volver al inicio */}
             <Link
-                href={route('welcome')} 
+                href={route('welcome')}
                 className="text-sm text-gray-500 hover:text-gray-300 transition duration-150 mt-4 block text-center"
             >
                 ← Volver al inicio

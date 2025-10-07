@@ -4,7 +4,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Transition } from '@headlessui/react';
 import { Link, useForm, usePage } from '@inertiajs/react';
-import { FormEventHandler } from 'react';
+import { FormEventHandler, useState } from 'react';
 
 export default function UpdateProfileInformation({
     mustVerifyEmail,
@@ -22,6 +22,8 @@ export default function UpdateProfileInformation({
             name: user.name,
             email: user.email,
         });
+
+    const [nameError, setNameError] = useState<string | null>(null);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -49,13 +51,31 @@ export default function UpdateProfileInformation({
                         id="name"
                         className="mt-1 block w-full"
                         value={data.name}
-                        onChange={(e) => setData('name', e.target.value)}
+                        onChange={(e) => {
+                            let value = e.target.value;
+
+                            // Validación espacios en blanco
+                            value = value.replace(/^\s+/, '').replace(/\s{2,}/g, ' ');
+
+                            value = value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+
+                            if (value.length > 30) {
+                                setNameError('El límite son 30 caracteres.');
+                                value = value.slice(0, 30);
+                            } else {
+                                setNameError(null);
+                            }
+
+                            setData('name', value);
+                        }}
                         required
                         isFocused
                         autoComplete="name"
                     />
 
-                    <InputError className="mt-2" message={errors.name} />
+                    <InputError className="mt-2" message={nameError || errors.name} />
+
+
                 </div>
 
                 <div>
