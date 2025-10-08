@@ -43,7 +43,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Adriano Leandro',
                 'apellido' => 'Daza Campero',
-                'email' => 'adrianoleandrodazacampero@gmail.com',
+                'email' => 'dazaadriano12@gmail.com',
                 'password' => '$2y$12$K65t8D3vpNupwSO.4DZKguOE87p4CpqdFW5GT.V8SrU0Egli6.U5u',
                 'telefono' => null,
                 'rol' => 'ingeniero',
