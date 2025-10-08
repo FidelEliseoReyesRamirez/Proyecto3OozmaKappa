@@ -87,18 +87,36 @@ export default function UpdatePasswordForm({
                 </div>
 
                 <div>
-                    <InputLabel htmlFor="password" value="Nueva contraseña" className="text-white"/>
+                    <InputLabel htmlFor="password" value="Nueva contraseña" className="text-white" />
 
                     <TextInput
                         id="password"
                         ref={passwordInput}
                         value={data.password}
-                        onChange={(e) => setData('password', e.target.value)}
+                        onChange={(e) => {
+                            const sanitized = e.target.value.replace(/\s/g, '');
+                            if (sanitized.length <= 20) {
+                                setData('password', sanitized);
+                            }
+                        }}
                         type="password"
                         className="mt-1 block w-full"
                         autoComplete="new-password"
-                        
                     />
+
+                    {data.password.length > 20 && (
+                        <InputError
+                            message="La contraseña no puede superar los 20 caracteres."
+                            className="mt-2"
+                        />
+                    )}
+
+                    {/\s/.test(data.password) && (
+                        <InputError
+                            message="La contraseña no puede contener espacios."
+                            className="mt-2"
+                        />
+                    )}
 
                     <InputError message={errors.password} className="mt-2" />
                 </div>
@@ -113,13 +131,30 @@ export default function UpdatePasswordForm({
                     <TextInput
                         id="password_confirmation"
                         value={data.password_confirmation}
-                        onChange={(e) =>
-                            setData('password_confirmation', e.target.value)
-                        }
+                        onChange={(e) => {
+                            const sanitized = e.target.value.replace(/\s/g, '');
+                            if (sanitized.length <= 20) {
+                                setData('password_confirmation', sanitized);
+                            }
+                        }}
                         type="password"
                         className="mt-1 block w-full"
                         autoComplete="new-password"
                     />
+
+                    {data.password_confirmation.length > 20 && (
+                        <InputError
+                            message="La confirmación no puede superar los 20 caracteres."
+                            className="mt-2"
+                        />
+                    )}
+
+                    {/\s/.test(data.password_confirmation) && (
+                        <InputError
+                            message="La confirmación no puede contener espacios."
+                            className="mt-2"
+                        />
+                    )}
 
                     <InputError
                         message={errors.password_confirmation}
