@@ -34,4 +34,10 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
         ];
     }
+    public function projects()
+    {
+        return $this->belongsToMany(Project::class, 'proyectos_usuarios', 'user_id', 'proyecto_id')
+                    ->withPivot('rol_en_proyecto', 'eliminado')
+                    ->wherePivot('eliminado', 0); 
+    }
 }
