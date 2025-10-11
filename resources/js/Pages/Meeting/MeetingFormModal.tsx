@@ -1,9 +1,10 @@
 // src/Components/Meeting/MeetingFormModal.tsx
 
 import React, { useState, useEffect } from 'react';
-import { useForm } from '@inertiajs/react';
+import { useForm, InertiaFormProps } from '@inertiajs/react';
 import moment from 'moment';
 import MeetingForm from './MeetingForm'; 
+
 interface ListItem {
     id: number;
     name: string;
@@ -27,7 +28,6 @@ interface MeetingFormModalProps {
     usersList: ListItem[];
     userRole: string; 
 }
-
 export default function MeetingFormModal({
     show,
     onClose,
@@ -39,7 +39,6 @@ export default function MeetingFormModal({
 
     const [timeConflictError, setTimeConflictError] = useState<string | null>(null);
 
-    // Preparación inicial de datos
     const initialFormattedData: FormData = {
         ...initialData,
         start: initialData.start ? moment(initialData.start).format('YYYY-MM-DDTHH:mm') : '',
@@ -47,7 +46,6 @@ export default function MeetingFormModal({
         projectId: initialData.projectId ? String(initialData.projectId) : '', 
     };
     
-    // Hook useForm de Inertia
     const { 
         data, 
         setData, 
@@ -60,7 +58,9 @@ export default function MeetingFormModal({
     } = useForm<FormData>(initialFormattedData);
 
     const isEditing = !!data.id;
-    const isInternalUser = userRole !== 'cliente';
+    const isClient = userRole === 'cliente';
+    const isReadOnly = isClient;
+    const isInternalUser = !isClient; 
 
     useEffect(() => {
         if (!show) {
@@ -72,9 +72,9 @@ export default function MeetingFormModal({
         return null;
     }
 
-    // HANDLERS
-    
     const handleParticipantChange = (userId: number, isChecked: boolean) => {
+        if (isReadOnly) return; 
+
         setData((prevData) => {
             const newParticipants = isChecked
                 ? [...prevData.participants, userId].filter((id, index, self) => self.indexOf(id) === index) 
@@ -86,6 +86,7 @@ export default function MeetingFormModal({
     
     const submitMeeting = (e: React.FormEvent) => {
         e.preventDefault();
+        if (isReadOnly) return; 
         
         const routeName = isEditing ? 'meetings.update' : 'meetings.store';
         const method = isEditing ? put : post;
@@ -109,7 +110,7 @@ export default function MeetingFormModal({
     };
     
     const handleDelete = () => {
-        if (!isInternalUser) return;
+        if (!isInternalUser || isReadOnly) return; 
 
         if (confirm('¿Estás seguro de que quieres eliminar esta reunión? Esta acción no se puede deshacer.')) {
             destroy(route('meetings.destroy', data.id), {
@@ -128,7 +129,7 @@ export default function MeetingFormModal({
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50 p-4">
             <div className="bg-[#1D3557] rounded-xl shadow-2xl max-w-lg w-full p-6 border border-white max-h-[90vh] overflow-y-auto">
                 <h2 className="text-2xl font-bold mb-6 text-white">
-                    {isEditing ? 'Editar Reunión' : 'Programar Nueva Reunión'}
+                    {isEditing ? (isReadOnly ? 'Detalles de la Reunión' : 'Editar Reunión') : 'Programar Nueva Reunión'}
                 </h2>
                 
                 {timeConflictError && (
@@ -140,11 +141,12 @@ export default function MeetingFormModal({
 
                 <MeetingForm
                     data={data}
-                    setData={setData}
+                    setData={setData as InertiaFormProps<FormData>['setData']}
                     errors={errors}
                     processing={processing}
                     isEditing={isEditing}
                     isInternalUser={isInternalUser}
+                    isReadOnly={isReadOnly} 
                     projectsList={projectsList}
                     usersList={usersList}
                     onParticipantChange={handleParticipantChange}

@@ -41,47 +41,56 @@ interface CalendarProps {
     usersList: ListItem[];
     projectsList: ListItem[];
 }
+
 export default function CalendarIndex({ meetings: initialMeetings, usersList, projectsList }: CalendarProps) {
     
     const { auth } = usePage().props as any;
     const user = auth.user;
     const isClient = user.rol === 'cliente';
-
+    const isInternalUser: boolean = !isClient; 
+    
     const [showModal, setShowModal] = useState<boolean>(false);
     const [modalData, setModalData] = useState<FormData | null>(null);
 
+    // Mapeamos las fechas a objetos Date para react-big-calendar
     const meetings = initialMeetings.map(m => ({
         ...m,
         start: typeof m.start === 'string' ? new Date(m.start) : m.start,
         end: typeof m.end === 'string' ? new Date(m.end) : m.end,
     }));
+    
     const handleCloseModal = () => {
         setShowModal(false);
         setModalData(null); 
     };
 
+    /**
+     * Handler para seleccionar un slot vacío (Crear nueva reunión)
+     * Solo disponible para usuarios internos.
+     */
     const handleSelectSlot = useCallback(
         ({ start, end }: { start: Date, end: Date }) => {
-            if (isClient) return;
+            if (isClient) return; 
 
             setModalData({
                 title: '',
                 description: '',
                 start: moment(start).format('YYYY-MM-DDTHH:mm'),
                 end: moment(end).format('YYYY-MM-DDTHH:mm'),
-                projectId: projectsList.length > 0 ? projectsList[0].id : '',
+                projectId: projectsList.length > 0 ? projectsList[0].id : '', 
                 participants: [user.id],
             });
             setShowModal(true);
         },
         [isClient, user.id, projectsList],
     );
+    
+    /**
+     * Handler para seleccionar un evento existente (Ver/Editar)
+     * Permitido para todos (Clientes: Ver, Internos: Editar).
+     */
     const handleSelectEvent = useCallback(
         (event: Meeting) => {
-            // Permitir la edición solo a usuarios internos
-            if (isClient) return; 
-
-            // Clonamos los datos del evento
             setModalData({
                 id: event.id, 
                 title: event.title,
@@ -93,7 +102,7 @@ export default function CalendarIndex({ meetings: initialMeetings, usersList, pr
             });
             setShowModal(true);
         },
-        [isClient],
+        [], 
     );
 
 
@@ -106,7 +115,7 @@ export default function CalendarIndex({ meetings: initialMeetings, usersList, pr
                 color = '#B3E10F';
                 textColor = 'black';
             } else if (user.rol === 'cliente') {
-                color = '#383838';
+                color = '#383838'; 
                 textColor = 'white';
             }
 
@@ -117,14 +126,13 @@ export default function CalendarIndex({ meetings: initialMeetings, usersList, pr
                     borderRadius: '5px',
                     border: 'none',
                     padding: '3px 6px',
-                    cursor: isClient ? 'default' : 'pointer',
+                    cursor: 'pointer', 
                 },
             };
         },
-        [user.rol, isClient],
+        [user.rol],
     );
     
-    const isInternalUser: boolean = user.rol !== 'cliente';
 
     return (
         <AuthenticatedLayout 
@@ -137,7 +145,7 @@ export default function CalendarIndex({ meetings: initialMeetings, usersList, pr
 
                     {isClient && (
                         <p className="mb-4 text-yellow-300">
-                            * Eres cliente. Solo puedes ver las reuniones a las que has sido invitado.
+                            * Eres **cliente**. Solo puedes ver los **detalles** de las reuniones haciendo click. No puedes crear, modificar ni eliminar.
                         </p>
                     )}
 
@@ -148,7 +156,7 @@ export default function CalendarIndex({ meetings: initialMeetings, usersList, pr
                             startAccessor="start"
                             endAccessor="end"
                             titleAccessor="title"
-                            selectable={!isClient}
+                            selectable={!isClient} 
                             onSelectSlot={handleSelectSlot}
                             onSelectEvent={handleSelectEvent as any}
                             eventPropGetter={eventPropGetter as any}
@@ -164,8 +172,7 @@ export default function CalendarIndex({ meetings: initialMeetings, usersList, pr
                 </div>
             </div>
 
-            {/* Renderizar el componente Modal extraído */}
-            {isInternalUser && modalData && (
+            {modalData && (
                 <MeetingFormModal 
                     show={showModal}
                     onClose={handleCloseModal}

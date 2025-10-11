@@ -17,6 +17,7 @@ interface MeetingFormProps {
     processing: boolean;
     isEditing: boolean;
     isInternalUser: boolean;
+    isReadOnly: boolean; 
     projectsList: ListItem[];
     usersList: ListItem[];
     onParticipantChange: (userId: number, isChecked: boolean) => void;
@@ -32,6 +33,7 @@ export default function MeetingForm({
     processing,
     isEditing,
     isInternalUser,
+    isReadOnly, 
     projectsList,
     usersList,
     onParticipantChange,
@@ -39,8 +41,24 @@ export default function MeetingForm({
     onDelete,
     onCancel,
 }: MeetingFormProps) {
+    
+    // Evita el submit si es solo lectura
+    const handleSubmit = (e: React.FormEvent) => {
+        if (isReadOnly) {
+            e.preventDefault();
+        } else {
+            onSubmit(e);
+        }
+    };
+
+    const inputClasses = (hasError: boolean) => 
+        `w-full px-4 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-500 focus:ring-[#B3E10F] focus:border-[#B3E10F] 
+         ${isReadOnly ? 'opacity-70 cursor-not-allowed border-gray-600' : 'border-white'} 
+         ${hasError ? 'border-red-400' : 'border-white'}`;
+
+
     return (
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
             
             {/* Título */}
             <div>
@@ -51,7 +69,8 @@ export default function MeetingForm({
                     value={data.title}
                     onChange={e => setData('title', e.target.value)}
                     required
-                    className="w-full px-4 py-2 bg-gray-800 border border-white rounded-lg text-white placeholder-gray-500 focus:ring-[#B3E10F] focus:border-[#B3E10F]"
+                    disabled={isReadOnly} 
+                    className={inputClasses(!!errors.title)}
                 />
                 {errors.title && <p className="text-red-400 text-xs mt-1">{errors.title}</p>}
             </div>
@@ -63,7 +82,8 @@ export default function MeetingForm({
                     value={String(data.projectId)}
                     onChange={e => setData('projectId', e.target.value)}
                     required
-                    className="w-full px-4 py-2 bg-gray-800 border border-white rounded-lg text-white focus:ring-[#B3E10F] focus:border-[#B3E10F]"
+                    disabled={isReadOnly} 
+                    className={inputClasses(!!errors.projectId)}
                 >
                     <option value="" disabled>Selecciona un proyecto</option>
                     {projectsList.map((project) => (
@@ -83,7 +103,8 @@ export default function MeetingForm({
                         value={data.start}
                         onChange={e => setData('start', e.target.value)}
                         required
-                        className="w-full px-4 py-2 bg-gray-800 border border-white rounded-lg text-white focus:ring-[#B3E10F] focus:border-[#B3E10F]"
+                        disabled={isReadOnly} 
+                        className={inputClasses(!!errors.start)}
                     />
                     {errors.start && <p className="text-red-400 text-xs mt-1">{errors.start}</p>}
                 </div>
@@ -95,18 +116,20 @@ export default function MeetingForm({
                         value={data.end}
                         onChange={e => setData('end', e.target.value)}
                         required
-                        className="w-full px-4 py-2 bg-gray-800 border border-white rounded-lg text-white focus:ring-[#B3E10F] focus:border-[#B3E10F]"
+                        disabled={isReadOnly} 
+                        className={inputClasses(!!errors.end)}
                     />
                     {errors.end && <p className="text-red-400 text-xs mt-1">{errors.end}</p>}
                 </div>
             </div>
             
-            {/* PARTICIPANTES  */}
+            {/* PARTICIPANTES */}
             <ParticipantsChecklist
                 usersList={usersList}
                 participants={data.participants}
                 onParticipantChange={onParticipantChange}
                 error={errors.participants}
+                isReadOnly={isReadOnly} 
             />
 
             {/* Descripción */}
@@ -116,16 +139,15 @@ export default function MeetingForm({
                     placeholder="Agenda de la reunión, objetivos..."
                     value={data.description}
                     onChange={e => setData('description', e.target.value)}
-                    className="w-full px-4 py-2 bg-gray-800 border border-white rounded-lg text-white placeholder-gray-500 focus:ring-[#B3E10F] focus:border-[#B3E10F]"
+                    disabled={isReadOnly} 
+                    className={inputClasses(!!errors.description)}
                 />
                 {errors.description && <p className="text-red-400 text-xs mt-1">{errors.description}</p>}
             </div>
 
 
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
-                
-                {/* Botón de Eliminar */}
-                {isEditing && isInternalUser && (
+                {isEditing && isInternalUser && !isReadOnly && (
                     <button 
                         type="button" 
                         onClick={onDelete}
@@ -141,18 +163,20 @@ export default function MeetingForm({
                     onClick={onCancel} 
                     className="px-5 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition font-semibold"
                 >
-                    Cancelar
+                    {isReadOnly ? 'Cerrar' : 'Cancelar'}
                 </button>
-                <button 
-                    type="submit" 
-                    disabled={processing}
-                    className="px-5 py-2 bg-[#B3E10F] text-black rounded-lg font-semibold hover:bg-[#8aab13] transition"
-                >
-                    {processing 
-                        ? (isEditing ? 'Actualizando...' : 'Guardando...') 
-                        : (isEditing ? 'Guardar Cambios' : 'Crear Reunión')
-                    }
-                </button>
+                {!isReadOnly && (
+                    <button 
+                        type="submit" 
+                        disabled={processing}
+                        className="px-5 py-2 bg-[#B3E10F] text-black rounded-lg font-semibold hover:bg-[#8aab13] transition"
+                    >
+                        {processing 
+                            ? (isEditing ? 'Actualizando...' : 'Guardando...') 
+                            : (isEditing ? 'Guardar Cambios' : 'Crear Reunión')
+                        }
+                    </button>
+                )}
             </div>
         </form>
     );
