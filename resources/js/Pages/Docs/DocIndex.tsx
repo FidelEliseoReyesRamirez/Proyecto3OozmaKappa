@@ -6,8 +6,12 @@ import { PageProps } from '@/types';
 interface Documento {
     id: number;
     titulo: string;
+    // 💡 AÑADIDO: La descripción
     descripcion: string | null;
     archivo_url: string;
+    // 💡 AÑADIDO: El tipo/extensión ya procesado por el controlador
+    tipo: string; // Tipo original (PDF, Excel, Word)
+    extension: string; // Extensión real (PDF, XLSX, DOCX)
     fecha_subida: string; 
     proyecto_id: number;
     proyecto_nombre: string;
@@ -16,13 +20,14 @@ interface Documento {
 interface DocIndexProps extends PageProps {
     documents: Documento[];
     projectsList: { id: number; name: string }[];
-    userRole: 'administrador' | 'arquitecto' | 'ingeniero' | 'cliente';
+    userRole: 'admin' | 'arquitecto' | 'ingeniero' | 'cliente';
 }
 
 const DocIndex: React.FC = () => {
-    const { documents, userRole } = usePage<DocIndexProps>().props;
+    // Asegúrate de actualizar la estructura de documents en el controlador PHP
+    const { documents, userRole } = usePage<DocIndexProps>().props; 
 
-    const isInternalUser = ['administrador', 'arquitecto', 'ingeniero'].includes(userRole);
+    const isInternalUser = ['admin', 'arquitecto', 'ingeniero'].includes(userRole);
 
     const handleDownload = (documento: Documento) => {
         window.open(documento.archivo_url, '_blank');
@@ -75,6 +80,7 @@ const DocIndex: React.FC = () => {
                                     <thead className="bg-gray-50">
                                         <tr>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Título</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proyecto</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Subida</th>
@@ -87,11 +93,14 @@ const DocIndex: React.FC = () => {
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                                     {doc.titulo}
                                                 </td>
+                                                <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                                                    {doc.descripcion || 'Sin descripción'}
+                                                </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                     {doc.proyecto_nombre}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {doc.archivo_url.split('.').pop()?.toUpperCase() || 'N/A'}
+                                                    {doc.extension || 'N/A'}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                     {doc.fecha_subida}

@@ -3,97 +3,75 @@
 namespace App\Http\Controllers;
 
 use App\Models\Documento;
-use App\Models\User;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\DB;
 
 class DocController extends Controller
 {
-    /**
-     * Muestra la lista de documentos filtrados por rol y proyecto.
-     */
     public function index(Request $request)
     {
         $user = $request->user();
-        $userRole = $user->rol;
-        
-        $query = Documento::query()
-            ->where('eliminado', 0)
-            ->with(['project:id,nombre']); 
-            
-        
-        if ($userRole === 'cliente') {
-            $clientProjectIds = $user->projects()->pluck('id');
+        $userRole = strtolower($user->rol);
 
-            if ($clientProjectIds->isNotEmpty()) {
-                $query->whereIn('proyecto_id', $clientProjectIds);
-            } else {
-                $query->whereRaw('1 = 0'); 
-            }
+        $query = Documento::query()->where('eliminado', 0)->with(['project:id,nombre']);
 
-        } elseif (in_array($userRole, ['arquitecto', 'ingeniero'])) {
-            $assignedProjectIds = $user->projects()->pluck('id');
-            
-            if ($assignedProjectIds->isNotEmpty()) {
-                $query->whereIn('proyecto_id', $assignedProjectIds);
+        // Filtrar según rol y proyectos asociados
+        if ($userRole === 'cliente' || in_array($userRole, ['arquitecto', 'ingeniero'])) {
+            $projectIds = $user->projects()->pluck('proyectos.id'); // especificar tabla
+            if ($projectIds->isNotEmpty()) {
+                $query->whereIn('proyecto_id', $projectIds);
             } else {
-                $query->whereRaw('1 = 0'); 
+                $query->whereRaw('1 = 0');
             }
-        } 
-        
+        }
+
         $documents = $query->orderBy('created_at', 'desc')->get();
-        
+
         $projectsList = Project::where('eliminado', 0)
-                               ->get(['id', 'nombre'])
-                               ->map(fn($p) => ['id' => $p->id, 'name' => $p->nombre]);
+            ->get(['id', 'nombre'])
+            ->map(fn($p) => ['id' => $p->id, 'name' => $p->nombre]);
 
         return Inertia::render('Docs/DocIndex', [
-            'documents' => $documents->map(function ($doc) use ($userRole) {
+            'documents' => $documents->map(function ($doc) {
                 $downloadUrl = route('docs.download', $doc->id);
-                
                 $extension = pathinfo($doc->archivo_url, PATHINFO_EXTENSION);
-                
+
                 return [
                     'id' => $doc->id,
-                    'titulo' => $doc->nombre, 
+                    'titulo' => $doc->nombre,
                     'descripcion' => $doc->descripcion,
                     'archivo_url' => $downloadUrl,
-                    'tipo' => $doc->tipo, 
+                    'tipo' => $doc->tipo,
                     'extension' => strtoupper($extension),
-                    'fecha_subida' => $doc->fecha_subida->format('d/m/Y H:i'),
+                    'fecha_subida' => $doc->created_at->format('d/m/Y H:i'),
                     'proyecto_id' => $doc->proyecto_id,
                     'proyecto_nombre' => $doc->project->nombre ?? 'N/A',
                 ];
             }),
             'projectsList' => $projectsList,
-            'userRole' => $userRole, 
+            'userRole' => $userRole,
         ]);
     }
 
-    /**
-     * Muestra el formulario para subir un nuevo documento (para Inertia).
-     */
     public function create(Request $request)
     {
         if ($request->user()->rol === 'cliente') {
-            return redirect()->route('docs.index')->with('error', 'No tienes permiso para acceder al formulario de subida.');
+            return redirect()->route('docs.index')
+                ->with('error', 'No tienes permiso para acceder al formulario de subida.');
         }
 
         $projectsList = Project::where('eliminado', 0)
-                               ->get(['id', 'nombre'])
-                               ->map(fn($p) => ['id' => $p->id, 'name' => $p->nombre]);
+            ->get(['id', 'nombre'])
+            ->map(fn($p) => ['id' => $p->id, 'name' => $p->nombre]);
 
         return Inertia::render('Docs/DocCreate', [
             'projectsList' => $projectsList,
         ]);
     }
-    /**
-     * Almacena un nuevo documento, incluyendo la subida del archivo.
-     */
+
     public function store(Request $request)
     {
         if ($request->user()->rol === 'cliente') {
@@ -104,82 +82,70 @@ class DocController extends Controller
             'titulo' => 'required|string|max:150',
             'descripcion' => 'nullable|string|max:1000',
             'proyecto_id' => 'required|exists:proyectos,id',
-            'archivo' => 'required|file|max:10240', 
+            'archivo' => 'required|file|max:10240',
             'archivo_tipo' => ['required', Rule::in(['PDF', 'Excel', 'Word'])],
         ]);
-        
+
         $file = $request->file('archivo');
         $fileType = $validated['archivo_tipo'];
-        
-        $extensionMap = [
-            'PDF' => 'pdf',
-            'Excel' => 'xlsx',
-            'Word' => 'docx',
-        ];
 
-        $extension = $extensionMap[$fileType] ?? 'bin';
-        
         try {
-            $ruta_archivo_almacenada = $file->store('documents'); 
-            
-            $mimeType = $file->getClientMimeType();
+            // Guardar en storage/app/documents
+            $ruta_archivo_almacenada = $file->store('documents');
+
             Documento::create([
-                'proyecto_id' => $validated['proyecto_id'],
-                'nombre' => $validated['titulo'],
-                'descripcion' => $validated['descripcion'],
-                'archivo_url' => $ruta_archivo_almacenada, 
-                'tipo' => $fileType, 
-                'subido_por' => $request->user()->id,
-                'eliminado' => 0,
+                'proyecto_id'   => $validated['proyecto_id'],
+                'nombre'        => $validated['titulo'],
+                'descripcion'   => $validated['descripcion'] ?? null,
+                'archivo_url'   => $ruta_archivo_almacenada,
+                'tipo'          => $fileType,
+                'fecha_subida'  => now(),
+                'subido_por'    => $request->user()->id,
+                'eliminado'     => 0,
             ]);
 
-            return redirect()->route('docs.index')->with('success', 'Documento subido exitosamente.');
-
+            return redirect()->route('docs.index')
+                ->with('success', 'Documento subido exitosamente.');
         } catch (\Exception $e) {
-            if (isset($ruta_archivo_almacenada)) {
-                 Storage::delete($ruta_archivo_almacenada);
+            if (!empty($ruta_archivo_almacenada)) {
+                Storage::delete($ruta_archivo_almacenada);
             }
             return back()->withInput()->with('error', 'Error al subir el archivo: ' . $e->getMessage());
         }
     }
-    /**
-     * Permite la descarga segura de un documento, verificando permisos.
-     */
-    public function download(Request $request, Documento $documento)
+
+    public function download(Documento $documento)
     {
-        $user = $request->user();
-        $userRole = $user->rol;
+        $user = request()->user();
+        $userRole = strtolower($user->rol);
         $hasPermission = false;
-        
-        if ($userRole === 'cliente') {
-            $clientProjectIds = $user->projects()->pluck('id');
-            if ($clientProjectIds->contains($documento->proyecto_id)) {
-                $hasPermission = true;
-            }
+
+        if ($userRole === 'admin') {
+            $hasPermission = true;
         } elseif (in_array($userRole, ['arquitecto', 'ingeniero'])) {
-            $assignedProjectIds = $user->projects()->pluck('id');
+            $assignedProjectIds = $user->projects()->pluck('proyectos.id');
             if ($assignedProjectIds->contains($documento->proyecto_id)) {
                 $hasPermission = true;
             }
-        } elseif ($userRole === 'administrador') {
-            $hasPermission = true;
+        } elseif ($userRole === 'cliente') {
+            $clientProjectIds = $user->projects()->pluck('proyectos.id');
+            if ($clientProjectIds->contains($documento->proyecto_id)) {
+                $hasPermission = true;
+            }
         }
 
         if (!$hasPermission) {
-            return response()->json(['error' => 'Acceso denegado. No tiene permisos para descargar este documento.'], 403);
-        }
-        
-        $filePath = $documento->archivo_url;
-
-        if (Storage::exists($filePath)) {
-            return Storage::download($filePath, $documento->nombre . '.' . pathinfo($filePath, PATHINFO_EXTENSION));
+            abort(403, 'No tienes permiso para descargar este documento.');
         }
 
-        return response()->json(['error' => 'Archivo no encontrado en el servidor.'], 404);
+        if (!Storage::exists($documento->archivo_url)) {
+            abort(404, 'El archivo no fue encontrado en el servidor.');
+        }
+
+        $extension = pathinfo($documento->archivo_url, PATHINFO_EXTENSION);
+        return Storage::download($documento->archivo_url, $documento->nombre . '.' . $extension);
     }
-    /**
-     * Elimina lógicamente un documento. (Solo para usuarios internos)
-     */
+
     public function destroy(Documento $documento)
     {
         if (request()->user()->rol === 'cliente') {
@@ -188,9 +154,7 @@ class DocController extends Controller
 
         try {
             $documento->update(['eliminado' => 1]);
-            
             return back()->with('success', 'Documento eliminado.');
-
         } catch (\Exception $e) {
             return back()->with('error', 'Error al eliminar el documento: ' . $e->getMessage());
         }
