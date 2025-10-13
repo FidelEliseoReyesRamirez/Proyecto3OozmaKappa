@@ -27,21 +27,19 @@ export default function Authenticated({
 
                             {/* Navegación principal */}
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex ">
-                                <NavLink
-                                    href={route('dashboard')}
-                                    active={route().current('dashboard')}
-                                >
+                                <NavLink href={route('dashboard')} active={route().current('dashboard')}>
                                     Dashboard
                                 </NavLink>
 
                                 {user.rol === 'admin' && (
-                                    <NavLink
-                                        href={route('users.index')}
-                                        active={route().current('users.index')}
-                                    >
+                                    <NavLink href={route('users.index')} active={route().current('users.index')}>
                                         Usuarios
                                     </NavLink>
                                 )}
+
+                                <NavLink href={route('calendar')} active={route().current('calendar')}>
+                                    Calendario
+                                </NavLink>
                             </div>
                         </div>
 
@@ -140,6 +138,11 @@ export default function Authenticated({
                                 Usuarios
                             </ResponsiveNavLink>
                         )}
+
+                        <ResponsiveNavLink
+                            href={route('calendar')}
+                            active={route().current('calendar')}
+                        ></ResponsiveNavLink>
                     </div>
 
                     <div className="border-t border-gray-200 pb-1 pt-4">
