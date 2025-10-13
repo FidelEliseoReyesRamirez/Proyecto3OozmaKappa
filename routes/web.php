@@ -6,6 +6,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\MeetingController; 
+use App\Http\Controllers\DocController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -30,6 +31,12 @@ Route::middleware('auth')->group(function () {
     ->name('calendar'); 
     Route::resource('meetings', MeetingController::class)
         ->only(['store', 'update', 'destroy']);
+    // Documentos
+    Route::get('/docs', [DocController::class, 'index'])->name('docs.index'); 
+    Route::get('/docs/create', [DocController::class, 'create'])->name('docs.create');
+    Route::post('/docs', [DocController::class, 'store'])->name('docs.store');
+    Route::get('/docs/download/{documento}', [DocController::class, 'download'])->name('docs.download');
+    Route::delete('/docs/{documento}', [DocController::class, 'destroy'])->name('docs.destroy');
 });
 
 //  solo los admins pueden ver y gestionar usuarios

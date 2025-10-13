@@ -40,6 +40,10 @@ export default function Authenticated({
                                 <NavLink href={route('calendar')} active={route().current('calendar')}>
                                     Calendario
                                 </NavLink>
+
+                                <NavLink href={route('docs.index')} active={route().current('docs.index')}>
+                                    Documentos
+                                </NavLink>
                             </div>
                         </div>
 
@@ -142,6 +146,11 @@ export default function Authenticated({
                         <ResponsiveNavLink
                             href={route('calendar')}
                             active={route().current('calendar')}
+                        ></ResponsiveNavLink>
+
+                        <ResponsiveNavLink
+                            href={route('docs.index')}
+                            active={route().current('docs.index')}
                         ></ResponsiveNavLink>
                     </div>
 
