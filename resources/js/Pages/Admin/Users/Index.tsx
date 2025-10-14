@@ -66,6 +66,7 @@ export default function UsersIndex() {
                                 <tr className="bg-[#2970E8] text-white text-center shadow-lg">
                                     <th className="p-3 border border-blue-700">Nombre</th>
                                     <th className="p-3 border border-blue-700">Correo</th>
+                                    <th className="p-3 border border-blue-700">Celular</th>
                                     <th className="p-3 border border-blue-700">Rol</th>
                                     <th className="p-3 border border-blue-700">Estado</th>
                                     <th className="p-3 border border-blue-700">Acciones</th>
@@ -79,6 +80,7 @@ export default function UsersIndex() {
                                     >
                                         <td className="p-2 border border-gray-800">{u.name} {u.apellido}</td>
                                         <td className="p-2 border border-gray-800">{u.email}</td>
+                                         <td className="p-2 border border-gray-800">{u.telefono}</td>
                                         <td className="p-2 border border-gray-800">
                                             <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
                                                 u.rol === 'admin' ? 'bg-red-800 text-red-100' : 
