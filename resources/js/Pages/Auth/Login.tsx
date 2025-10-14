@@ -91,7 +91,6 @@ export default function Login({
                             className="block w-full bg-black border-white text-white placeholder-gray-500 focus:border-[#2970E8] focus:ring-[#2970E8] rounded-md"
                             autoComplete="username"
                             isFocused={true}
-                            placeholder="tu@email.com"
                             onChange={(e) => setData('email', e.target.value)}
                         />
                         <InputError message={emailError || errors.email} className="mt-2" />
@@ -108,7 +107,7 @@ export default function Login({
                                 value={data.password}
                                 className="block w-full bg-black border-white text-white placeholder-gray-500 focus:border-[#2970E8] focus:ring-[#2970E8] pr-10 rounded-md"
                                 autoComplete="current-password"
-                                placeholder="******"
+                               
                                 onChange={(e) => setData('password', e.target.value)}
                             />
                             <i
@@ -154,7 +153,7 @@ export default function Login({
                             className="w-full justify-center py-3 bg-[#2970E8] text-white rounded-md hover:bg-blue-600 transition duration-150 text-lg font-bold flex items-center shadow-lg"
                             disabled={processing}
                         >
-                            <i className="fa-solid fa-arrow-right mr-2 ml-auto"></i> Iniciar Sesión <span className="ml-auto"></span>
+                            <i className=" mr-2 ml-auto"></i> Iniciar Sesión <span className="ml-auto"></span>
                         </button>
                     </div>
 
@@ -166,7 +165,7 @@ export default function Login({
                 href={route('welcome')}
                 className="text-sm text-gray-500 hover:text-gray-300 transition duration-150 mt-4 block text-center"
             >
-                ← Volver al inicio
+                 Volver al inicio
             </Link>
 
         </GuestLayout>

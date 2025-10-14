@@ -44,7 +44,7 @@ const Welcome: React.FC<WelcomeProps> = ({ auth }) => {
                         <div className="flex items-center space-x-4 mb-10">
                             <a href="#contacto" className="px-6 py-3 text-lg font-bold rounded-lg bg-[#B3E10F] text-[#121212] hover:bg-lime-300 transition duration-150 shadow-lg flex items-center">
                                 Solicitar Consulta
-                                <span className="ml-2">→</span>
+                        
                             </a>
                             <a href="#" className="px-6 py-3 text-lg font-bold rounded-lg text-gray-300 hover:text-[#2970E8] transition duration-150 flex items-center">
                                 ▷ Ver Demo

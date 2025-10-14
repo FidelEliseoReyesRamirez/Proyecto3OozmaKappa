@@ -3,7 +3,7 @@ import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
-import { PropsWithChildren, ReactNode, useState } from 'react';
+import { PropsWithChildren, ReactNode, useState, useEffect } from 'react';
 
 export default function Authenticated({
     header,
@@ -11,6 +11,24 @@ export default function Authenticated({
 }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user;
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
+useEffect(() => {
+    // Bloquear botón "Atrás"
+    window.history.pushState(null, '', window.location.href);
+    window.onpopstate = function () {
+        window.history.pushState(null, '', window.location.href);
+    };
+}, []);
+
+  
+    useEffect(() => {
+        const handlePageShow = (event: PageTransitionEvent) => {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        };
+        window.addEventListener('pageshow', handlePageShow);
+        return () => window.removeEventListener('pageshow', handlePageShow);
+    }, []);
 
     return (
         <div className="min-h-screen bg-[#121212]">
@@ -121,13 +139,13 @@ export default function Authenticated({
                 </div>
 
                 {/* Menú responsive */}
-                <div className={(showingNavigationDropdown ? 'block' : 'hidden') + ' sm:hidden'} >
+                <div className={(showingNavigationDropdown ? 'block' : 'hidden') + ' sm:hidden'}>
                     <div className="space-y-1 pb-3 pt-2">
                         <ResponsiveNavLink
                             href={route('dashboard')}
                             active={route().current('dashboard')}
                         >
-                            Dashboards
+                            Dashboard
                         </ResponsiveNavLink>
 
                         {user.rol === 'admin' && (
@@ -142,7 +160,9 @@ export default function Authenticated({
                         <ResponsiveNavLink
                             href={route('calendar')}
                             active={route().current('calendar')}
-                        ></ResponsiveNavLink>
+                        >
+                            Calendario
+                        </ResponsiveNavLink>
                     </div>
 
                     <div className="border-t border-gray-200 pb-1 pt-4">
