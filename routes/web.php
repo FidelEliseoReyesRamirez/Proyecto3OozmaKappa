@@ -5,8 +5,10 @@ use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\MeetingController; 
+use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\DocController;
+use App\Http\Controllers\ProyectoController;
+
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -28,7 +30,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     // Calendario
     Route::get('/calendar', [MeetingController::class, 'index'])
-    ->name('calendar'); 
+        ->name('calendar');
     Route::resource('meetings', MeetingController::class)
         ->only(['store', 'update', 'destroy']);
     // Documentos
@@ -52,23 +54,32 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::patch('/usuarios/{user}/restaurar', [UserController::class, 'restaurar'])->name('users.restaurar');
 });
 
-//Rutas Publicas
-Route::group([], function(){
-    Route::get('/proyectos', function () {
-        return Inertia::render('Public/Projects'); 
-    })->name('projects'); 
-    Route::get('/carreras', function () {
-        return Inertia::render('Public/Career'); 
-    })->name('career'); 
-    Route::get('/servicios', function () {
-        return Inertia::render('Public/Services'); 
-    })->name('services'); 
-    Route::get('/acercadenosotros', function () {
-        return Inertia::render('Public/AboutUs'); 
-    })->name('aboutus'); 
+//  solo los arquitectos pueden ver y gestionar proyectos
+Route::middleware(['auth', 'role:arquitecto'])->group(function () {
+    Route::resource('proyectos', ProyectoController::class);
+    Route::get('/proyectos/{id}/versiones', [ProyectoController::class, 'versiones'])
+        ->name('proyectos.versiones');
+    Route::patch('/proyectos/{id}/estado', [ProyectoController::class, 'cambiarEstado'])
+        ->name('proyectos.cambiarEstado');
 });
 
-require __DIR__.'/auth.php';
+//Rutas Publicas
+Route::group([], function () {
+    Route::get('/portafolio', function () {
+        return Inertia::render('Public/Projects');
+    })->name('projects');
+    Route::get('/carreras', function () {
+        return Inertia::render('Public/Career');
+    })->name('career');
+    Route::get('/servicios', function () {
+        return Inertia::render('Public/Services');
+    })->name('services');
+    Route::get('/acercadenosotros', function () {
+        return Inertia::render('Public/AboutUs');
+    })->name('aboutus');
+});
+
+require __DIR__ . '/auth.php';
 
 
 Route::fallback(function () {

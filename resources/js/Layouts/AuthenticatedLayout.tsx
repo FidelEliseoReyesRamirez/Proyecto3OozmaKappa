@@ -3,7 +3,7 @@ import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
-import { PropsWithChildren, ReactNode, useState } from 'react';
+import { PropsWithChildren, ReactNode, useState, useEffect } from 'react';
 
 export default function Authenticated({
     header,
@@ -11,6 +11,24 @@ export default function Authenticated({
 }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user;
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
+    useEffect(() => {
+        // Bloquear botón "Atrás"
+        window.history.pushState(null, '', window.location.href);
+        window.onpopstate = function () {
+            window.history.pushState(null, '', window.location.href);
+        };
+    }, []);
+
+
+    useEffect(() => {
+        const handlePageShow = (event: PageTransitionEvent) => {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        };
+        window.addEventListener('pageshow', handlePageShow);
+        return () => window.removeEventListener('pageshow', handlePageShow);
+    }, []);
 
     return (
         <div className="min-h-screen bg-[#121212]">
@@ -34,6 +52,12 @@ export default function Authenticated({
                                 {user.rol === 'admin' && (
                                     <NavLink href={route('users.index')} active={route().current('users.index')}>
                                         Usuarios
+                                    </NavLink>
+                                )}
+
+                                {user.rol === 'arquitecto' && (
+                                    <NavLink href={route('proyectos.index')} active={route().current('proyectos.index')}>
+                                        Proyectos
                                     </NavLink>
                                 )}
 
@@ -125,28 +149,30 @@ export default function Authenticated({
                 </div>
 
                 {/* Menú responsive */}
-                <div className={(showingNavigationDropdown ? 'block' : 'hidden') + ' sm:hidden'} >
+                <div className={(showingNavigationDropdown ? 'block' : 'hidden') + ' sm:hidden'}>
                     <div className="space-y-1 pb-3 pt-2">
                         <ResponsiveNavLink
                             href={route('dashboard')}
                             active={route().current('dashboard')}
                         >
-                            Dashboards
+                            Dashboard
                         </ResponsiveNavLink>
 
-                        {user.rol === 'admin' && (
+                        {user.rol === 'arquitecto' && (
                             <ResponsiveNavLink
-                                href={route('users.index')}
-                                active={route().current('users.index')}
+                                href={route('proyectos.index')}
+                                active={route().current('proyectos.index')}
                             >
-                                Usuarios
+                                Proyectos
                             </ResponsiveNavLink>
                         )}
 
                         <ResponsiveNavLink
                             href={route('calendar')}
                             active={route().current('calendar')}
-                        ></ResponsiveNavLink>
+                        >
+                            Calendario
+                        </ResponsiveNavLink>
 
                         <ResponsiveNavLink
                             href={route('docs.index')}

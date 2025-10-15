@@ -40,4 +40,8 @@ class User extends Authenticatable implements MustVerifyEmail
                     ->withPivot('rol_en_proyecto', 'eliminado')
                     ->wherePivot('eliminado', 0); 
     }
+    public function sendEmailVerificationNotification()
+    {
+        $this->notify(new \App\Notifications\CustomVerifyEmail);
+    }
 }
