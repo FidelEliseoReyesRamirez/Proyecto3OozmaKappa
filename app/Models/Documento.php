@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+// 🛑 CORRECCIÓN: Agregar import del modelo User
+use App\Models\User; 
+
 class Documento extends Model
 {
     use HasFactory;
@@ -24,7 +27,6 @@ class Documento extends Model
         'descripcion',
         'archivo_url',
         'tipo',
-        'fecha_subida', 
         'subido_por',
         'eliminado',
     ];
@@ -47,8 +49,12 @@ class Documento extends Model
         'fecha_subida' => 'datetime', 
     ];
     
+    /**
+     * Relación: Un documento pertenece a un proyecto.
+     */
     public function project(): BelongsTo
     {
+        // Asumiendo que tu modelo de proyectos se llama Project
         return $this->belongsTo(Project::class, 'proyecto_id');
     }
 
@@ -57,8 +63,10 @@ class Documento extends Model
      */
     public function uploader(): BelongsTo
     {
+        // 🛑 CORRECCIÓN: Usar el modelo User importado
         return $this->belongsTo(User::class, 'subido_por');
     }
+    
     /**
      * Scope para recuperar solo documentos activos (no eliminados).
      */

@@ -1,4 +1,4 @@
-import { Link, router, usePage } from "@inertiajs/react";
+import { Link, router, usePage, Head } from "@inertiajs/react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { useState } from "react";
 import PrimaryButton from "@/Components/PrimaryButton";
@@ -27,9 +27,9 @@ export default function Index() {
 
     return (
         <AuthenticatedLayout
-            header={<h2 className="text-xl font-semibold leading-tight text-white">Gestión de Proyectos</h2>}
-        >
+            header={<h2 className="text-xl font-semibold leading-tight text-white">Gestión de Proyectos</h2>}>
 
+            <Head title="DEVELARQ | Inicio Proyecto" />
             <ConfirmModal
                 open={modalOpen}
                 onClose={() => setModalOpen(false)}

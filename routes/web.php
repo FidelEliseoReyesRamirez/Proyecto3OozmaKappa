@@ -6,8 +6,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\MeetingController;
-use App\Http\Controllers\DocController;
 use App\Http\Controllers\ProyectoController;
+use App\Http\Controllers\DocController;
 
 
 Route::get('/', function () {
@@ -39,6 +39,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/docs', [DocController::class, 'store'])->name('docs.store');
     Route::get('/docs/download/{documento}', [DocController::class, 'download'])->name('docs.download');
     Route::delete('/docs/{documento}', [DocController::class, 'destroy'])->name('docs.destroy');
+    // Proyectos
+    Route::resource('proyectos', ProyectoController::class);
+    Route::get('/proyectos/{id}/versiones', [ProyectoController::class, 'versiones'])
+        ->name('proyectos.versiones');
+    Route::patch('/proyectos/{id}/estado', [ProyectoController::class, 'cambiarEstado'])
+        ->name('proyectos.cambiarEstado');
+    
 });
 
 //  solo los admins pueden ver y gestionar usuarios
@@ -52,15 +59,6 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::patch('/usuarios/{user}/estado', [UserController::class, 'updateEstado'])->name('users.updateEstado');
     Route::patch('/usuarios/{user}/eliminar', [UserController::class, 'eliminar'])->name('users.eliminar');
     Route::patch('/usuarios/{user}/restaurar', [UserController::class, 'restaurar'])->name('users.restaurar');
-});
-
-//  solo los arquitectos pueden ver y gestionar proyectos
-Route::middleware(['auth', 'role:arquitecto'])->group(function () {
-    Route::resource('proyectos', ProyectoController::class);
-    Route::get('/proyectos/{id}/versiones', [ProyectoController::class, 'versiones'])
-        ->name('proyectos.versiones');
-    Route::patch('/proyectos/{id}/estado', [ProyectoController::class, 'cambiarEstado'])
-        ->name('proyectos.cambiarEstado');
 });
 
 //Rutas Publicas

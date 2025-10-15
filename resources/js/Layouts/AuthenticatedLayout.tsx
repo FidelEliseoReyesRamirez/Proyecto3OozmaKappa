@@ -55,11 +55,9 @@ export default function Authenticated({
                                     </NavLink>
                                 )}
 
-                                {user.rol === 'arquitecto' && (
-                                    <NavLink href={route('proyectos.index')} active={route().current('proyectos.index')}>
-                                        Proyectos
-                                    </NavLink>
-                                )}
+                                <NavLink href={route('proyectos.index')} active={route().current('proyectos.index')}>
+                                    Proyectos
+                                </NavLink>
 
                                 <NavLink href={route('calendar')} active={route().current('calendar')}>
                                     Calendario
@@ -158,26 +156,23 @@ export default function Authenticated({
                             Dashboard
                         </ResponsiveNavLink>
 
-                        {user.rol === 'arquitecto' && (
-                            <ResponsiveNavLink
-                                href={route('proyectos.index')}
-                                active={route().current('proyectos.index')}
-                            >
+                        <ResponsiveNavLink
+                            href={route('proyectos.index')}
+                            active={route().current('proyectos.index')}>
                                 Proyectos
-                            </ResponsiveNavLink>
-                        )}
+                        </ResponsiveNavLink>
 
                         <ResponsiveNavLink
                             href={route('calendar')}
-                            active={route().current('calendar')}
-                        >
+                            active={route().current('calendar')}>
                             Calendario
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink
                             href={route('docs.index')}
-                            active={route().current('docs.index')}
-                        ></ResponsiveNavLink>
+                            active={route().current('docs.index')}>
+                                Documentos
+                        </ResponsiveNavLink>
                     </div>
 
                     <div className="border-t border-gray-200 pb-1 pt-4">

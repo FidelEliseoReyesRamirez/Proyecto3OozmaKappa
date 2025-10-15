@@ -6,12 +6,10 @@ import { PageProps } from '@/types';
 interface Documento {
     id: number;
     titulo: string;
-    // 💡 AÑADIDO: La descripción
     descripcion: string | null;
     archivo_url: string;
-    // 💡 AÑADIDO: El tipo/extensión ya procesado por el controlador
-    tipo: string; // Tipo original (PDF, Excel, Word)
-    extension: string; // Extensión real (PDF, XLSX, DOCX)
+    tipo: string; 
+    extension: string;
     fecha_subida: string; 
     proyecto_id: number;
     proyecto_nombre: string;
@@ -24,7 +22,6 @@ interface DocIndexProps extends PageProps {
 }
 
 const DocIndex: React.FC = () => {
-    // Asegúrate de actualizar la estructura de documents en el controlador PHP
     const { documents, userRole } = usePage<DocIndexProps>().props; 
 
     const isInternalUser = ['admin', 'arquitecto', 'ingeniero'].includes(userRole);
