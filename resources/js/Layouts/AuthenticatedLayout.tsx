@@ -11,15 +11,15 @@ export default function Authenticated({
 }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user;
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
-useEffect(() => {
-    // Bloquear botón "Atrás"
-    window.history.pushState(null, '', window.location.href);
-    window.onpopstate = function () {
+    useEffect(() => {
+        // Bloquear botón "Atrás"
         window.history.pushState(null, '', window.location.href);
-    };
-}, []);
+        window.onpopstate = function () {
+            window.history.pushState(null, '', window.location.href);
+        };
+    }, []);
 
-  
+
     useEffect(() => {
         const handlePageShow = (event: PageTransitionEvent) => {
             if (event.persisted) {
@@ -52,6 +52,12 @@ useEffect(() => {
                                 {user.rol === 'admin' && (
                                     <NavLink href={route('users.index')} active={route().current('users.index')}>
                                         Usuarios
+                                    </NavLink>
+                                )}
+
+                                {user.rol === 'arquitecto' && (
+                                    <NavLink href={route('proyectos.index')} active={route().current('proyectos.index')}>
+                                        Proyectos
                                     </NavLink>
                                 )}
 
@@ -148,12 +154,12 @@ useEffect(() => {
                             Dashboard
                         </ResponsiveNavLink>
 
-                        {user.rol === 'admin' && (
+                        {user.rol === 'arquitecto' && (
                             <ResponsiveNavLink
-                                href={route('users.index')}
-                                active={route().current('users.index')}
+                                href={route('proyectos.index')}
+                                active={route().current('proyectos.index')}
                             >
-                                Usuarios
+                                Proyectos
                             </ResponsiveNavLink>
                         )}
 
