@@ -1,80 +1,364 @@
-import { usePage, router } from "@inertiajs/react";
+import { Head, Link, router, usePage } from "@inertiajs/react";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import React, { useEffect, useMemo, useState } from "react";
 
-// Tipo de una notificación
+// Tipos
 type Notificacion = {
-    id: number;
-    mensaje: string;
-    tipo: string;
-    fecha_envio: string;
-    leida: boolean;
+  id: number;
+  mensaje: string;
+  tipo: "tarea" | "reunion" | "avance" | "documento" | string;
+  fecha_envio: string;
+  leida: boolean;
 };
 
-// Extraer tipo real del usuario desde Inertia
 type AuthUser = ReturnType<typeof usePage>["props"]["auth"]["user"];
-
-// Tipo completo de props de la página
 type PageProps = {
-    auth: {
-        user: AuthUser;
-    };
-    notificaciones: Notificacion[];
+  auth: { user: AuthUser };
+  notificaciones: Notificacion[];
 };
+
+// Modal simple y accesible
+function ConfirmModal({
+  open,
+  onClose,
+  onConfirm,
+  title = "Confirmar",
+  message,
+  confirmText = "Confirmar",
+  cancelText = "Cancelar",
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title?: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+}) {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-title"
+    >
+      <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#0B1120] p-5 text-white shadow-2xl">
+        <h3 id="confirm-title" className="mb-2 text-lg font-semibold">
+          {title}
+        </h3>
+        <p className="mb-6 text-sm text-gray-300">{message}</p>
+        <div className="flex items-center justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="rounded-md border border-gray-600 px-4 py-2 text-sm text-gray-200 hover:bg-gray-700"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={onConfirm}
+            className="rounded-md bg-[#B3E10F] px-4 py-2 text-sm font-medium text-black hover:bg-lime-500"
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Index() {
-    const { notificaciones } = usePage<PageProps>().props;
+  const { notificaciones } = usePage<PageProps>().props;
 
-    return (
-        <div className="max-w-4xl mx-auto p-6 text-white">
-            {/* Header con botón de marcar todas */}
-            <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold">Notificaciones</h1>
+  // Filtros + estado UI
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [tipo, setTipo] = useState<"" | "tarea" | "reunion" | "avance" | "documento">("");
+  const [desde, setDesde] = useState<string>("");
+  const [hasta, setHasta] = useState<string>("");
+  const [soloNoLeidas, setSoloNoLeidas] = useState(false);
 
-                {notificaciones.length > 0 && (
-                    <button
-                        className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded"
-                        onClick={() => router.post(route("notificaciones.marcarTodas"))}
-                    >
-                        Marcar todas como leídas
-                    </button>
-                )}
-            </div>
+  // Validaciones de fecha
+  const dateError =
+    desde && hasta && new Date(desde).getTime() > new Date(hasta).getTime()
+      ? "La fecha inicial no puede ser mayor que la final."
+      : "";
 
-            {/* Contenedor de notificaciones */}
-            <div className="bg-gray-800 rounded-lg shadow p-4">
-                {/* Si no hay notificaciones */}
-                {notificaciones.length === 0 ? (
-                    <div className="py-6 text-center text-sm text-gray-400">
-                        No hay notificaciones
-                    </div>
-                ) : (
-                    <ul className="divide-y divide-gray-700">
-                        {notificaciones.map((n) => (
-                            <li key={n.id} className="py-3 flex justify-between items-center">
-                                <div className="flex flex-col">
-                                    <span>{n.mensaje}</span>
-                                    <span className="text-xs text-gray-400">
-                                        {new Date(n.fecha_envio).toLocaleString()}
-                                    </span>
-                                </div>
+  // Filtro aplicado (memoizado)
+  const filtradas = useMemo(() => {
+    let data = [...notificaciones];
 
-                                {/* Acciones */}
-                                {!n.leida ? (
-                                    <button
-                                        className="text-blue-400 hover:text-blue-300 text-sm"
-                                        onClick={() => router.post(route("notificaciones.marcar", n.id))}
-                                    >
-                                        Marcar como leída
-                                    </button>
-                                ) : (
-                                    <span className="text-xs text-gray-500">
-                                        Leída
-                                    </span>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-        </div>
+    if (q.trim()) {
+      const text = q.trim().toLowerCase();
+      data = data.filter((n) => n.mensaje.toLowerCase().includes(text));
+    }
+
+    if (tipo) {
+      data = data.filter((n) => n.tipo === tipo);
+    }
+
+    if (desde) {
+      const d = new Date(desde).getTime();
+      data = data.filter((n) => new Date(n.fecha_envio).getTime() >= d);
+    }
+
+    if (hasta) {
+      // Ajuste para incluir todo el día "hasta"
+      const end = new Date(hasta);
+      end.setHours(23, 59, 59, 999);
+      const t = end.getTime();
+      data = data.filter((n) => new Date(n.fecha_envio).getTime() <= t);
+    }
+
+    if (soloNoLeidas) {
+      data = data.filter((n) => !n.leida);
+    }
+
+    // Orden más reciente primero
+    data.sort(
+      (a, b) =>
+        new Date(b.fecha_envio).getTime() - new Date(a.fecha_envio).getTime()
     );
+
+    return data;
+  }, [notificaciones, q, tipo, desde, hasta, soloNoLeidas]);
+
+  // Modal marcar todas
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const handleMarcarTodas = () => {
+    if (filtradas.length === 0) return;
+    setConfirmOpen(true);
+  };
+
+  const confirmMarcarTodas = () => {
+    setConfirmOpen(false);
+    router.post(route("notificaciones.marcarTodas"));
+  };
+
+  const markAsRead = (id: number) => {
+    router.post(route("notificaciones.marcar", id));
+  };
+
+  // Accesibilidad: cerrar panel con ESC
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && panelOpen) setPanelOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [panelOpen]);
+
+  return (
+    <AuthenticatedLayout
+      header={
+        <h2 className="text-xl font-semibold leading-tight text-white">
+          Notificaciones
+        </h2>
+      }
+    >
+      <Head title="Notificaciones" />
+      <div className="mx-auto max-w-5xl p-6 text-white">
+        {/* Barra superior */}
+        <div className="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPanelOpen((v) => !v)}
+              className="rounded-md border border-gray-600 px-3 py-2 text-sm hover:bg-gray-800"
+              aria-expanded={panelOpen}
+              aria-controls="filtros-panel"
+            >
+              {panelOpen ? "Ocultar filtros" : "Mostrar filtros"}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href={route("dashboard")}
+              className="rounded-md border border-gray-600 px-3 py-2 text-sm hover:bg-gray-800"
+            >
+              Volver al inicio
+            </Link>
+
+            <button
+              onClick={handleMarcarTodas}
+              disabled={filtradas.length === 0}
+              className={`rounded-md px-3 py-2 text-sm font-medium ${
+                filtradas.length === 0
+                  ? "cursor-not-allowed bg-gray-600 text-gray-300"
+                  : "bg-[#B3E10F] text-black hover:bg-lime-500"
+              }`}
+            >
+              Marcar todas como leídas
+            </button>
+          </div>
+        </div>
+
+        {/* Panel de filtros: cerrado por defecto */}
+        <div
+          id="filtros-panel"
+          className={`overflow-hidden rounded-xl border border-white/10 bg-[#0B1120] transition-all duration-300 ${
+            panelOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="flex flex-col">
+              <label className="mb-1 text-xs uppercase tracking-wide text-gray-400">
+                Buscar
+              </label>
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Texto en el mensaje…"
+                className="rounded-md border border-gray-600 bg-[#0B1120] px-3 py-2 text-sm text-gray-200 outline-none focus:border-[#B3E10F]"
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="mb-1 text-xs uppercase tracking-wide text-gray-400">
+                Tipo
+              </label>
+              <select
+                value={tipo}
+                onChange={(e) =>
+                  setTipo(e.target.value as "" | "tarea" | "reunion" | "avance" | "documento")
+                }
+                className="rounded-md border border-gray-600 bg-[#0B1120] px-3 py-2 text-sm text-gray-200 outline-none focus:border-[#B3E10F]"
+              >
+                <option value="">Todos</option>
+                <option value="tarea">Tarea</option>
+                <option value="reunion">Reunión</option>
+                <option value="avance">Avance</option>
+                <option value="documento">Documento</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col">
+              <label className="mb-1 text-xs uppercase tracking-wide text-gray-400">
+                Desde
+              </label>
+              <input
+                type="date"
+                value={desde}
+                max={hasta || undefined}
+                onChange={(e) => setDesde(e.target.value)}
+                className="rounded-md border border-gray-600 bg-[#0B1120] px-3 py-2 text-sm text-gray-200 outline-none focus:border-[#B3E10F]"
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="mb-1 text-xs uppercase tracking-wide text-gray-400">
+                Hasta
+              </label>
+              <input
+                type="date"
+                value={hasta}
+                min={desde || undefined}
+                onChange={(e) => setHasta(e.target.value)}
+                className="rounded-md border border-gray-600 bg-[#0B1120] px-3 py-2 text-sm text-gray-200 outline-none focus:border-[#B3E10F]"
+              />
+            </div>
+
+            <div className="col-span-1 flex items-center sm:col-span-2 lg:col-span-4">
+              <label className="inline-flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={soloNoLeidas}
+                  onChange={(e) => setSoloNoLeidas(e.target.checked)}
+                  className="h-4 w-4 accent-[#B3E10F]"
+                />
+                <span className="text-sm text-gray-200">Solo no leídas</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Errores de validación inline (sin alerts) */}
+          {dateError && (
+            <div className="border-t border-white/10 px-4 pb-4 pt-3">
+              <div className="rounded-md border border-red-800 bg-red-900/30 px-3 py-2 text-sm text-red-200">
+                {dateError}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Contenedor de lista */}
+        <div className="mt-6 rounded-xl border border-white/10 bg-[#0B1120]">
+          {filtradas.length === 0 ? (
+            <div className="p-8 text-center text-sm text-gray-400">
+              No hay notificaciones para los filtros seleccionados.
+            </div>
+          ) : (
+            <ul className="divide-y divide-white/10">
+              {filtradas.map((n) => (
+                <li
+                  key={n.id}
+                  className="flex items-start justify-between gap-4 p-4"
+                >
+                  <div className="min-w-0">
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${
+                          n.tipo === "tarea"
+                            ? "bg-blue-900/40 text-blue-300 border border-blue-700/50"
+                            : n.tipo === "reunion"
+                            ? "bg-purple-900/40 text-purple-300 border border-purple-700/50"
+                            : n.tipo === "avance"
+                            ? "bg-emerald-900/40 text-emerald-300 border border-emerald-700/50"
+                            : n.tipo === "documento"
+                            ? "bg-amber-900/40 text-amber-300 border border-amber-700/50"
+                            : "bg-gray-800 text-gray-300 border border-gray-700"
+                        }`}
+                        title={`Tipo: ${n.tipo}`}
+                      >
+                        {n.tipo}
+                      </span>
+                      {!n.leida && (
+                        <span className="inline-flex items-center rounded-full border border-[#B3E10F]/40 bg-[#B3E10F]/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-[#B3E10F]">
+                          Nueva
+                        </span>
+                      )}
+                    </div>
+                    <div className={`text-sm ${!n.leida ? "font-semibold" : ""}`}>
+                      {n.mensaje}
+                    </div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      {new Date(n.fecha_envio).toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div className="shrink-0">
+                    {!n.leida ? (
+                      <button
+                        onClick={() => markAsRead(n.id)}
+                        className="rounded-md border border-gray-600 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-800"
+                      >
+                        Marcar como leída
+                      </button>
+                    ) : (
+                      <span className="select-none rounded-md border border-gray-700 px-3 py-1.5 text-xs uppercase tracking-wide text-gray-400">
+                        Leída
+                      </span>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* Modal de confirmación */}
+      <ConfirmModal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={confirmMarcarTodas}
+        title="Marcar todas como leídas"
+        message="¿Deseas marcar todas las notificaciones filtradas como leídas? Esta acción no se puede deshacer."
+        confirmText="Sí, marcar todas"
+        cancelText="Cancelar"
+      />
+    </AuthenticatedLayout>
+  );
 }

@@ -119,7 +119,8 @@ export default function Authenticated({
                         </div>
 
                         {/* Botón hamburguesa */}
-                        <div className="-me-2 flex items-center sm:hidden">
+                        <div className="-me-2 flex items-center sm:hidden space-x-2">
+                            <NotificationsBell />
                             <button
                                 onClick={() => setShowingNavigationDropdown(prev => !prev)}
                                 className="inline-flex items-center justify-center rounded-md p-2 text-white transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
@@ -147,6 +148,7 @@ export default function Authenticated({
                                 </svg>
                             </button>
                         </div>
+
                     </div>
                 </div>
 
