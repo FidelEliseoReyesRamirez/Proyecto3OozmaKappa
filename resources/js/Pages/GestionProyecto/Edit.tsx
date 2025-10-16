@@ -4,8 +4,10 @@ import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";
 import PrimaryButton from "@/Components/PrimaryButton";
 import TextInput from "@/Components/TextInput";
-import { Inertia } from "@inertiajs/inertia";
+import { router } from "@inertiajs/react";
+
 import { Link, Head } from "@inertiajs/react";
+
 
 export default function Edit({ proyecto, clientes, responsables }: any) {
     // Campos no editables se inicializan y se usan directamente en FormData
@@ -40,7 +42,7 @@ export default function Edit({ proyecto, clientes, responsables }: any) {
         fd.append("fecha_inicio", fecha_inicio ?? "");
         if (archivoBim) fd.append("archivo_bim", archivoBim);
 
-        Inertia.post(route("proyectos.update", proyecto.id), fd, {
+        router.post(route("proyectos.update", proyecto.id), fd, {
             // No es estrictamente necesario, Inertia/FormData lo maneja, pero se mantiene si es por seguridad
             // headers: { "Content-Type": "multipart/form-data" }, 
             onError: (errs: any) => {
