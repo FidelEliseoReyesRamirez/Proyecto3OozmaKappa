@@ -38,6 +38,6 @@ class Meeting extends Model
      */
     public function project()
     {
-        return $this->belongsTo(Project::class, 'proyecto_id', 'id');
+        return $this->belongsTo(Proyecto::class, 'proyecto_id', 'id');
     }
 }

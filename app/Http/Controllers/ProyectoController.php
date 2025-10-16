@@ -76,6 +76,7 @@ class ProyectoController extends Controller
             'archivo_bim' => 'nullable|file',
         ]);
 
+        // ✅ 1. Crear proyecto
         $proyecto = Proyecto::create([
             'nombre' => $request->nombre,
             'cliente_id' => $request->cliente_id,
@@ -85,13 +86,28 @@ class ProyectoController extends Controller
             'estado' => 'activo',
         ]);
 
+        // ✅ 2. VINCULAR CLIENTE EN TABLA PIVOT
+        $proyecto->users()->syncWithoutDetaching([
+            $request->cliente_id => [
+                'rol_en_proyecto' => 'cliente',
+                'eliminado' => 0
+            ]
+        ]);
 
+        // ✅ 3. VINCULAR RESPONSABLE EN TABLA PIVOT
+        $proyecto->users()->syncWithoutDetaching([
+            $request->responsable_id => [
+                'rol_en_proyecto' => 'responsable',
+                'eliminado' => 0
+            ]
+        ]);
+
+        // ✅ 4. Enviar notificaciones
         NotificationService::send(
             $request->responsable_id,
             "Se te ha asignado el proyecto: {$proyecto->nombre}",
             'tarea'
         );
-
 
         NotificationService::send(
             $request->cliente_id,
@@ -99,7 +115,7 @@ class ProyectoController extends Controller
             'tarea'
         );
 
-
+        // ✅ 5. Subir archivo BIM (opcional)
         if ($request->hasFile('archivo_bim')) {
             $path = $request->file('archivo_bim')->store('planos_bim', 'public');
             PlanoBim::create([
@@ -113,6 +129,7 @@ class ProyectoController extends Controller
 
         return redirect()->route('proyectos.index')->with('success', 'Proyecto creado correctamente.');
     }
+
 
     // -------------------------------------------------------------------------
 

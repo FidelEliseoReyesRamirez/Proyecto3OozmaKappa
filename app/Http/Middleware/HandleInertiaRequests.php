@@ -4,7 +4,8 @@ namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Inertia\Middleware;
-
+use App\Models\Notificacion;
+use Illuminate\Support\Facades\Auth;
 class HandleInertiaRequests extends Middleware
 {
     /**
@@ -34,6 +35,13 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'notificaciones' => Auth::check()
+                ? Notificacion::where('user_id', Auth::id())
+                ->where('leida', 0)
+                ->orderBy('created_at', 'desc')
+                ->take(5)
+                ->get()
+                : [],
         ];
     }
 }

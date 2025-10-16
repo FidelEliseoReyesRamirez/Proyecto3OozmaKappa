@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Documento;
-use App\Models\Project;
+
+use App\Models\Proyecto;
+
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
@@ -39,7 +41,7 @@ class DocController extends Controller
         $documents = $query->orderBy('created_at', 'desc')->get();
 
         // Lista completa de proyectos (para filtros o el formulario de subida)
-        $projectsList = Project::where('eliminado', 0)
+        $projectsList = Proyecto::where('eliminado', 0)
             ->get(['id', 'nombre'])
             ->map(fn($p) => ['id' => $p->id, 'name' => $p->nombre]);
 
@@ -73,7 +75,7 @@ class DocController extends Controller
             return redirect()->route('docs.index')->with('error', 'No tienes permiso para acceder al formulario de subida.');
         }
 
-        $projectsList = Project::where('eliminado', 0)
+        $projectsList = Proyecto::where('eliminado', 0)
             ->get(['id', 'nombre'])
             ->map(fn($p) => ['id' => $p->id, 'name' => $p->nombre]);
 
@@ -140,7 +142,7 @@ class DocController extends Controller
 
             // 4. Obtener TODOS los usuarios del proyecto (no solo el usuario actual)
             // Asegúrate que en tu modelo Proyecto existe la relación users()
-            $projectUsers = \App\Models\Proyecto::find($projectId)
+            $projectUsers = Proyecto::find($projectId)
                 ->users()
                 ->pluck('users.id');
 

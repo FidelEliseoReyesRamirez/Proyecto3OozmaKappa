@@ -8,6 +8,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+use App\Models\Proyecto;
+
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable;
@@ -37,28 +39,21 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Relación: Los proyectos en los que participa el usuario a través de la tabla pivot.
-     * @return BelongsToMany
+     * Relación: proyectos en los que el usuario participa
      */
     public function projects(): BelongsToMany
     {
-        // Obtener la instancia del modelo para acceder al rol del usuario
         $userRole = $this->rol;
 
-        $relation = $this->belongsToMany(Project::class, 'proyectos_usuarios', 'user_id', 'proyecto_id')
-            // Seleccionar explícitamente las columnas para evitar ambigüedad (esto ya lo tenías)
+
+        $relation = $this->belongsToMany(Proyecto::class, 'proyectos_usuarios', 'user_id', 'proyecto_id')
             ->select('proyectos.id', 'proyectos.nombre')
             ->withPivot('rol_en_proyecto', 'eliminado')
             ->wherePivot('eliminado', 0);
 
-        // 🛑 NUEVA RESTRICCIÓN: Si el usuario es un 'cliente', solo trae proyectos donde 
-        // su rol en la tabla pivot es 'cliente'.
         if (strtolower($userRole) === 'cliente') {
             $relation->wherePivot('rol_en_proyecto', 'cliente');
         }
-
-        // Si el usuario no es 'cliente' (ej: 'arquitecto', 'ingeniero'), traerá todos
-        // los proyectos asignados, independientemente de su rol_en_proyecto.
 
         return $relation;
     }
@@ -67,7 +62,10 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         $this->notify(new \App\Notifications\CustomVerifyEmail);
     }
-    //función para notificaciones
+
+    /**
+     * Relación: notificaciones del usuario
+     */
     public function notificaciones()
     {
         return $this->hasMany(Notificacion::class, 'user_id')

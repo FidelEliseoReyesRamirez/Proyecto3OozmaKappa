@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Meeting;
 use App\Models\User;
-use App\Models\Project;
+use App\Models\Proyecto;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -69,7 +69,7 @@ class MeetingController extends Controller
             return ['id' => $u->id, 'name' => "{$u->name} {$u->apellido}"];
         });
 
-        $projectsList = Project::where('eliminado', 0)
+        $projectsList = Proyecto::where('eliminado', 0)
             ->where('estado', '!=', 'finalizado')
             ->get(['id', 'nombre'])
             ->map(fn($p) => ['id' => $p->id, 'name' => $p->nombre]);

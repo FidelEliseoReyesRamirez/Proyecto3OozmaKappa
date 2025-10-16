@@ -22,21 +22,26 @@ export function useNotifications() {
     const { notificaciones = [] } = usePage<PageProps>().props;
 
     const [open, setOpen] = useState(false);
-    const [prevCount, setPrevCount] = useState(notificaciones.length);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const hasUnread = notificaciones.length > 0;
 
-    // ✅ Sonido cuando llega una nueva notificación
+    // Detectar nueva notificación (comparando con localStorage)
     useEffect(() => {
-        if (notificaciones.length > prevCount) {
+        if (notificaciones.length === 0) return;
+
+        const newestId = notificaciones[0].id;
+        const lastSeenId = localStorage.getItem("last_notification_id");
+
+        if (lastSeenId && parseInt(lastSeenId) !== newestId) {
             const audio = new Audio("/sounds/notification.mp3");
             audio.play();
         }
-        setPrevCount(notificaciones.length);
+
+        localStorage.setItem("last_notification_id", newestId.toString());
     }, [notificaciones]);
 
-    // ✅ Cerrar dropdown al hacer click fuera
+    // Cerrar dropdown al hacer click fuera
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (
@@ -56,20 +61,16 @@ export function useNotifications() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [open]);
 
-    // ✅ Alternar dropdown
-    const toggleDropdown = () => setOpen((prev) => !prev);
+    const toggleDropdown = () => setOpen(prev => !prev);
 
-    // ✅ Marcar una notificación como leída
     const markAsRead = (id: number) => {
         router.post(route("notificaciones.marcar", id));
     };
 
-    // ✅ Marcar todas como leídas
     const markAllAsRead = () => {
         router.post(route("notificaciones.marcarTodas"));
     };
 
-    // ✅ (Opcional para futuro) formatear fecha relativa
     const timeAgo = (date: string) => {
         const diff = (new Date().getTime() - new Date(date).getTime()) / 1000;
         if (diff < 60) return "Hace unos segundos";
@@ -78,7 +79,6 @@ export function useNotifications() {
         return new Date(date).toLocaleDateString();
     };
 
-    // ✅ (Opcional futuro PRO) Ícono según tipo
     const getIcon = (tipo: Notificacion["tipo"]) => {
         switch (tipo) {
             case "tarea":
@@ -96,8 +96,8 @@ export function useNotifications() {
 
     return {
         notificaciones,
-        open,
         hasUnread,
+        open,
         dropdownRef,
         toggleDropdown,
         markAsRead,

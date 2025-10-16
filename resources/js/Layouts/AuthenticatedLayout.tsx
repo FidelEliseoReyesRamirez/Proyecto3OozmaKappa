@@ -6,20 +6,24 @@ import { Link, usePage } from '@inertiajs/react';
 import { PropsWithChildren, ReactNode, useState, useEffect } from 'react';
 import NotificationsBell from '@/Components/NotificationsBell';
 
+import { useNotifications } from "@/Hooks/useNotifications";
+
 export default function Authenticated({
     header,
     children,
 }: PropsWithChildren<{ header?: ReactNode }>) {
+
+    const { notificaciones, hasUnread } = useNotifications();
     const user = usePage().props.auth.user;
+
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
+
     useEffect(() => {
-        // Bloquear botón "Atrás"
         window.history.pushState(null, '', window.location.href);
         window.onpopstate = function () {
             window.history.pushState(null, '', window.location.href);
         };
     }, []);
-
 
     useEffect(() => {
         const handlePageShow = (event: PageTransitionEvent) => {
@@ -36,7 +40,7 @@ export default function Authenticated({
             <nav className="bg-[#121212]">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 justify-between">
-                        <div className="flex ">
+                        <div className="flex">
                             {/* Logo */}
                             <div className="flex shrink-0 items-center">
                                 <Link href="/">
@@ -45,7 +49,7 @@ export default function Authenticated({
                             </div>
 
                             {/* Navegación principal */}
-                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex ">
+                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                                 <NavLink href={route('dashboard')} active={route().current('dashboard')}>
                                     Dashboard
                                 </NavLink>
@@ -69,11 +73,10 @@ export default function Authenticated({
                                 </NavLink>
                             </div>
                         </div>
-                       
 
-                        {/* Dropdown usuario */}
+                        {/* Notificaciones + Usuario */}
                         <div className="hidden sm:ms-6 sm:flex sm:items-center">
-                             <NotificationsBell />
+                            <NotificationsBell />
                             <div className="relative ms-3">
                                 <Dropdown>
                                     <Dropdown.Trigger>
@@ -118,9 +121,7 @@ export default function Authenticated({
                         {/* Botón hamburguesa */}
                         <div className="-me-2 flex items-center sm:hidden">
                             <button
-                                onClick={() =>
-                                    setShowingNavigationDropdown((prev) => !prev)
-                                }
+                                onClick={() => setShowingNavigationDropdown(prev => !prev)}
                                 className="inline-flex items-center justify-center rounded-md p-2 text-white transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
                             >
                                 <svg
@@ -152,28 +153,19 @@ export default function Authenticated({
                 {/* Menú responsive */}
                 <div className={(showingNavigationDropdown ? 'block' : 'hidden') + ' sm:hidden'}>
                     <div className="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink
-                            href={route('dashboard')}
-                            active={route().current('dashboard')}
-                        >
+                        <ResponsiveNavLink href={route('dashboard')} active={route().current('dashboard')}>
                             Dashboard
                         </ResponsiveNavLink>
 
-                        <ResponsiveNavLink
-                            href={route('proyectos.index')}
-                            active={route().current('proyectos.index')}>
+                        <ResponsiveNavLink href={route('proyectos.index')} active={route().current('proyectos.index')}>
                             Proyectos
                         </ResponsiveNavLink>
 
-                        <ResponsiveNavLink
-                            href={route('calendar')}
-                            active={route().current('calendar')}>
+                        <ResponsiveNavLink href={route('calendar')} active={route().current('calendar')}>
                             Calendario
                         </ResponsiveNavLink>
 
-                        <ResponsiveNavLink
-                            href={route('docs.index')}
-                            active={route().current('docs.index')}>
+                        <ResponsiveNavLink href={route('docs.index')} active={route().current('docs.index')}>
                             Documentos
                         </ResponsiveNavLink>
                     </div>
@@ -192,11 +184,7 @@ export default function Authenticated({
                             <ResponsiveNavLink href={route('profile.edit')}>
                                 Perfil
                             </ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                method="post"
-                                href={route('logout')}
-                                as="button"
-                            >
+                            <ResponsiveNavLink method="post" href={route('logout')} as="button">
                                 Cerrar sesión
                             </ResponsiveNavLink>
                         </div>

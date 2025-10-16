@@ -5,8 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
-// 🛑 CORRECCIÓN: Agregar import del modelo User
 use App\Models\User; 
 
 class Documento extends Model
@@ -55,7 +53,7 @@ class Documento extends Model
     public function project(): BelongsTo
     {
         // Asumiendo que tu modelo de proyectos se llama Project
-        return $this->belongsTo(Project::class, 'proyecto_id');
+        return $this->belongsTo(Proyecto::class, 'proyecto_id');
     }
 
     /**
