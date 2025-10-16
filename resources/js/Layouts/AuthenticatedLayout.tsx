@@ -71,6 +71,12 @@ export default function Authenticated({
                                 <NavLink href={route('docs.index')} active={route().current('docs.index')}>
                                     Documentos
                                 </NavLink>
+
+                                {user.rol === 'cliente' && (
+                                    <NavLink href={route('avances.index')} active={route().current('avances.index')}>
+                                        Avances Proyecto
+                                    </NavLink>
+                                )}
                             </div>
                         </div>
 
@@ -170,6 +176,15 @@ export default function Authenticated({
                         <ResponsiveNavLink href={route('docs.index')} active={route().current('docs.index')}>
                             Documentos
                         </ResponsiveNavLink>
+
+                        {user.rol === 'cliente' && (
+                            <ResponsiveNavLink 
+                                href={route('avances.index')} 
+                                active={route().current('avances.index')}
+                            >
+                                Avances Proyecto
+                            </ResponsiveNavLink>
+                        )}
                     </div>
 
                     <div className="border-t border-gray-200 pb-1 pt-4">

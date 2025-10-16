@@ -52,7 +52,6 @@ export default function CalendarIndex({ meetings: initialMeetings, usersList, pr
     const [showModal, setShowModal] = useState<boolean>(false);
     const [modalData, setModalData] = useState<FormData | null>(null);
 
-    // Mapeamos las fechas a objetos Date para react-big-calendar
     const meetings = initialMeetings.map(m => ({
         ...m,
         start: typeof m.start === 'string' ? new Date(m.start) : m.start,

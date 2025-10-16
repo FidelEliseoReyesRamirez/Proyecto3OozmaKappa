@@ -20,7 +20,7 @@ export default function UsersIndex() {
             return;
         }
 
-        if (auth.user.id === id && rol === 'admin') {
+        if (auth.user.id === id && rol === 'admin' && (modal.type === 'estado' || modal.type === 'eliminar')) {
             setModal({ type: 'errorSelf', user: modal.user });
             return;
         }
@@ -37,17 +37,19 @@ export default function UsersIndex() {
     };
 
     return (
-        <AuthenticatedLayout header={<h2 className="text-xl font-semibold leading-tight text-white">Usuarios</h2>}>
+        <AuthenticatedLayout 
+            header={<h2 className="text-xl font-extrabold leading-tight text-[#B3E10F] tracking-wider">GESTIÓN DE USUARIOS</h2>}
+        >
             <Head title="Usuarios" />
 
             <div className="py-6 max-w-7xl mx-auto sm:px-4 lg:px-8">
-                <div className="bg-black p-4 sm:p-6 shadow-2xl rounded-xl border border-gray-800">
-                    <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
-                        <h3 className="font-bold text-lg text-white">Lista de usuarios</h3>
+                <div className="bg-[#0B1120] p-4 sm:p-6 shadow-2xl rounded-xl border border-gray-800/80">
+                    <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2 border-b border-gray-700 pb-4">
+                        <h3 className="font-bold text-2xl text-white">Lista de Usuarios Activos</h3>
                         <div className="flex gap-2">
                             <Link 
                                 href={route('users.create')} 
-                                className="bg-[#2970E8] text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-150 text-sm font-semibold shadow-md"
+                                className="bg-[#2970E8] text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-150 text-sm font-semibold shadow-md shadow-[#2970E8]/30"
                             >
                                 Crear nuevo usuario
                             </Link>
@@ -60,10 +62,10 @@ export default function UsersIndex() {
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto bg-gray-900 border border-gray-700 rounded-lg">
+                    <div className="overflow-x-auto bg-[#080D15] border border-gray-700 rounded-lg">
                         <table className="w-full border-collapse text-sm text-gray-200">
                             <thead>
-                                <tr className="bg-[#2970E8] text-white text-center shadow-lg">
+                                <tr className="bg-[#2970E8] text-white text-center shadow-lg shadow-[#2970E8]/20">
                                     <th className="p-3 border border-blue-700">Nombre</th>
                                     <th className="p-3 border border-blue-700">Correo</th>
                                     <th className="p-3 border border-blue-700">Celular</th>
@@ -76,16 +78,16 @@ export default function UsersIndex() {
                                 {usuarios.map((u: any) => (
                                     <tr 
                                         key={u.id} 
-                                        className="text-center bg-gray-900 hover:bg-gray-800 transition duration-150"
+                                        className="text-center bg-[#080D15] hover:bg-gray-800/70 transition duration-150 border-t border-gray-800"
                                     >
-                                        <td className="p-2 border border-gray-800">{u.name} {u.apellido}</td>
-                                        <td className="p-2 border border-gray-800">{u.email}</td>
-                                         <td className="p-2 border border-gray-800">{u.telefono}</td>
+                                        <td className="p-2 border border-gray-800 font-semibold">{u.name} {u.apellido}</td>
+                                        <td className="p-2 border border-gray-800 text-gray-400 font-mono text-xs">{u.email}</td>
+                                        <td className="p-2 border border-gray-800 text-gray-500">{u.telefono}</td>
                                         <td className="p-2 border border-gray-800">
                                             <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
                                                 u.rol === 'admin' ? 'bg-red-800 text-red-100' : 
                                                 u.rol === 'cliente' ? 'bg-[#B3E10F]/20 text-[#B3E10F]' :
-                                                'bg-indigo-800 text-indigo-100' 
+                                                'bg-[#2970E8]/30 text-[#2970E8]' 
                                             }`}>
                                                 {u.rol}
                                             </span>
@@ -100,7 +102,7 @@ export default function UsersIndex() {
                                         <td className="p-2 border border-gray-800 space-x-1 sm:space-x-2">
                                             <Link 
                                                 href={route('users.edit', u.id)} 
-                                                className="bg-[#B3E10F] text-black px-2 py-1 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-medium"
+                                                className="bg-[#B3E10F] text-gray-900 px-2 py-1 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-bold shadow-md shadow-[#B3E10F]/30"
                                             >
                                                 Editar
                                             </Link>
@@ -125,15 +127,15 @@ export default function UsersIndex() {
                         </table>
                     </div>
                 </div>
-                {/* Modal de Confirmación Genérica */}
+
                 {modal.type && modal.type !== 'error' && modal.type !== 'errorSelf' && (
-                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
-                        <div className="bg-gray-900 rounded-xl shadow-2xl max-w-md w-full p-6 text-white border border-gray-700">
-                            <h2 className="text-xl font-bold mb-4 text-[#2970E8]">
-                                {modal.type === 'estado' ? 'Cambiar estado' : 'Eliminar usuario'}
+                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-50">
+                        <div className="bg-[#0B1120] rounded-xl shadow-2xl max-w-md w-full p-6 text-white border border-gray-700">
+                            <h2 className="text-xl font-bold mb-4 text-[#B3E10F]">
+                                {modal.type === 'estado' ? 'Cambiar Estado' : 'Confirmar Eliminación'}
                             </h2>
                             <p className="mb-6 text-gray-300">
-                                ¿Seguro que deseas {modal.type === 'estado' ? 'cambiar el estado de' : 'eliminar'} <strong className="text-white">{modal.user?.email}</strong>?
+                                ¿Seguro que deseas {modal.type === 'estado' ? 'cambiar el estado de' : 'eliminar'} <strong className="text-[#B3E10F]">{modal.user?.email}</strong>?
                             </p>
                             <div className="flex justify-end gap-3">
                                 <button 
@@ -144,7 +146,7 @@ export default function UsersIndex() {
                                 </button>
                                 <button 
                                     onClick={confirmAction} 
-                                    className="px-4 py-2 bg-[#2970E8] text-white rounded-lg hover:bg-blue-600 transition duration-150 font-semibold"
+                                    className="px-4 py-2 bg-[#2970E8] text-white rounded-lg hover:bg-blue-600 transition duration-150 font-semibold shadow-md shadow-[#2970E8]/30"
                                 >
                                     Confirmar
                                 </button>
@@ -153,12 +155,13 @@ export default function UsersIndex() {
                     </div>
                 )}
 
-                {/* Modal de Error: Último Administrador */}
                 {modal.type === 'error' && (
-                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
-                        <div className="bg-gray-900 rounded-xl shadow-2xl max-w-md w-full p-6 text-white border border-red-700">
+                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-50">
+                        <div className="bg-[#0B1120] rounded-xl shadow-2xl max-w-md w-full p-6 text-white border border-red-700">
                             <h2 className="text-xl font-bold mb-4 text-red-500">Acción no permitida</h2>
-                            <p className="mb-6 text-gray-300">No se puede eliminar o desactivar al último administrador activo.</p>
+                            <p className="mb-6 text-gray-300">
+                                No se puede eliminar o desactivar al **último administrador activo** restante.
+                            </p>
                             <div className="flex justify-end">
                                 <button 
                                     onClick={closeModal} 
@@ -171,12 +174,13 @@ export default function UsersIndex() {
                     </div>
                 )}
 
-                {/* Modal de Error: Auto-Desactivación/Eliminación */}
                 {modal.type === 'errorSelf' && (
-                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
-                        <div className="bg-gray-900 rounded-xl shadow-2xl max-w-md w-full p-6 text-white border border-red-700">
-                            <h2 className="text-xl font-bold mb-4 text-red-500">Acción no permitida</h2>
-                            <p className="mb-6 text-gray-300">No puedes desactivar ni eliminar tu propio usuario de administrador.</p>
+                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-50">
+                        <div className="bg-[#0B1120] rounded-xl shadow-2xl max-w-md w-full p-6 text-white border border-red-700">
+                            <h2 className="text-xl font-bold mb-4 text-red-500">Error de Seguridad</h2>
+                            <p className="mb-6 text-gray-300">
+                                No puedes desactivar ni eliminar tu **propio usuario de administrador** mientras estás conectado.
+                            </p>
                             <div className="flex justify-end">
                                 <button 
                                     onClick={closeModal} 

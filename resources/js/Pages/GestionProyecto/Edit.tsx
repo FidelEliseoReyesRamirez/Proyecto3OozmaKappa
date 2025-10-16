@@ -10,19 +10,16 @@ import { Link, Head } from "@inertiajs/react";
 
 
 export default function Edit({ proyecto, clientes, responsables }: any) {
-    // Campos no editables se inicializan y se usan directamente en FormData
     const nombre = proyecto.nombre || "";
     const cliente_id = String(proyecto.cliente_id ?? "");
     const fecha_inicio = proyecto.fecha_inicio || "";
 
-    // Campos editables usan useState
     const [descripcion, setDescripcion] = useState(proyecto.descripcion || "");
     const [responsable_id, setResponsableId] = useState(String(proyecto.responsable_id ?? ""));
     const [archivoBim, setArchivoBim] = useState<File | null>(null);
     const [errors, setErrors] = useState<any>({});
     const [processing, setProcessing] = useState(false);
 
-    // Estilos consistentes para select y textarea
     const inputFieldStyles = "mt-1 block w-full bg-gray-900 border border-gray-700 text-gray-200 rounded-lg shadow-inner focus:border-[#2970E8] focus:ring-[#2970E8] transition duration-200 ease-in-out placeholder-gray-500";
 
 
@@ -32,9 +29,7 @@ export default function Edit({ proyecto, clientes, responsables }: any) {
         setErrors({});
 
         const fd = new FormData();
-        // Laravel espera PATCH para update
         fd.append("_method", "PATCH");
-        // Enviamos todos los datos requeridos por la validación del controlador
         fd.append("nombre", nombre);
         fd.append("descripcion", descripcion ?? "");
         fd.append("cliente_id", cliente_id);
@@ -43,8 +38,6 @@ export default function Edit({ proyecto, clientes, responsables }: any) {
         if (archivoBim) fd.append("archivo_bim", archivoBim);
 
         router.post(route("proyectos.update", proyecto.id), fd, {
-            // No es estrictamente necesario, Inertia/FormData lo maneja, pero se mantiene si es por seguridad
-            // headers: { "Content-Type": "multipart/form-data" }, 
             onError: (errs: any) => {
                 setErrors(errs);
                 setProcessing(false);
@@ -54,7 +47,6 @@ export default function Edit({ proyecto, clientes, responsables }: any) {
     };
 
     return (
-        // Contenedor principal con fondo muy oscuro (Develarq)
         <section className="flex justify-center items-center py-12 px-4 min-h-screen bg-gray-950">
             <Head title="DEVELARQ | Editar Proyecto" />
             {/* Contenedor del formulario */}
@@ -112,10 +104,6 @@ export default function Edit({ proyecto, clientes, responsables }: any) {
                             />
                         </div>
                     </div>
-
-
-                    {/* Sección Editable */}
-
                     {/* Descripción */}
                     <div>
                         <InputLabel htmlFor="descripcion" value="Descripción (Editable)" className="text-gray-200 font-semibold" />
@@ -156,7 +144,6 @@ export default function Edit({ proyecto, clientes, responsables }: any) {
                             id="archivo_bim"
                             type="file"
                             accept=".bim,.ifc"
-                            // Estilo de botón de archivo con color primario
                             className="mt-1 block w-full text-sm text-gray-300
                                 file:mr-4 file:py-2 file:px-4
                                 file:rounded-full file:border-0

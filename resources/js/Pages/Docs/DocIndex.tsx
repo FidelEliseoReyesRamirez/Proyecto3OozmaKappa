@@ -48,6 +48,27 @@ const DocIndex: React.FC = () => {
     const handleCreateClick = () => {
         router.get(route('docs.create')); 
     };
+    const formatDate = (dateString: string) => {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            
+            if (isNaN(date.getTime())) {
+                return dateString; 
+            }
+            return date.toLocaleTimeString('es-ES', {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+            }).replace(',', ''); 
+
+        } catch (error) {
+            console.error("Error al formatear la fecha:", error);
+            return dateString; 
+        }
+    };
 
     return (
         <AuthenticatedLayout>
@@ -55,57 +76,58 @@ const DocIndex: React.FC = () => {
 
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                    <div className="bg-[#0B1120] overflow-hidden shadow-2xl sm:rounded-xl p-8 border border-gray-800/80">
                         
-                        <div className="flex justify-between items-center mb-6">
-                            <h1 className="text-2xl font-bold text-gray-800">
-                                Documentos
+                        <div className="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+                            <h1 className="text-3xl font-extrabold text-white tracking-wider">
+                                BIBLIOTECA DE DOCUMENTOS
                             </h1>
                             
                             {isInternalUser && (
                                 <button
                                     onClick={handleCreateClick}
-                                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-150"
+                                    className="bg-[#B3E10F] hover:bg-lime-500 text-gray-900 font-bold py-2 px-4 rounded-lg transition duration-150 shadow-md shadow-[#B3E10F]/30"
                                 >
-                                    Subir Nuevo Documento
+                                    <span className="hidden sm:inline">Subir Nuevo </span> Documento
                                 </button>
                             )}
                         </div>
+                        
                         {documents.length > 0 ? (
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
+                            <div className="overflow-x-auto border border-gray-800 rounded-lg">
+                                <table className="min-w-full divide-y divide-gray-800">
+                                    <thead className="bg-gray-900">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Título</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proyecto</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Subida</th>
-                                            <th className="relative px-6 py-3">Acciones</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Título</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Descripción</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Proyecto</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Ext.</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Fecha Subida</th>
+                                            <th className="relative px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
+                                    <tbody className="bg-[#080D15] divide-y divide-gray-800/50">
                                         {documents.map((doc) => (
-                                            <tr key={doc.id} className="hover:bg-gray-50">
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                            <tr key={doc.id} className="hover:bg-gray-800/50 transition duration-150">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-[#2970E8]">
                                                     {doc.titulo}
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                                                    {doc.descripcion || 'Sin descripción'}
+                                                <td className="px-6 py-4 text-sm text-gray-400 max-w-xs truncate">
+                                                    {doc.descripcion || '—'}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#B3E10F]">
                                                     {doc.proyecto_nombre}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {doc.extension || 'N/A'}
+                                                <td className="px-6 py-4 whitespace-nowrap text-xs font-mono text-gray-500">
+                                                    .{doc.extension || 'N/A'}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {doc.fecha_subida}
+                                                    {formatDate(doc.fecha_subida)}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                     <button
                                                         onClick={() => handleDownload(doc)}
-                                                        className="text-indigo-600 hover:text-indigo-900 mr-4"
+                                                        className="text-[#2970E8] hover:text-indigo-400 font-medium transition duration-150 mr-4 border-b border-transparent hover:border-[#2970E8]"
                                                     >
                                                         Descargar
                                                     </button>
@@ -113,7 +135,7 @@ const DocIndex: React.FC = () => {
                                                     {isInternalUser && (
                                                         <button
                                                             onClick={() => handleDelete(doc.id)}
-                                                            className="text-red-600 hover:text-red-900"
+                                                            className="text-red-600 hover:text-red-400 transition duration-150 border-b border-transparent hover:border-red-600"
                                                         >
                                                             Eliminar
                                                         </button>
@@ -125,7 +147,7 @@ const DocIndex: React.FC = () => {
                                 </table>
                             </div>
                         ) : (
-                            <p className="text-gray-500 text-center py-10">
+                            <p className="text-gray-500 text-center py-10 italic">
                                 No se encontraron documentos asociados a tus proyectos.
                             </p>
                         )}
