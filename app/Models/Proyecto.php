@@ -28,4 +28,10 @@ class Proyecto extends Model
     {
         return $this->hasMany(PlanoBim::class, 'proyecto_id');
     }
+    public function users()
+{
+    return $this->belongsToMany(User::class, 'proyectos_usuarios', 'proyecto_id', 'user_id')
+        ->wherePivot('eliminado', 0);
+}
+
 }

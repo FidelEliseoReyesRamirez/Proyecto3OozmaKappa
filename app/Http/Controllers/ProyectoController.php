@@ -11,6 +11,7 @@ use App\Models\ProyectoVersion;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use App\Services\NotificationService;
 
 class ProyectoController extends Controller
 {
@@ -28,18 +29,18 @@ class ProyectoController extends Controller
         if ($userRole === 'cliente') {
             $query->where('cliente_id', $user->id);
         }
-        
+
         // Los otros roles (admin, arquitecto, ingeniero) ven todos los proyectos por defecto.
         $proyectos = $query->get();
-        
+
         return Inertia::render('GestionProyecto/Index', [
             'proyectos' => $proyectos,
             // Opcional: Pasar el rol para que el frontend pueda ocultar botones de edición/creación
-            'userRole' => $userRole, 
+            'userRole' => $userRole,
         ]);
     }
 
-// -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
     public function create()
     {
@@ -49,7 +50,7 @@ class ProyectoController extends Controller
         }
 
         $clientes = User::where('rol', 'cliente')->get();
-        $responsables = User::whereIn('rol', ['arquitecto', 'ingeniero','admin'])->get();
+        $responsables = User::whereIn('rol', ['arquitecto', 'ingeniero', 'admin'])->get();
 
         return Inertia::render('GestionProyecto/Form', [
             'clientes' => $clientes,
@@ -57,7 +58,7 @@ class ProyectoController extends Controller
         ]);
     }
 
-// -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
     public function store(Request $request)
     {
@@ -65,7 +66,7 @@ class ProyectoController extends Controller
         if (strtolower(Auth::user()->rol) === 'cliente') {
             return redirect()->route('proyectos.index')->with('error', 'No tienes permiso para almacenar proyectos.');
         }
-        
+
         $request->validate([
             'nombre' => 'required|string|max:150|unique:proyectos,nombre',
             'cliente_id' => 'required|exists:users,id',
@@ -84,6 +85,21 @@ class ProyectoController extends Controller
             'estado' => 'activo',
         ]);
 
+
+        NotificationService::send(
+            $request->responsable_id,
+            "Se te ha asignado el proyecto: {$proyecto->nombre}",
+            'tarea'
+        );
+
+
+        NotificationService::send(
+            $request->cliente_id,
+            "Tu proyecto '{$proyecto->nombre}' ha sido creado.",
+            'tarea'
+        );
+
+
         if ($request->hasFile('archivo_bim')) {
             $path = $request->file('archivo_bim')->store('planos_bim', 'public');
             PlanoBim::create([
@@ -98,7 +114,7 @@ class ProyectoController extends Controller
         return redirect()->route('proyectos.index')->with('success', 'Proyecto creado correctamente.');
     }
 
-// -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
     public function edit($id)
     {
@@ -109,7 +125,7 @@ class ProyectoController extends Controller
 
         $proyecto = Proyecto::with('cliente', 'responsable')->findOrFail($id);
         $clientes = User::where('rol', 'cliente')->get();
-        $responsables = User::whereIn('rol', ['arquitecto', 'ingeniero','admin'])->get();
+        $responsables = User::whereIn('rol', ['arquitecto', 'ingeniero', 'admin'])->get();
 
         return Inertia::render('GestionProyecto/Edit', [
             'proyecto' => $proyecto,
@@ -118,7 +134,7 @@ class ProyectoController extends Controller
         ]);
     }
 
-// -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
     public function update(Request $request, $id)
     {
@@ -126,7 +142,7 @@ class ProyectoController extends Controller
         if (strtolower(Auth::user()->rol) === 'cliente') {
             abort(403, 'No tienes permiso para actualizar proyectos.');
         }
-        
+
         $proyecto = Proyecto::findOrFail($id);
 
         $validated = $request->validate([
@@ -179,11 +195,15 @@ class ProyectoController extends Controller
                 'subido_por' => Auth::id(),
             ]);
         }
-
+        NotificationService::send(
+            $proyecto->responsable_id,
+            "El proyecto '{$proyecto->nombre}' ha sido actualizado.",
+            'avance'
+        );
         return redirect()->route('proyectos.index')->with('success', 'Se ha creado una nueva versión del proyecto.');
     }
 
-// -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
     public function versiones($id)
     {
@@ -199,7 +219,7 @@ class ProyectoController extends Controller
             ->get();
 
         $versionesBim = PlanoBim::where('proyecto_id', $id)
-            ->with('subidoPor') 
+            ->with('subidoPor')
             ->orderByDesc('created_at')
             ->get();
 
@@ -210,7 +230,7 @@ class ProyectoController extends Controller
         ]);
     }
 
-// -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
     public function cambiarEstado(Request $request, $id)
     {
@@ -218,7 +238,7 @@ class ProyectoController extends Controller
         if (strtolower(Auth::user()->rol) === 'cliente') {
             abort(403, 'No tienes permiso para cambiar el estado de los proyectos.');
         }
-        
+
         $request->validate([
             'estado' => 'required|in:activo,en progreso,finalizado',
         ]);

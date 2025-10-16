@@ -8,6 +8,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\ProyectoController;
 use App\Http\Controllers\DocController;
+use App\Http\Controllers\NotificacionController;
 
 
 Route::get('/', function () {
@@ -34,7 +35,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('meetings', MeetingController::class)
         ->only(['store', 'update', 'destroy']);
     // Documentos
-    Route::get('/docs', [DocController::class, 'index'])->name('docs.index'); 
+    Route::get('/docs', [DocController::class, 'index'])->name('docs.index');
     Route::get('/docs/create', [DocController::class, 'create'])->name('docs.create');
     Route::post('/docs', [DocController::class, 'store'])->name('docs.store');
     Route::get('/docs/download/{documento}', [DocController::class, 'download'])->name('docs.download');
@@ -45,7 +46,6 @@ Route::middleware('auth')->group(function () {
         ->name('proyectos.versiones');
     Route::patch('/proyectos/{id}/estado', [ProyectoController::class, 'cambiarEstado'])
         ->name('proyectos.cambiarEstado');
-    
 });
 
 //  solo los admins pueden ver y gestionar usuarios
@@ -85,4 +85,15 @@ Route::fallback(function () {
         'title' => 'Página no encontrada',
         'message' => 'La página que buscas no existe.',
     ])->toResponse(request())->setStatusCode(404);
+});
+
+
+//rutas para notificaciones
+Route::middleware(['auth'])->group(function () {
+    Route::get('/notificaciones', [NotificacionController::class, 'index'])->name('notificaciones.index');
+    Route::post('/notificaciones/{id}/leida', [NotificacionController::class, 'marcarComoLeida'])
+        ->name('notificaciones.marcar');
+
+    Route::post('/notificaciones/leidas/todas', [NotificacionController::class, 'marcarTodasComoLeidas'])
+        ->name('notificaciones.marcarTodas');
 });

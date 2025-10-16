@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use App\Services\NotificationService;
 
 class DocController extends Controller
 {
@@ -17,16 +18,16 @@ class DocController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $userRole = strtolower($user->rol); 
+        $userRole = strtolower($user->rol);
 
         $query = Documento::query()->where('eliminado', 0)->with(['project:id,nombre']);
 
         // Aplicar restricción de visibilidad si el usuario NO es 'admin'
-        if ($userRole !== 'admin') { 
-            
+        if ($userRole !== 'admin') {
+
             // CRUCIAL: Obtener los IDs de proyecto a los que el usuario está asociado (excluyendo eliminados).
-            $projectIds = $user->projects->pluck('id'); 
-            
+            $projectIds = $user->projects->pluck('id');
+
             if ($projectIds->isNotEmpty()) {
                 $query->whereIn('proyecto_id', $projectIds);
             } else {
@@ -34,7 +35,7 @@ class DocController extends Controller
                 $query->whereRaw('1 = 0');
             }
         }
-        
+
         $documents = $query->orderBy('created_at', 'desc')->get();
 
         // Lista completa de proyectos (para filtros o el formulario de subida)
@@ -49,22 +50,22 @@ class DocController extends Controller
 
                 return [
                     'id' => $doc->id,
-                    'titulo' => $doc->nombre, 
+                    'titulo' => $doc->nombre,
                     'descripcion' => $doc->descripcion,
                     'archivo_url' => $downloadUrl,
-                    'tipo' => $doc->tipo, 
+                    'tipo' => $doc->tipo,
                     'extension' => strtoupper($extension),
-                    'fecha_subida' => $doc->created_at->format('d/m/Y H:i'), 
+                    'fecha_subida' => $doc->created_at->format('d/m/Y H:i'),
                     'proyecto_id' => $doc->proyecto_id,
                     'proyecto_nombre' => $doc->project->nombre ?? 'N/A',
                 ];
             }),
             'projectsList' => $projectsList,
-            'userRole' => $userRole, 
+            'userRole' => $userRole,
         ]);
     }
 
-// -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
     public function create(Request $request)
     {
@@ -81,7 +82,7 @@ class DocController extends Controller
         ]);
     }
 
-// -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
     /**
      * Almacena un nuevo documento y asegura que el usuario esté vinculado al proyecto.
@@ -102,58 +103,73 @@ class DocController extends Controller
             'archivo' => 'required|file|max:10240',
             'archivo_tipo' => ['required', Rule::in(['PDF', 'Excel', 'Word'])],
         ]);
-        
+
         $file = $request->file('archivo');
         $fileType = $validated['archivo_tipo'];
         $ruta_archivo_almacenada = null;
         $projectId = $validated['proyecto_id'];
-        
+
         try {
-            // 1. Guardar el archivo en el disco
-            $ruta_archivo_almacenada = $file->store('documents'); 
-            
-            // 2. LÓGICA CLAVE: ASIGNAR USUARIO AL PROYECTO (para que el usuario vea el documento)
+            // 1. Guardar el archivo
+            $ruta_archivo_almacenada = $file->store('documents');
+
+            // 2. Asegurar que el usuario esté vinculado al proyecto (si no es admin)
             if ($userRole !== 'admin') {
                 try {
-                    // Esto inserta o actualiza la fila en proyectos_usuarios si no existe.
                     $user->projects()->syncWithoutDetaching([
                         $projectId => [
-                            'rol_en_proyecto' => $userRole, 
+                            'rol_en_proyecto' => $userRole,
                             'eliminado' => 0
                         ]
                     ]);
                 } catch (\Exception $e) {
-                    // Si el problema es de BD (ej. el campo rol_en_proyecto es demasiado corto),
-                    // lo registramos, pero dejamos que la subida del documento continúe.
+                    // ignoramos si ya estaba vinculado
                 }
             }
-            
-            // 3. Crear el registro del Documento
-            Documento::create([
+
+            // 3. Crear el documento
+            $documento = Documento::create([
                 'proyecto_id' => $projectId,
-                'nombre' => $validated['titulo'], 
+                'nombre' => $validated['titulo'],
                 'descripcion' => $validated['descripcion'],
-                'archivo_url' => $ruta_archivo_almacenada, 
-                'tipo' => $fileType, 
+                'archivo_url' => $ruta_archivo_almacenada,
+                'tipo' => $fileType,
                 'subido_por' => $user->id,
                 'eliminado' => 0,
             ]);
 
-            return redirect()->route('docs.index')->with('success', 'Documento subido exitosamente.');
+            // 4. Obtener TODOS los usuarios del proyecto (no solo el usuario actual)
+            // Asegúrate que en tu modelo Proyecto existe la relación users()
+            $projectUsers = \App\Models\Proyecto::find($projectId)
+                ->users()
+                ->pluck('users.id');
 
+            // (Opcional) excluir al usuario que subió el documento
+            // $projectUsers = $projectUsers->reject(fn($id) => $id == $user->id);
+
+            // 5. Enviar notificaciones
+            NotificationService::sendToMany(
+                $projectUsers,
+                "Se ha subido un nuevo documento al proyecto.",
+                'documento'
+            );
+
+            return redirect()->route('docs.index')->with('success', 'Documento subido exitosamente.');
         } catch (\Exception $e) {
-            // Manejo de errores de subida o creación de registro
+            // Manejo de errores
             if (!empty($ruta_archivo_almacenada)) {
                 Storage::delete($ruta_archivo_almacenada);
             }
-            // Agregamos el mensaje de error de la excepción
+
             return back()->withInput()->with('error', 'Error al subir el archivo o guardar documento: ' . $e->getMessage());
         }
     }
 
-// -------------------------------------------------------------------------
 
-    public function download(Documento $documento) 
+
+    // -------------------------------------------------------------------------
+
+    public function download(Documento $documento)
     {
         $user = request()->user();
         $userRole = strtolower($user->rol);
@@ -165,7 +181,7 @@ class DocController extends Controller
         } else {
             // 2. Para otros roles, verifica la asociación al proyecto.
             $assignedProjectIds = $user->projects->pluck('id');
-            
+
             if ($assignedProjectIds->contains($documento->proyecto_id)) {
                 $hasPermission = true;
             }
@@ -183,7 +199,7 @@ class DocController extends Controller
         return Storage::download($documento->archivo_url, $documento->nombre . '.' . $extension);
     }
 
-// -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
     public function destroy(Documento $documento)
     {
@@ -193,9 +209,8 @@ class DocController extends Controller
 
         try {
             $documento->update(['eliminado' => 1]);
-            
-            return back()->with('success', 'Documento eliminado.');
 
+            return back()->with('success', 'Documento eliminado.');
         } catch (\Exception $e) {
             return back()->with('error', 'Error al eliminar el documento: ' . $e->getMessage());
         }

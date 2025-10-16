@@ -4,6 +4,7 @@ import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
 import { PropsWithChildren, ReactNode, useState, useEffect } from 'react';
+import NotificationsBell from '@/Components/NotificationsBell';
 
 export default function Authenticated({
     header,
@@ -68,9 +69,11 @@ export default function Authenticated({
                                 </NavLink>
                             </div>
                         </div>
+                       
 
                         {/* Dropdown usuario */}
                         <div className="hidden sm:ms-6 sm:flex sm:items-center">
+                             <NotificationsBell />
                             <div className="relative ms-3">
                                 <Dropdown>
                                     <Dropdown.Trigger>
@@ -159,7 +162,7 @@ export default function Authenticated({
                         <ResponsiveNavLink
                             href={route('proyectos.index')}
                             active={route().current('proyectos.index')}>
-                                Proyectos
+                            Proyectos
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink
@@ -171,7 +174,7 @@ export default function Authenticated({
                         <ResponsiveNavLink
                             href={route('docs.index')}
                             active={route().current('docs.index')}>
-                                Documentos
+                            Documentos
                         </ResponsiveNavLink>
                     </div>
 
