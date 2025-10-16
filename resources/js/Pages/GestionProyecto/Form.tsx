@@ -25,10 +25,10 @@ export default function Form({ proyecto, clientes, responsables }: any) {
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
         const routeName = proyecto ? 'proyectos.update' : 'proyectos.store';
-        
+
         if (proyecto) {
             post(route(routeName, proyecto.id), {
-                forceFormData: true, 
+                forceFormData: true,
             });
         } else {
             post(route(routeName));
@@ -45,7 +45,7 @@ export default function Form({ proyecto, clientes, responsables }: any) {
             <Head title="DEVELARQ | Crear Proyecto" />
             {/* Contenedor del formulario con un borde sutil para destacar */}
             <div className="w-full max-w-4xl bg-gray-900 border border-gray-800 p-8 md:p-10 rounded-xl shadow-lg shadow-gray-900/50">
-                
+
                 {/* Encabezado con colores de marca */}
                 <h2 className="text-3xl font-extrabold text-[#2970E8] mb-1 tracking-wider">
                     {proyecto ? "EDITAR PROYECTO" : "CREAR NUEVO PROYECTO"}
@@ -71,7 +71,7 @@ export default function Form({ proyecto, clientes, responsables }: any) {
 
                     <div>
                         <InputLabel htmlFor="descripcion" value="Descripción Detallada del Proyecto" className="text-gray-200 font-semibold" />
-                        <textarea 
+                        <textarea
                             id="descripcion"
                             rows={4}
                             className={inputFieldStyles}
@@ -84,7 +84,7 @@ export default function Form({ proyecto, clientes, responsables }: any) {
 
                     {/* Sección 2: Grid de 2 Columnas para Asignaciones y Fecha */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-700">
-                        
+
                         {/* Cliente */}
                         <div>
                             <InputLabel htmlFor="cliente" value="Cliente Asociado" className="text-gray-200 font-semibold" />
@@ -125,7 +125,7 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                         </div>
 
                         {/* Fecha de Inicio (Full width si es necesario, aquí lo mantenemos en 2 columnas) */}
-                        <div className="md:col-span-2"> 
+                        <div className="md:col-span-2">
                             <InputLabel htmlFor="fecha_inicio" value="Fecha de Inicio del Proyecto" className="text-gray-200 font-semibold" />
                             <TextInput
                                 id="fecha_inicio"
@@ -139,7 +139,7 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                         </div>
 
                     </div>
-                    
+
                     {/* Sección 3: Archivo BIM */}
                     <div className="pt-4 border-t border-gray-700">
                         <InputLabel htmlFor="archivo_bim" value="Archivo BIM Inicial (.ifc, .bim)" className="text-gray-200 font-semibold" />
@@ -148,7 +148,7 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                             type="file"
                             accept=".bim,.ifc"
                             // Estilo de botón de archivo más corporativo y visible
-                            className="mt-1 block w-full text-sm text-gray-300
+                            className="mt-1 block w-50% text-sm text-gray-300
                                 file:mr-4 file:py-2 file:px-4
                                 file:rounded-full file:border-0
                                 file:text-sm file:font-bold
@@ -164,8 +164,8 @@ export default function Form({ proyecto, clientes, responsables }: any) {
 
                     {/* Botones de Acción */}
                     <div className="flex items-center justify-between pt-6 border-t border-gray-700">
-                        <PrimaryButton 
-                            className="bg-[#2970E8] hover:bg-indigo-600 focus:bg-indigo-600 active:bg-indigo-700 shadow-md shadow-[#2970E8]/40 transform hover:scale-[1.02]" 
+                        <PrimaryButton
+                            className="bg-[#2970E8] hover:bg-indigo-600 focus:bg-indigo-600 active:bg-indigo-700 shadow-md shadow-[#2970E8]/40 transform hover:scale-[1.02]"
                             disabled={processing}
                         >
                             {proyecto ? "ACTUALIZAR PROYECTO" : "GUARDAR PROYECTO"}

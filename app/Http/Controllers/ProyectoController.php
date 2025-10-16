@@ -168,7 +168,7 @@ class ProyectoController extends Controller
             'responsable_id' => ['required', 'exists:users,id'],
             'cliente_id' => ['required', 'exists:users,id'],
             'fecha_inicio' => ['required', 'date'],
-            'archivo_bim' => ['nullable', 'file', 'mimes:bim,ifc', 'max:10240'],
+            'archivo_bim' => ['nullable', 'file', 'max:10240'],
         ]);
 
         // Guardamos versión anterior antes de actualizar
@@ -211,7 +211,22 @@ class ProyectoController extends Controller
                 'version' => $versionBim,
                 'subido_por' => Auth::id(),
             ]);
+        } elseif ($request->has('mantener_archivo') && $request->mantener_archivo === 'true') {
+            $ultimoPlano = PlanoBim::where('proyecto_id', $proyecto->id)
+                ->latest()
+                ->first();
+
+            if ($ultimoPlano) {
+                PlanoBim::create([
+                    'proyecto_id' => $proyecto->id,
+                    'nombre' => $ultimoPlano->nombre,
+                    'archivo_url' => $ultimoPlano->archivo_url,
+                    'version' => 'v' . (PlanoBim::where('proyecto_id', $proyecto->id)->count() + 1) . '.0',
+                    'subido_por' => Auth::id(),
+                ]);
+            }
         }
+
         NotificationService::send(
             $proyecto->responsable_id,
             "El proyecto '{$proyecto->nombre}' ha sido actualizado.",

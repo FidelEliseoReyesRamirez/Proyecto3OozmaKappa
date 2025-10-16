@@ -5,8 +5,8 @@ export default function Versiones() {
     const { proyecto, versionesProyecto, versionesBim } = usePage().props as any;
 
     return (
-        <section className="flex justify-center items-start mt-10 bg-black min-h-screen">
-            <div className="w-full max-w-5xl bg-[#0B1120] rounded-lg shadow-lg p-8 text-white border border-white mt-5">
+        <section className="flex justify-center items-start bg-gray-950 min-h-screen">
+            <div className="w-full max-w-5xl bg-[#0B1120] rounded-lg shadow-lg p-8 text-white border border-white mt-10">
                 <h2 className="text-lg font-medium text-[#2970E8] mb-4">
                     Historial del proyecto — {proyecto.nombre}
                 </h2>
