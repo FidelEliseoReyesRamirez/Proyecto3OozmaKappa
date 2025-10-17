@@ -48,7 +48,7 @@ export default function Authenticated({
                                 </Link>
                             </div>
 
-                            {/* Navegación principal */}
+                            {/* Navegación principal (Escritorio) */}
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                                 <NavLink href={route('dashboard')} active={route().current('dashboard')}>
                                     Dashboard
@@ -77,10 +77,16 @@ export default function Authenticated({
                                         Avances Proyecto
                                     </NavLink>
                                 )}
+
+                                {user.rol === 'admin' && (
+                                    <NavLink href={route('documents.history')} active={route().current('documents.history')}>
+                                        Historial Descargas
+                                    </NavLink>
+                                )}
                             </div>
                         </div>
 
-                        {/* Notificaciones + Usuario */}
+                        {/* Notificaciones + Usuario (Escritorio) */}
                         <div className="hidden sm:ms-6 sm:flex sm:items-center">
                             <NotificationsBell />
                             <div className="relative ms-3">
@@ -124,37 +130,21 @@ export default function Authenticated({
                             </div>
                         </div>
 
-                        {/* Botón hamburguesa */}
+                        {/* Botón hamburguesa y campana (Móvil) */}
                         <div className="-me-2 flex items-center sm:hidden space-x-2">
                             <NotificationsBell />
                             <button
                                 onClick={() => setShowingNavigationDropdown(prev => !prev)}
                                 className="inline-flex items-center justify-center rounded-md p-2 text-white transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
                             >
-                                <svg
-                                    className="h-6 w-6"
-                                    stroke="currentColor"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        className={!showingNavigationDropdown ? 'inline-flex' : 'hidden'}
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M4 6h16M4 12h16M4 18h16"
-                                    />
-                                    <path
-                                        className={showingNavigationDropdown ? 'inline-flex' : 'hidden'}
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
+                                <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                                    <path className={!showingNavigationDropdown ? 'inline-flex' : 'hidden'} strokeLinecap="round" strokeLinejoin="round"
+                                        strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/>
+                                    <path className={showingNavigationDropdown ? 'inline-flex' : 'hidden'} strokeLinecap="round" strokeLinejoin="round"
+                                        strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
                             </button>
                         </div>
-
                     </div>
                 </div>
 
@@ -164,6 +154,14 @@ export default function Authenticated({
                         <ResponsiveNavLink href={route('dashboard')} active={route().current('dashboard')}>
                             Dashboard
                         </ResponsiveNavLink>
+
+                        {user.rol === 'admin' && (
+                            <ResponsiveNavLink 
+                                href={route('users.index')} 
+                                active={route().current('users.index')}>
+                                Usuarios 
+                            </ResponsiveNavLink>
+                        )}
 
                         <ResponsiveNavLink href={route('proyectos.index')} active={route().current('proyectos.index')}>
                             Proyectos
@@ -185,8 +183,17 @@ export default function Authenticated({
                                 Avances Proyecto
                             </ResponsiveNavLink>
                         )}
+
+                        {user.rol === 'admin' && (
+                            <ResponsiveNavLink 
+                                href={route('documents.history')} 
+                                active={route().current('documents.history')}>
+                                Historial Descargas
+                            </ResponsiveNavLink>
+                        )}
                     </div>
 
+                    {/* Menú de Usuario Responsive */}
                     <div className="border-t border-gray-200 pb-1 pt-4">
                         <div className="px-4">
                             <div className="text-base font-medium text-white">

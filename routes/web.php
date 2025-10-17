@@ -9,6 +9,7 @@ use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\ProyectoController;
 use App\Http\Controllers\DocController;
 use App\Http\Controllers\NotificacionController;
+use App\Http\Controllers\DocumentoHistorialController;
 use App\Http\Controllers\AvancesProyectoController;
 
 
@@ -69,6 +70,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::patch('/usuarios/{user}/estado', [UserController::class, 'updateEstado'])->name('users.updateEstado');
     Route::patch('/usuarios/{user}/eliminar', [UserController::class, 'eliminar'])->name('users.eliminar');
     Route::patch('/usuarios/{user}/restaurar', [UserController::class, 'restaurar'])->name('users.restaurar');
+    Route::patch('/usuarios/{user}/restaurar', [UserController::class, 'restaurar'])->name('users.restaurar');
+    
+    Route::get('/admin/documents/history', [DocumentoHistorialController::class, 'showDownloadHistory'])
+        ->name('documents.history');
 });
 
 //Rutas Publicas
