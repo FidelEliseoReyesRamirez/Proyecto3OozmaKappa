@@ -9,6 +9,8 @@ use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\ProyectoController;
 use App\Http\Controllers\DocController;
 use App\Http\Controllers\NotificacionController;
+use App\Http\Controllers\DocumentoHistorialController;
+use App\Http\Controllers\AvancesProyectoController;
 
 
 Route::get('/', function () {
@@ -46,6 +48,15 @@ Route::middleware('auth')->group(function () {
         ->name('proyectos.versiones');
     Route::patch('/proyectos/{id}/estado', [ProyectoController::class, 'cambiarEstado'])
         ->name('proyectos.cambiarEstado');
+    // Avances para clientes
+    Route::get('/proyectos/{projectId}/timeline', [AvancesProyectoController::class, 'showTimeline'])
+     ->name('projects.timeline');
+    Route::get('/mis-avances', [AvancesProyectoController::class, 'showClientTimeline'])
+     ->name('avances.index');
+    Route::post('/projects/{id}/update-status', [AvancesProyectoController::class, 'updateStatus'])
+    ->name('projects.updateStatus');
+    Route::get('/projects/{projectId}/report/pdf', [AvancesProyectoController::class, 'downloadReport'])
+    ->name('projects.report.pdf');
 });
 
 //  solo los admins pueden ver y gestionar usuarios
@@ -59,6 +70,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::patch('/usuarios/{user}/estado', [UserController::class, 'updateEstado'])->name('users.updateEstado');
     Route::patch('/usuarios/{user}/eliminar', [UserController::class, 'eliminar'])->name('users.eliminar');
     Route::patch('/usuarios/{user}/restaurar', [UserController::class, 'restaurar'])->name('users.restaurar');
+    Route::patch('/usuarios/{user}/restaurar', [UserController::class, 'restaurar'])->name('users.restaurar');
+    
+    Route::get('/admin/documents/history', [DocumentoHistorialController::class, 'showDownloadHistory'])
+        ->name('documents.history');
 });
 
 //Rutas Publicas

@@ -5,7 +5,13 @@ import PrimaryButton from "@/Components/PrimaryButton";
 import ConfirmModal from "@/Components/ConfirmModal";
 
 export default function Index() {
-    const { proyectos } = usePage().props as any;
+    // Asegúrate de que el controlador de Laravel pase 'proyectos' y 'auth'
+    const { proyectos, auth } = usePage().props as any; 
+    
+    // 1. Detección del rol del usuario
+    const userRole = auth.user?.rol; // Asumiendo que el rol viene en auth.user.rol
+    const isEmployee = ['admin', 'arquitecto', 'ingeniero'].includes(userRole);
+
     const [filtro, setFiltro] = useState("todos");
     const [modalOpen, setModalOpen] = useState(false);
     const [estadoSeleccionado, setEstadoSeleccionado] = useState("");
@@ -18,11 +24,22 @@ export default function Index() {
 
     const handleConfirm = () => {
         if (proyectoSeleccionado && estadoSeleccionado) {
+            // Esta ruta PATCH solo se intentará si es un empleado (la interfaz está habilitada)
+            // Y el backend debe también validar este permiso!
             router.patch(route("proyectos.cambiarEstado", proyectoSeleccionado.id), {
                 estado: estadoSeleccionado,
             });
         }
         setModalOpen(false);
+    };
+
+    const handleEstadoChange = (proyecto: any, nuevoEstado: string) => {
+        // Solo si es empleado, permitimos el cambio y abrimos el modal
+        if (isEmployee) {
+            setProyectoSeleccionado(proyecto);
+            setEstadoSeleccionado(nuevoEstado);
+            setModalOpen(true);
+        }
     };
 
     return (
@@ -51,9 +68,13 @@ export default function Index() {
                                 <option value="finalizado">Finalizado</option>
                             </select>
                         </div>
-                        <Link href={route("proyectos.create")}>
-                            <PrimaryButton>Nuevo Proyecto</PrimaryButton>
-                        </Link>
+                        
+                        {/* 2. Restringir botón de creación solo a EMPLEADOS */}
+                        {isEmployee && (
+                            <Link href={route("proyectos.create")}>
+                                <PrimaryButton>Nuevo Proyecto</PrimaryButton>
+                            </Link>
+                        )}
                     </div>
 
                     <table className="min-w-full bg-[#0B1120] rounded-lg overflow-hidden">
@@ -76,13 +97,13 @@ export default function Index() {
                                     <td className="p-3">{proyecto.descripcion || "Sin descripción"}</td>
                                     <td className="p-3">
                                         <select
-                                            className="bg-[#0B1120] border border-gray-600 rounded-md p-1 text-white"
+                                            className={`rounded-md p-1 text-white 
+                                                ${isEmployee ? 'bg-[#0B1120] border-gray-600 hover:border-[#B3E10F]' : 'bg-gray-800 border-gray-800 cursor-not-allowed'}
+                                            `}
                                             value={proyecto.estado}
-                                            onChange={(e) => {
-                                                setProyectoSeleccionado(proyecto);
-                                                setEstadoSeleccionado(e.target.value);
-                                                setModalOpen(true);
-                                            }}
+                                            // 3. Aplicar restricción al <select>
+                                            onChange={(e) => handleEstadoChange(proyecto, e.target.value)}
+                                            disabled={!isEmployee} // Deshabilita el control si NO es empleado
                                         >
                                             <option value="activo">Activo</option>
                                             <option value="en progreso">En progreso</option>
@@ -90,12 +111,15 @@ export default function Index() {
                                         </select>
                                     </td>
                                     <td className="p-3 space-x-2">
-                                        <Link
-                                            href={route("proyectos.edit", proyecto.id)}
-                                            className="text-[#B3E10F] hover:underline"
-                                        >
-                                            Editar
-                                        </Link>
+                                        {/* 4. Restringir el botón de Editar solo a EMPLEADOS */}
+                                        {isEmployee && (
+                                            <Link
+                                                href={route("proyectos.edit", proyecto.id)}
+                                                className="text-[#B3E10F] hover:underline"
+                                            >
+                                                Editar
+                                            </Link>
+                                        )}
                                         <Link
                                             href={route("proyectos.versiones", proyecto.id)}
                                             className="text-[#2970E8] hover:underline"

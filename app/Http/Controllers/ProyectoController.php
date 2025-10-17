@@ -25,26 +25,20 @@ class ProyectoController extends Controller
 
         $query = Proyecto::with(['cliente', 'responsable']);
 
-        // 🛑 FILTRADO: Si el usuario es 'cliente', solo ve sus proyectos.
         if ($userRole === 'cliente') {
             $query->where('cliente_id', $user->id);
         }
 
-        // Los otros roles (admin, arquitecto, ingeniero) ven todos los proyectos por defecto.
         $proyectos = $query->get();
 
         return Inertia::render('GestionProyecto/Index', [
             'proyectos' => $proyectos,
-            // Opcional: Pasar el rol para que el frontend pueda ocultar botones de edición/creación
             'userRole' => $userRole,
         ]);
     }
 
-    // -------------------------------------------------------------------------
-
     public function create()
     {
-        // 🛑 AUTORIZACIÓN: Solo roles internos pueden crear.
         if (strtolower(Auth::user()->rol) === 'cliente') {
             return redirect()->route('proyectos.index')->with('error', 'No tienes permiso para crear proyectos.');
         }
@@ -58,11 +52,8 @@ class ProyectoController extends Controller
         ]);
     }
 
-    // -------------------------------------------------------------------------
-
     public function store(Request $request)
     {
-        // 🛑 AUTORIZACIÓN: Solo roles internos pueden almacenar.
         if (strtolower(Auth::user()->rol) === 'cliente') {
             return redirect()->route('proyectos.index')->with('error', 'No tienes permiso para almacenar proyectos.');
         }
@@ -76,7 +67,6 @@ class ProyectoController extends Controller
             'archivo_bim' => 'nullable|file',
         ]);
 
-        // ✅ 1. Crear proyecto
         $proyecto = Proyecto::create([
             'nombre' => $request->nombre,
             'cliente_id' => $request->cliente_id,
@@ -86,7 +76,6 @@ class ProyectoController extends Controller
             'estado' => 'activo',
         ]);
 
-        // ✅ 2. VINCULAR CLIENTE EN TABLA PIVOT
         $proyecto->users()->syncWithoutDetaching([
             $request->cliente_id => [
                 'rol_en_proyecto' => 'cliente',
@@ -94,7 +83,6 @@ class ProyectoController extends Controller
             ]
         ]);
 
-        // ✅ 3. VINCULAR RESPONSABLE EN TABLA PIVOT
         $proyecto->users()->syncWithoutDetaching([
             $request->responsable_id => [
                 'rol_en_proyecto' => 'responsable',
@@ -102,7 +90,6 @@ class ProyectoController extends Controller
             ]
         ]);
 
-        // ✅ 4. Enviar notificaciones
         NotificationService::send(
             $request->responsable_id,
             "Se te ha asignado el proyecto: {$proyecto->nombre}",
@@ -115,7 +102,6 @@ class ProyectoController extends Controller
             'tarea'
         );
 
-        // ✅ 5. Subir archivo BIM (opcional)
         if ($request->hasFile('archivo_bim')) {
             $path = $request->file('archivo_bim')->store('planos_bim', 'public');
             PlanoBim::create([
@@ -130,12 +116,8 @@ class ProyectoController extends Controller
         return redirect()->route('proyectos.index')->with('success', 'Proyecto creado correctamente.');
     }
 
-
-    // -------------------------------------------------------------------------
-
     public function edit($id)
     {
-        // 🛑 AUTORIZACIÓN: El cliente NO debe poder acceder al formulario de edición.
         if (strtolower(Auth::user()->rol) === 'cliente') {
             abort(403, 'No tienes permiso para editar proyectos.');
         }
@@ -150,12 +132,8 @@ class ProyectoController extends Controller
             'responsables' => $responsables,
         ]);
     }
-
-    // -------------------------------------------------------------------------
-
     public function update(Request $request, $id)
     {
-        // 🛑 AUTORIZACIÓN: El cliente NO debe poder ejecutar la lógica de actualización.
         if (strtolower(Auth::user()->rol) === 'cliente') {
             abort(403, 'No tienes permiso para actualizar proyectos.');
         }
@@ -168,17 +146,15 @@ class ProyectoController extends Controller
             'responsable_id' => ['required', 'exists:users,id'],
             'cliente_id' => ['required', 'exists:users,id'],
             'fecha_inicio' => ['required', 'date'],
-            'archivo_bim' => ['nullable', 'file', 'max:10240'],
+            'archivo_bim' => ['nullable', 'file', 'mimes:bim,ifc', 'max:5242880'],
         ]);
 
-        // Guardamos versión anterior antes de actualizar
         $ultimaVersion = ProyectoVersion::where('proyecto_id', $proyecto->id)
             ->orderByDesc('id')
             ->first();
         $nuevoNumero = $ultimaVersion ? intval(explode('.', ltrim($ultimaVersion->version, 'v'))[0]) + 1 : 1;
         $versionActual = 'v' . $nuevoNumero . '.0';
 
-        // Creamos un registro de versión del proyecto
         ProyectoVersion::create([
             'proyecto_id' => $proyecto->id,
             'descripcion_cambio' => 'Actualización del proyecto por ' . Auth::user()->name,
@@ -190,14 +166,11 @@ class ProyectoController extends Controller
                 'fecha' => now()->toDateTimeString(),
             ]),
         ]);
-
-        // Actualizamos campos permitidos
         $proyecto->update([
             'descripcion' => $validated['descripcion'],
             'responsable_id' => $validated['responsable_id'],
         ]);
 
-        // Manejo del archivo BIM (opcional)
         if ($request->hasFile('archivo_bim')) {
             $versionBimActual = PlanoBim::where('proyecto_id', $proyecto->id)->count();
             $versionBim = 'v' . ($versionBimActual + 1) . '.0';
@@ -235,11 +208,9 @@ class ProyectoController extends Controller
         return redirect()->route('proyectos.index')->with('success', 'Se ha creado una nueva versión del proyecto.');
     }
 
-    // -------------------------------------------------------------------------
 
     public function versiones($id)
     {
-        // 🛑 AUTORIZACIÓN: Un cliente solo debe ver versiones de su proyecto.
         $proyecto = Proyecto::findOrFail($id);
         if (strtolower(Auth::user()->rol) === 'cliente' && $proyecto->cliente_id !== Auth::id()) {
             abort(403, 'No tienes permiso para ver las versiones de este proyecto.');
@@ -261,12 +232,8 @@ class ProyectoController extends Controller
             'versionesBim' => $versionesBim,
         ]);
     }
-
-    // -------------------------------------------------------------------------
-
     public function cambiarEstado(Request $request, $id)
     {
-        // 🛑 AUTORIZACIÓN: Solo roles internos pueden cambiar el estado.
         if (strtolower(Auth::user()->rol) === 'cliente') {
             abort(403, 'No tienes permiso para cambiar el estado de los proyectos.');
         }

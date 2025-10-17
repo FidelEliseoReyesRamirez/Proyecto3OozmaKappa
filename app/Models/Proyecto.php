@@ -9,7 +9,7 @@ class Proyecto extends Model
 {
     use HasFactory;
 
-    protected $table = 'proyectos'; // importante si no sigue convención
+    protected $table = 'proyectos'; 
 
     protected $fillable = [
         'nombre',
@@ -27,25 +27,27 @@ class Proyecto extends Model
         'fecha_fin' => 'date',
     ];
 
-    // Cliente dueño del proyecto
     public function cliente()
     {
         return $this->belongsTo(User::class, 'cliente_id');
     }
 
-    // Responsable del proyecto
     public function responsable()
     {
         return $this->belongsTo(User::class, 'responsable_id');
     }
 
-    // Planos BIM
     public function planos()
     {
         return $this->hasMany(PlanoBim::class, 'proyecto_id');
     }
+    
+    public function hitos()
+    {
+        return $this->hasMany(\App\Models\Hitos::class, 'proyecto_id');
+    }
 
-    // Usuarios asignados (pivot proyectos_usuarios)
+
     public function users()
     {
         return $this->belongsToMany(User::class, 'proyectos_usuarios', 'proyecto_id', 'user_id')
@@ -53,10 +55,14 @@ class Proyecto extends Model
             ->wherePivot('eliminado', 0);
     }
 
-    // Reuniones del proyecto
     public function meetings()
     {
         return $this->hasMany(Meeting::class, 'proyecto_id')
             ->where('eliminado', 0);
+    }
+
+    public function documentos() 
+    {
+        return $this->hasMany(Documento::class, 'proyecto_id')->orderBy('created_at');
     }
 }

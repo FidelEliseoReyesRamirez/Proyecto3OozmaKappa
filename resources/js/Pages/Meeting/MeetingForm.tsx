@@ -3,7 +3,7 @@
 import React from 'react';
 import { InertiaFormProps } from '@inertiajs/react';
 import { FormData } from './MeetingFormModal'; 
-import ParticipantsChecklist from './ParticipantsChecklist'; 
+import Participantslist from './ParticipantsList'; 
 
 interface ListItem {
     id: number;
@@ -42,7 +42,6 @@ export default function MeetingForm({
     onCancel,
 }: MeetingFormProps) {
     
-    // Evita el submit si es solo lectura
     const handleSubmit = (e: React.FormEvent) => {
         if (isReadOnly) {
             e.preventDefault();
@@ -124,7 +123,7 @@ export default function MeetingForm({
             </div>
             
             {/* PARTICIPANTES */}
-            <ParticipantsChecklist
+            <Participantslist
                 usersList={usersList}
                 participants={data.participants}
                 onParticipantChange={onParticipantChange}
