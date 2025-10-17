@@ -11,6 +11,7 @@ use App\Http\Controllers\DocController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\DocumentoHistorialController;
 use App\Http\Controllers\AvancesProyectoController;
+use App\Http\Controllers\TareaController;
 
 
 Route::get('/', function () {
@@ -50,13 +51,20 @@ Route::middleware('auth')->group(function () {
         ->name('proyectos.cambiarEstado');
     // Avances para clientes
     Route::get('/proyectos/{projectId}/timeline', [AvancesProyectoController::class, 'showTimeline'])
-     ->name('projects.timeline');
+        ->name('projects.timeline');
     Route::get('/mis-avances', [AvancesProyectoController::class, 'showClientTimeline'])
-     ->name('avances.index');
+        ->name('avances.index');
     Route::post('/projects/{id}/update-status', [AvancesProyectoController::class, 'updateStatus'])
-    ->name('projects.updateStatus');
+        ->name('projects.updateStatus');
     Route::get('/projects/{projectId}/report/pdf', [AvancesProyectoController::class, 'downloadReport'])
-    ->name('projects.report.pdf');
+        ->name('projects.report.pdf');
+    // Tareas
+    Route::get('/tareas', [TareaController::class, 'index'])->name('tareas.index');
+    Route::get('/tareas/create/{proyecto_id?}', [TareaController::class, 'create'])->name('tareas.create');
+    Route::post('/tareas', [TareaController::class, 'store'])->name('tareas.store');
+    Route::get('/tareas/proyecto/{id}', [TareaController::class, 'obtenerPorProyecto'])->name('tareas.proyecto');
+    Route::patch('/tareas/{id}/estado', [TareaController::class, 'actualizarEstado'])->name('tareas.estado');
+    Route::get('/tareas/{id}/historial', [TareaController::class, 'historial'])->name('tareas.historial');
 });
 
 //  solo los admins pueden ver y gestionar usuarios
@@ -71,7 +79,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::patch('/usuarios/{user}/eliminar', [UserController::class, 'eliminar'])->name('users.eliminar');
     Route::patch('/usuarios/{user}/restaurar', [UserController::class, 'restaurar'])->name('users.restaurar');
     Route::patch('/usuarios/{user}/restaurar', [UserController::class, 'restaurar'])->name('users.restaurar');
-    
+
     Route::get('/admin/documents/history', [DocumentoHistorialController::class, 'showDownloadHistory'])
         ->name('documents.history');
 });

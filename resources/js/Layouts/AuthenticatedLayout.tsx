@@ -64,6 +64,10 @@ export default function Authenticated({
                                     Proyectos
                                 </NavLink>
 
+                                <NavLink href={route('tareas.index')} active={route().current('tareas.index')}>
+                                    Tablero Kanban
+                                </NavLink>
+
                                 <NavLink href={route('calendar')} active={route().current('calendar')}>
                                     Calendario
                                 </NavLink>
@@ -156,10 +160,10 @@ export default function Authenticated({
                         </ResponsiveNavLink>
 
                         {user.rol === 'admin' && (
-                            <ResponsiveNavLink 
-                                href={route('users.index')} 
+                            <ResponsiveNavLink
+                                href={route('users.index')}
                                 active={route().current('users.index')}>
-                                Usuarios 
+                                Usuarios
                             </ResponsiveNavLink>
                         )}
 
@@ -176,8 +180,8 @@ export default function Authenticated({
                         </ResponsiveNavLink>
 
                         {user.rol === 'cliente' && (
-                            <ResponsiveNavLink 
-                                href={route('avances.index')} 
+                            <ResponsiveNavLink
+                                href={route('avances.index')}
                                 active={route().current('avances.index')}
                             >
                                 Avances Proyecto
@@ -185,8 +189,8 @@ export default function Authenticated({
                         )}
 
                         {user.rol === 'admin' && (
-                            <ResponsiveNavLink 
-                                href={route('documents.history')} 
+                            <ResponsiveNavLink
+                                href={route('documents.history')}
                                 active={route().current('documents.history')}>
                                 Historial Descargas
                             </ResponsiveNavLink>
