@@ -199,4 +199,85 @@ class DocController extends Controller
             return back()->with('error', 'Error al eliminar el documento: ' . $e->getMessage());
         }
     }
+    public function edit(Documento $documento)
+    {
+        $userRole = strtolower(request()->user()->rol);
+        
+        if ($userRole === 'cliente') {
+            return redirect()->route('docs.index')->with('error', 'No tienes permiso para editar documentos.');
+        }
+
+        $projectsList = Proyecto::where('eliminado', 0)
+            ->get(['id', 'nombre'])
+            ->map(fn($p) => ['id' => $p->id, 'name' => $p->nombre]);
+            
+        return Inertia::render('Docs/DocEdit', [
+            'document' => [
+                'id' => $documento->id,
+                'titulo' => $documento->nombre ?? '', 
+                'descripcion' => $documento->descripcion ?? '',
+                'proyecto_id' => $documento->proyecto_id,
+                'tipo' => $documento->tipo ?? '',
+            ],
+            'projectsList' => $projectsList,
+        ]);
+    }
+    public function update(Request $request, Documento $documento)
+{
+    $userRole = strtolower($request->user()->rol);
+
+    if ($userRole === 'cliente') {
+        return back()->with('error', 'No tienes permiso para actualizar documentos.');
+    }
+
+    $validated = $request->validate([
+        'titulo' => 'nullable|string|max:150',
+        'descripcion' => 'nullable|string|max:1000',
+        'proyecto_id' => 'nullable|exists:proyectos,id',
+        'archivo' => 'nullable|file|max:5242880',
+        'archivo_tipo' => ['required_with:archivo', Rule::in(['PDF', 'Excel', 'Word', 'Otro'])],
+    ]);
+    $updateData['nombre'] = !empty($validated['titulo']) 
+        ? $validated['titulo'] 
+        : $documento->nombre;
+
+    $updateData['descripcion'] = !empty($validated['descripcion']) 
+        ? $validated['descripcion'] 
+        : $documento->descripcion;
+        
+    $updateData['proyecto_id'] = $validated['proyecto_id'] 
+        ?? $documento->proyecto_id;
+    
+    if ($request->file('archivo')) { 
+        $file = $request->file('archivo');
+        
+        try {
+            if (!empty($documento->archivo_url) && Storage::exists($documento->archivo_url)) {
+                Storage::delete($documento->archivo_url);
+            }
+
+            $ruta_archivo_almacenada = $file->store('documents');
+            $updateData['archivo_url'] = $ruta_archivo_almacenada;
+            $updateData['tipo'] = $validated['archivo_tipo']; 
+
+        } catch (\Exception $e) {
+            Log::error("Error al reemplazar archivo para documento ID {$documento->id}: " . $e->getMessage());
+            return back()->withInput()->with('error', 'Error al cambiar el archivo: ' . $e->getMessage());
+        }
+    }
+    try {
+        $documento->update($updateData);
+
+        NotificationService::sendToMany(
+            Proyecto::find($updateData['proyecto_id'])->users()->pluck('users.id'),
+            "El documento '{$updateData['nombre']}' ha sido actualizado en el proyecto.",
+            'documento'
+       );
+
+        return redirect()->route('docs.index')->with('success', 'Documento actualizado exitosamente.');
+    } catch (\Exception $e) {
+        Log::error("Error al actualizar documento ID {$documento->id}: " . $e->getMessage());
+        return back()->withInput()->with('error', 'Error al actualizar el documento: ' . $e->getMessage());
+    }
+}
 }

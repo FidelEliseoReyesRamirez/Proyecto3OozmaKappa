@@ -182,15 +182,15 @@ export default function Edit({ proyecto, clientes, responsables }: any) {
 
                     {/* Botones de Acción */}
                     <div className="flex items-center justify-between pt-6 border-t border-gray-700">
-                        <PrimaryButton
-                            className="bg-[#2970E8] hover:bg-indigo-600 focus:bg-indigo-600 active:bg-indigo-700 shadow-md shadow-[#2970E8]/40 transform hover:scale-[1.02]"
+                        <button
+                            className="bg-[#B3E10F] text-gray-900 px-2 py-1 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-bold shadow-md shadow-[#B3E10F]/30"
                             disabled={processing}
                         >
                             {processing ? "Actualizando..." : "GUARDAR CAMBIOS"}
-                        </PrimaryButton>
+                        </button>
                         <Link
                             href={route("proyectos.index")}
-                            className="text-[#B3E10F] hover:text-lime-400 font-semibold transition duration-150 ml-4"
+                            className="bg-red-700 hover:bg-red-600 px-2 py-1 rounded-md text-xs sm:text-sm font-medium transition duration-150 text-white"
                         >
                             Cancelar
                         </Link>

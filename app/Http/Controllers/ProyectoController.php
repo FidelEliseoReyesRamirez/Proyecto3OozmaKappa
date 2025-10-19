@@ -27,12 +27,11 @@ class ProyectoController extends Controller
 
         $query = Proyecto::with(['cliente', 'responsable']);
 
-        // 🧠 Clientes solo ven sus proyectos
         if ($userRole === 'cliente') {
             $query->where('cliente_id', $user->id);
         }
+        if ($userRole === 'admin') {}
 
-        // 🧠 Empleados solo ven proyectos con permiso 'ver' o 'editar'
         elseif (in_array($userRole, ['arquitecto', 'ingeniero', 'admin'])) {
             $query->whereIn('id', function ($q) use ($user) {
                 $q->select('proyecto_id')

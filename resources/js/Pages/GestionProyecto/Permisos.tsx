@@ -72,13 +72,13 @@ export default function Permisos({ proyecto, usuarios, asignaciones }: any) {
                     <div className="flex justify-end space-x-4 pt-6 border-t border-gray-700">
                         <Link
                             href={route("proyectos.index")}
-                            className="text-[#B3E10F] hover:text-lime-400 font-semibold transition duration-150"
+                            className="bg-red-700 hover:bg-red-600 px-2 py-1 rounded-md text-xs sm:text-sm font-medium transition duration-150 text-white"
                         >
                             Cancelar
                         </Link>
-                        <PrimaryButton className="bg-[#2970E8] hover:bg-indigo-600">
+                        <button className="bg-[#B3E10F] text-gray-900 px-2 py-1 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-bold shadow-md shadow-[#B3E10F]/30">
                             Guardar Cambios
-                        </PrimaryButton>
+                        </button>
                     </div>
                 </form>
             </div>

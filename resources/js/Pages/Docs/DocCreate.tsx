@@ -1,35 +1,71 @@
-import React, { FormEventHandler } from 'react';
-import { Head, useForm, usePage } from '@inertiajs/react';
+// resources/js/Pages/Docs/DocCreate.tsx
+
+import React, { FormEventHandler, useMemo } from 'react';
+import { Head, useForm, usePage, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'; 
 import { PageProps } from '@/types';
 import InputError from '@/Components/InputError';
-import PrimaryButton from '@/Components/PrimaryButton';
 
+// Definición de tipos permitidos para el archivo
+type FileType = 'PDF' | 'Excel' | 'Word' | 'Otro'; // 'Otro' se deja solo si es necesario en otro contexto, pero lo omitiremos en el selector
+
+// ====================================================================
+// 1. Definición de Tipos para las Props del Componente
+// ====================================================================
 interface DocCreateProps extends PageProps {
     projectsList: { id: number; name: string }[];
 }
 
+const handleCreateClick = () => {
+    router.get(route('docs.index')); 
+};
+
+// ====================================================================
+// 2. Componente Funcional DocCreate
+// ====================================================================
 const DocCreate: React.FC = () => {
     const { projectsList } = usePage<DocCreateProps>().props;
 
     const { data, setData, post, processing, errors } = useForm({
         titulo: '',
         descripcion: '',
+        // Establece el primer proyecto como valor inicial por defecto
         proyecto_id: projectsList.length > 0 ? projectsList[0].id.toString() : '', 
         archivo: null as File | null,
-        archivo_tipo: 'PDF', 
+        archivo_tipo: 'PDF' as FileType, // Inicializamos con 'PDF'
     });
 
-    const allowedTypes = [
-        { label: 'Documento PDF', value: 'PDF' },
-        { label: 'Hoja de Cálculo (Excel)', value: 'Excel' },
-        { label: 'Documento de Word', value: 'Word' },
-    ];
+    // 💡 Definición de Tipos y sus extensiones (MIME types)
+    const allowedTypes = useMemo(() => ([
+        { label: 'Documento PDF', value: 'PDF' as FileType, extensions: '.pdf' },
+        // Usamos las extensiones más comunes de Excel
+        { label: 'Hoja de Cálculo (Excel)', value: 'Excel' as FileType, extensions: '.xls,.xlsx,.xlsm' },
+        // Usamos las extensiones más comunes de Word
+        { label: 'Documento de Word', value: 'Word' as FileType, extensions: '.doc,.docx' },
+    ]), []);
+
+    // 💡 Función para obtener la cadena 'accept' basada en el tipo seleccionado
+    const getAcceptAttribute = (selectedType: FileType): string => {
+        const typeInfo = allowedTypes.find(t => t.value === selectedType);
+        // Devuelve las extensiones, si no encuentra o el tipo es 'Otro', permite todo
+        return typeInfo ? typeInfo.extensions : '*/*'; 
+    };
+
+    // Obtenemos el valor de 'accept' dinámicamente para el input file
+    const acceptFileTypes = getAcceptAttribute(data.archivo_tipo);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
         
-        post(route('docs.store'));
+        // La subida de archivos requiere que Inertia envíe los datos como multipart/form-data
+        post(route('docs.store'), {
+            onSuccess: () => {
+                router.get(route('docs.index'));
+            },
+            onError: (err) => {
+                console.error("Error al subir el documento:", err);
+            }
+        });
     };
 
     const inputStyle = "mt-1 block w-full border border-gray-700 bg-[#080D15] text-white rounded-md shadow-inner py-2 px-3 focus:outline-none focus:ring-[#2970E8] focus:border-[#2970E8] sm:text-sm transition duration-150";
@@ -104,16 +140,16 @@ const DocCreate: React.FC = () => {
                                 <InputError message={errors.descripcion} className="mt-2 text-red-400" />
                             </div>
 
-                            {/* Tipo de Archivo */}
+                            {/* Tipo de Archivo (Selector) */}
                             <div>
                                 <label htmlFor="archivo_tipo" className={labelStyle}>
-                                    Categoría de Documento (Requerido para extensión)
+                                    Categoría de Documento (Define la extensión permitida)
                                 </label>
                                 <select
                                     id="archivo_tipo"
                                     name="archivo_tipo"
                                     value={data.archivo_tipo}
-                                    onChange={(e) => setData('archivo_tipo', e.target.value as 'PDF' | 'Excel' | 'Word')}
+                                    onChange={(e) => setData('archivo_tipo', e.target.value as FileType)}
                                     required
                                     className={inputStyle}
                                 >
@@ -126,30 +162,43 @@ const DocCreate: React.FC = () => {
                                 <InputError message={errors.archivo_tipo} className="mt-2 text-red-400" />
                             </div>
 
-                            {/* Campo de Archivo */}
+                            {/* Campo de Archivo (APLICACIÓN DEL FILTRO) */}
                             <div>
                                 <label htmlFor="archivo" className={labelStyle}>
-                                    Seleccionar Archivo (Máx. 10MB)
+                                    Seleccionar Archivo (Sólo {data.archivo_tipo})
                                 </label>
                                 <input
                                     id="archivo"
                                     name="archivo"
                                     type="file"
+                                    // 🚀 APLICACIÓN CLAVE: Filtramos el diálogo de archivo con la extensión correcta
+                                    accept={acceptFileTypes}
                                     onChange={(e) => setData('archivo', e.target.files ? e.target.files[0] : null)}
                                     required
                                     className="mt-1 block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#2970E8] file:text-white hover:file:bg-blue-600 transition duration-150"
                                 />
+                                <p className='mt-1 text-xs text-gray-400'>
+                                    Extensiones aceptadas: <span className='font-mono text-white/80'>{acceptFileTypes}</span>
+                                </p>
                                 <InputError message={errors.archivo} className="mt-2 text-red-400" />
                             </div>
 
+                            {/* Botones de Acción */}
                             <div className="flex items-center justify-end pt-4 border-t border-gray-700">
-                                <PrimaryButton 
+                                <button
                                     disabled={processing}
-                                    className="bg-[#2970E8] hover:bg-blue-600 focus:bg-blue-600 active:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 shadow-md shadow-[#2970E8]/30"
+                                    type="submit"
+                                    className="bg-[#B3E10F] text-gray-900 px-2 py-1 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-bold shadow-md shadow-[#B3E10F]/30 disabled:opacity-50"
                                 >
                                     {processing ? 'Subiendo...' : 'Subir Documento'}
-                                </PrimaryButton>
+                                </button>
+                                <button onClick={handleCreateClick}
+                                    type="button"
+                                    className="ml-4 bg-red-700 hover:bg-red-600 px-2 py-1 rounded-md text-xs sm:text-sm font-medium transition duration-150 text-white">
+                                    Regresar
+                                </button>
                             </div>
+
                         </form>
                     </div>
                 </div>

@@ -75,7 +75,7 @@ export default function ProyectosIndex() {
                         {isEmployee && (
                             <Link
                                 href={route("proyectos.create")}
-                                className="bg-[#2970E8] text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-150 text-sm font-semibold shadow-md shadow-[#2970E8]/30"
+                                className="bg-[#B3E10F] text-gray-900 px-2 py-1 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-bold shadow-md shadow-[#B3E10F]/30"
                             >
                                 Nuevo Proyecto
                             </Link>

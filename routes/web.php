@@ -43,6 +43,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/docs', [DocController::class, 'store'])->name('docs.store');
     Route::get('/docs/download/{documento}', [DocController::class, 'download'])->name('docs.download');
     Route::delete('/docs/{documento}', [DocController::class, 'destroy'])->name('docs.destroy');
+    Route::get('/docs/{documento}/edit', [DocController::class, 'edit'])->name('docs.edit');
+    Route::put('/docs/{documento}', [DocController::class, 'update'])->name('docs.update');
     // Proyectos
     Route::resource('proyectos', ProyectoController::class);
     Route::get('/proyectos/{id}/versiones', [ProyectoController::class, 'versiones'])
