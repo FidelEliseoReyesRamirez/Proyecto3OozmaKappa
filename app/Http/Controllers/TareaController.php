@@ -9,13 +9,19 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class TareaController extends Controller
 {
+    /**
+     * Muestra el tablero Kanban.
+     */
     public function index()
     {
         $proyectos = Proyecto::select('id', 'nombre')->get();
-        $usuarios = User::whereIn('rol', ['arquitecto', 'ingeniero', 'admin'])->get();
+
+        // No cargamos usuarios todavía, ya que dependen del proyecto seleccionado
+        $usuarios = [];
 
         return Inertia::render('Tareas/Tablero', [
             'proyectos' => $proyectos,
@@ -23,6 +29,9 @@ class TareaController extends Controller
         ]);
     }
 
+    /**
+     * Obtiene las tareas y usuarios con permiso "editar" de un proyecto.
+     */
     public function obtenerPorProyecto($id)
     {
         $tareas = Tarea::with(['asignado'])
@@ -30,9 +39,24 @@ class TareaController extends Controller
             ->orderBy('prioridad', 'desc')
             ->get();
 
-        return response()->json($tareas);
+        // 🧠 Solo usuarios con permiso "editar" y activos
+        $usuarios = DB::table('proyectos_usuarios')
+            ->join('users', 'users.id', '=', 'proyectos_usuarios.user_id')
+            ->where('proyectos_usuarios.proyecto_id', $id)
+            ->where('proyectos_usuarios.permiso', 'editar')
+            ->where('users.estado', 'activo')
+            ->select('users.id', 'users.name', 'users.email')
+            ->get();
+
+        return response()->json([
+            'tareas' => $tareas,
+            'usuarios' => $usuarios,
+        ]);
     }
 
+    /**
+     * Muestra el formulario de creación de tarea.
+     */
     public function create($proyecto_id = null)
     {
         $user = Auth::user();
@@ -42,15 +66,30 @@ class TareaController extends Controller
         }
 
         $proyectos = Proyecto::select('id', 'nombre')->get();
-        $usuarios = User::whereIn('rol', ['arquitecto', 'ingeniero', 'admin'])->get();
 
-        return inertia('Tareas/Form', [
+        $usuarios = collect();
+
+        // Si ya se seleccionó un proyecto, filtrar usuarios con permiso 'editar'
+        if ($proyecto_id) {
+            $usuarios = DB::table('proyectos_usuarios')
+                ->join('users', 'users.id', '=', 'proyectos_usuarios.user_id')
+                ->where('proyectos_usuarios.proyecto_id', $proyecto_id)
+                ->where('proyectos_usuarios.permiso', 'editar')
+                ->where('users.estado', 'activo')
+                ->select('users.id', 'users.name', 'users.email')
+                ->get();
+        }
+
+        return Inertia::render('Tareas/Form', [
             'proyectos' => $proyectos,
             'usuarios' => $usuarios,
             'proyectoSeleccionado' => $proyecto_id,
         ]);
     }
 
+    /**
+     * Guarda una nueva tarea.
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -61,6 +100,19 @@ class TareaController extends Controller
             'prioridad' => 'required|in:baja,media,alta',
             'asignado_id' => 'required|exists:users,id',
         ]);
+
+        // 🧠 Verificar que el usuario asignado esté activo y tenga permiso 'editar' en ese proyecto
+        $asignadoValido = DB::table('proyectos_usuarios')
+            ->join('users', 'users.id', '=', 'proyectos_usuarios.user_id')
+            ->where('proyectos_usuarios.proyecto_id', $validated['proyecto_id'])
+            ->where('proyectos_usuarios.user_id', $validated['asignado_id'])
+            ->where('proyectos_usuarios.permiso', 'editar')
+            ->where('users.estado', 'activo')
+            ->exists();
+
+        if (!$asignadoValido) {
+            return redirect()->back()->with('error', 'El usuario asignado no tiene permiso o no está activo.');
+        }
 
         $tarea = Tarea::create([
             'proyecto_id' => $validated['proyecto_id'],
@@ -73,7 +125,7 @@ class TareaController extends Controller
             'creado_por' => Auth::id(),
         ]);
 
-        // 🧠 Historial inicial — con proyecto_id
+        // 🧠 Historial inicial
         TareaHistorial::create([
             'proyecto_id' => $tarea->proyecto_id,
             'tarea_id' => $tarea->id,
@@ -87,6 +139,9 @@ class TareaController extends Controller
         return redirect()->route('tareas.index')->with('success', 'Tarea creada correctamente.');
     }
 
+    /**
+     * Cambia el estado de una tarea (para el Kanban).
+     */
     public function actualizarEstado(Request $request, $id)
     {
         $tarea = Tarea::findOrFail($id);
@@ -111,9 +166,12 @@ class TareaController extends Controller
             ]);
         }
 
-        return redirect()->back();
+        return response()->json(['success' => true]);
     }
 
+    /**
+     * Devuelve el historial de una tarea.
+     */
     public function historial($id)
     {
         $historial = TareaHistorial::where('tarea_id', $id)

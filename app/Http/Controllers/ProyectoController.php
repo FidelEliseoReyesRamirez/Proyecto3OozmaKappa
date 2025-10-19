@@ -57,8 +57,14 @@ class ProyectoController extends Controller
             return redirect()->route('proyectos.index')->with('error', 'No tienes permiso para crear proyectos.');
         }
 
-        $clientes = User::where('rol', 'cliente')->get();
-        $responsables = User::whereIn('rol', ['arquitecto', 'ingeniero', 'admin'])->get();
+        $clientes = User::where('rol', 'cliente')
+            ->where('estado', 'activo')
+            ->get();
+
+        $responsables = User::whereIn('rol', ['arquitecto', 'ingeniero', 'admin'])
+            ->where('estado', 'activo')
+            ->get();
+
 
         return Inertia::render('GestionProyecto/Form', [
             'clientes' => $clientes,
@@ -80,6 +86,18 @@ class ProyectoController extends Controller
             'fecha_inicio' => 'required|date',
             'archivo_bim' => 'nullable|file',
         ]);
+
+        $clienteActivo = User::where('id', $request->cliente_id)
+            ->where('estado', 'activo')
+            ->exists();
+
+        $responsableActivo = User::where('id', $request->responsable_id)
+            ->where('estado', 'activo')
+            ->exists();
+
+        if (!$clienteActivo || !$responsableActivo) {
+            return redirect()->back()->with('error', 'El cliente o responsable seleccionado no está activo.');
+        }
 
         $proyecto = Proyecto::create([
             'nombre' => $request->nombre,
@@ -137,8 +155,13 @@ class ProyectoController extends Controller
         }
 
         $proyecto = Proyecto::with('cliente', 'responsable')->findOrFail($id);
-        $clientes = User::where('rol', 'cliente')->get();
-        $responsables = User::whereIn('rol', ['arquitecto', 'ingeniero', 'admin'])->get();
+        $clientes = User::where('rol', 'cliente')
+            ->where('estado', 'activo')
+            ->get();
+
+        $responsables = User::whereIn('rol', ['arquitecto', 'ingeniero', 'admin'])
+            ->where('estado', 'activo')
+            ->get();
 
         return Inertia::render('GestionProyecto/Edit', [
             'proyecto' => $proyecto,
@@ -281,6 +304,7 @@ class ProyectoController extends Controller
 
         $usuarios = User::whereIn('rol', ['arquitecto', 'ingeniero'])
             ->where('id', '!=', $proyecto->responsable_id)
+            ->where('estado', 'activo')
             ->select('id', 'name', 'email')
             ->get();
 
@@ -314,7 +338,13 @@ class ProyectoController extends Controller
                 ->where('proyecto_id', $proyecto->id)
                 ->where('user_id', $permiso['user_id'])
                 ->value('permiso');
+            $usuarioValido = User::where('id', $permiso['user_id'])
+                ->where('estado', 'activo')
+                ->exists();
 
+            if (!$usuarioValido) {
+                continue; // ignora usuarios inactivos
+            }
             // Solo aplicar cambios si el permiso realmente cambió
             if ($actual !== $permiso['permiso']) {
                 DB::table('proyectos_usuarios')

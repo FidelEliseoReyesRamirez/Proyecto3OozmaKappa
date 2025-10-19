@@ -4,7 +4,9 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import PrimaryButton from "@/Components/PrimaryButton";
 
 export default function Tablero() {
-    const { proyectos, auth, usuarios } = usePage().props as any;
+    const pageProps = usePage().props as any;
+    const { proyectos, auth } = pageProps;
+    const [usuarios, setUsuarios] = useState<any[]>(pageProps.usuarios || []);
     const userRole = auth.user?.rol;
     const isEmployee = ["admin", "arquitecto", "ingeniero"].includes(userRole);
 
@@ -20,36 +22,33 @@ export default function Tablero() {
         if (proyectoSeleccionado) {
             fetch(`/tareas/proyecto/${proyectoSeleccionado}`)
                 .then(res => res.json())
-                .then(data => setTareas(data))
-                .catch(err => console.error("Error cargando tareas:", err));
-        } else {
-            setTareas([]);
+                .then(data => {
+                    setTareas(data.tareas);
+                    setUsuarios(data.usuarios);
+                });
         }
     }, [proyectoSeleccionado]);
+
+
 
     const onDrop = (_e: any, nuevoEstado: string) => {
         if (!dragged) return;
 
         const tareaId = dragged.id;
 
-        // Optimista: actualizar UI localmente
         setTareas(prev => prev.map(t => t.id === tareaId ? { ...t, estado: nuevoEstado } : t));
 
-        // Usamos router.patch (Inertia). Como el controlador responde con redirect, Inertia lo acepta.
         router.patch(
             route("tareas.estado", tareaId),
             { estado: nuevoEstado },
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    // opcional: volver a refrescar tareas desde servidor si quieres fuente de verdad
-                    // fetch(`/tareas/proyecto/${proyectoSeleccionado}`).then(...)
 
                     console.log("Estado actualizado correctamente");
                 },
                 onError: (err) => {
                     console.error("Error al actualizar estado", err);
-                    // revertir cambio visual si error
                     setTareas(prev => prev.map(t => t.id === tareaId ? { ...t, estado: dragged.estado } : t));
                 },
             }
