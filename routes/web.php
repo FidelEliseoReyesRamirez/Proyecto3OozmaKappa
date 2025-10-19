@@ -49,6 +49,10 @@ Route::middleware('auth')->group(function () {
         ->name('proyectos.versiones');
     Route::patch('/proyectos/{id}/estado', [ProyectoController::class, 'cambiarEstado'])
         ->name('proyectos.cambiarEstado');
+    //Permisos proyectos
+    Route::get('/proyectos/{id}/permisos', [ProyectoController::class, 'gestionarPermisos'])->name('proyectos.permisos');
+    Route::post('/proyectos/{id}/permisos', [ProyectoController::class, 'actualizarPermisos'])->name('proyectos.permisos.actualizar');
+
     // Avances para clientes
     Route::get('/proyectos/{projectId}/timeline', [AvancesProyectoController::class, 'showTimeline'])
         ->name('projects.timeline');

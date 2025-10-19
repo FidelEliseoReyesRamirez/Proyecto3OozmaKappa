@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use App\Services\NotificationService;
+use Illuminate\Support\Facades\DB;
+use App\Models\HistorialPermiso;
 
 class ProyectoController extends Controller
 {
@@ -25,8 +27,19 @@ class ProyectoController extends Controller
 
         $query = Proyecto::with(['cliente', 'responsable']);
 
+        // 🧠 Clientes solo ven sus proyectos
         if ($userRole === 'cliente') {
             $query->where('cliente_id', $user->id);
+        }
+
+        // 🧠 Empleados solo ven proyectos con permiso 'ver' o 'editar'
+        elseif (in_array($userRole, ['arquitecto', 'ingeniero', 'admin'])) {
+            $query->whereIn('id', function ($q) use ($user) {
+                $q->select('proyecto_id')
+                    ->from('proyectos_usuarios')
+                    ->where('user_id', $user->id)
+                    ->where('permiso', 'editar');
+            });
         }
 
         $proyectos = $query->get();
@@ -36,6 +49,7 @@ class ProyectoController extends Controller
             'userRole' => $userRole,
         ]);
     }
+
 
     public function create()
     {
@@ -254,5 +268,71 @@ class ProyectoController extends Controller
         $proyecto->update($datos);
 
         return redirect()->back()->with('success', 'Estado actualizado correctamente.');
+    }
+
+    public function gestionarPermisos($id)
+    {
+        $proyecto = Proyecto::findOrFail($id);
+
+        // Solo el encargado del proyecto puede gestionar permisos
+        if (Auth::id() !== $proyecto->responsable_id) {
+            abort(403, 'No tienes permiso para gestionar este proyecto.');
+        }
+
+        $usuarios = User::whereIn('rol', ['arquitecto', 'ingeniero'])
+            ->where('id', '!=', $proyecto->responsable_id)
+            ->select('id', 'name', 'email')
+            ->get();
+
+        $asignaciones = DB::table('proyectos_usuarios')
+            ->where('proyecto_id', $id)
+            ->get();
+
+        return Inertia::render('GestionProyecto/Permisos', [
+            'proyecto' => $proyecto,
+            'usuarios' => $usuarios,
+            'asignaciones' => $asignaciones,
+        ]);
+    }
+
+    public function actualizarPermisos(Request $request, $id)
+    {
+        $proyecto = Proyecto::findOrFail($id);
+
+        if (Auth::id() !== $proyecto->responsable_id) {
+            abort(403, 'No tienes permiso para editar permisos en este proyecto.');
+        }
+
+        $request->validate([
+            'permisos' => 'required|array',
+            'permisos.*.user_id' => 'required|exists:users,id',
+            'permisos.*.permiso' => 'required|in:ninguno,editar',
+        ]);
+
+        foreach ($request->permisos as $permiso) {
+            $actual = DB::table('proyectos_usuarios')
+                ->where('proyecto_id', $proyecto->id)
+                ->where('user_id', $permiso['user_id'])
+                ->value('permiso');
+
+            // Solo aplicar cambios si el permiso realmente cambió
+            if ($actual !== $permiso['permiso']) {
+                DB::table('proyectos_usuarios')
+                    ->updateOrInsert(
+                        ['proyecto_id' => $proyecto->id, 'user_id' => $permiso['user_id']],
+                        ['permiso' => $permiso['permiso'], 'asignado_en' => now()]
+                    );
+
+                HistorialPermiso::create([
+                    'proyecto_id' => $proyecto->id,
+                    'usuario_modificador_id' => Auth::id(),
+                    'usuario_afectado_id' => $permiso['user_id'],
+                    'permiso_asignado' => $permiso['permiso'],
+                    'fecha_cambio' => now(),
+                ]);
+            }
+        }
+        return redirect()->route('proyectos.index')
+            ->with('success', 'Permisos actualizados correctamente.');
     }
 }

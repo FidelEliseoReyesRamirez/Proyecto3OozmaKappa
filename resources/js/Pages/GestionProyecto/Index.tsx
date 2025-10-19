@@ -6,8 +6,8 @@ import ConfirmModal from "@/Components/ConfirmModal";
 
 export default function Index() {
     // Asegúrate de que el controlador de Laravel pase 'proyectos' y 'auth'
-    const { proyectos, auth } = usePage().props as any; 
-    
+    const { proyectos, auth } = usePage().props as any;
+
     // 1. Detección del rol del usuario
     const userRole = auth.user?.rol; // Asumiendo que el rol viene en auth.user.rol
     const isEmployee = ['admin', 'arquitecto', 'ingeniero'].includes(userRole);
@@ -68,7 +68,7 @@ export default function Index() {
                                 <option value="finalizado">Finalizado</option>
                             </select>
                         </div>
-                        
+
                         {/* 2. Restringir botón de creación solo a EMPLEADOS */}
                         {isEmployee && (
                             <Link href={route("proyectos.create")}>
@@ -97,7 +97,7 @@ export default function Index() {
                                     <td className="p-3">{proyecto.descripcion || "Sin descripción"}</td>
                                     <td className="p-3">
                                         <select
-                                            className={`rounded-md p-1 text-white 
+                                            className={`rounded-md p-1 text-white
                                                 ${isEmployee ? 'bg-[#0B1120] border-gray-600 hover:border-[#B3E10F]' : 'bg-gray-800 border-gray-800 cursor-not-allowed'}
                                             `}
                                             value={proyecto.estado}
@@ -126,6 +126,14 @@ export default function Index() {
                                         >
                                             Ver versiones
                                         </Link>
+                                        {auth.user.id === proyecto.responsable_id && (
+                                            <Link
+                                                href={route("proyectos.permisos", proyecto.id)}
+                                                className="text-[#b3b3b3] hover:underline"
+                                            >
+                                                Permisos
+                                            </Link>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
