@@ -1,4 +1,4 @@
-// resources/js/Pages/Proyectos/Edit.tsx
+// resources/js/Pages/GestionProyecto/Edit.tsx
 import React, { useState } from "react";
 import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";
