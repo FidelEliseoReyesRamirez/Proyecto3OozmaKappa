@@ -57,12 +57,13 @@ class ProyectoController extends Controller
 
         $clientes = User::where('rol', 'cliente')
             ->where('estado', 'activo')
+            ->where('eliminado', 0)
             ->get();
 
         $responsables = User::whereIn('rol', ['arquitecto', 'ingeniero', 'admin'])
             ->where('estado', 'activo')
+            ->where('eliminado', 0)
             ->get();
-
 
         return Inertia::render('GestionProyecto/Form', [
             'clientes' => $clientes,
@@ -153,12 +154,15 @@ class ProyectoController extends Controller
         }
 
         $proyecto = Proyecto::with('cliente', 'responsable')->findOrFail($id);
+
         $clientes = User::where('rol', 'cliente')
             ->where('estado', 'activo')
+            ->where('eliminado', 0)
             ->get();
 
         $responsables = User::whereIn('rol', ['arquitecto', 'ingeniero', 'admin'])
             ->where('estado', 'activo')
+            ->where('eliminado', 0)
             ->get();
 
         return Inertia::render('GestionProyecto/Edit', [
