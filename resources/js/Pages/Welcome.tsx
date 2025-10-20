@@ -46,9 +46,6 @@ const Welcome: React.FC<WelcomeProps> = ({ auth }) => {
                                 Solicitar Consulta
                         
                             </a>
-                            <a href="#" className="px-6 py-3 text-lg font-bold rounded-lg text-gray-300 hover:text-[#2970E8] transition duration-150 flex items-center">
-                                ▷ Ver Demo
-                            </a>
                         </div>
                         
                         {/* Estadísticas Inferiores */}
