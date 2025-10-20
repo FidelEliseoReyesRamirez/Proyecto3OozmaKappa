@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";
-import PrimaryButton from "@/Components/PrimaryButton";
 import TextInput from "@/Components/TextInput";
 import { router, Head, Link } from "@inertiajs/react";
 
@@ -14,19 +13,94 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
         prioridad: "media",
         asignado_id: "",
     });
+
     const [errors, setErrors] = useState<any>({});
+    const [localErrors, setLocalErrors] = useState<any>({});
     const [processing, setProcessing] = useState(false);
 
     const inputStyle =
         "mt-1 block w-full bg-gray-900 border border-gray-700 text-gray-200 rounded-lg shadow-inner focus:border-[#2970E8] focus:ring-[#2970E8] transition duration-200 ease-in-out placeholder-gray-500";
 
-    const handleChange = (e: any) => {
-        setTarea({ ...tarea, [e.target.name]: e.target.value });
+    // 🔍 Validaciones personalizadas
+    const validateTitulo = (value: string) => {
+        let clean = value.replace(/\s+/g, " ").trimStart();
+
+        // Solo letras, números y paréntesis
+        if (/[^A-Z0-9() ]/i.test(clean)) {
+            setLocalErrors({ ...localErrors, titulo: "Solo se permiten letras, números y paréntesis." });
+            clean = clean.replace(/[^A-Z0-9() ]/gi, "");
+        } else {
+            setLocalErrors({ ...localErrors, titulo: "" });
+        }
+
+        // Convertir a mayúsculas
+        clean = clean.toUpperCase();
+
+        // Límite de 50 caracteres
+        if (clean.length > 50) {
+            setLocalErrors({ ...localErrors, titulo: "Máximo 50 caracteres permitidos." });
+            clean = clean.slice(0, 50);
+        }
+
+        setTarea({ ...tarea, titulo: clean });
+    };
+
+    const validateDescripcion = (value: string) => {
+        let clean = value.replace(/\s+/g, " ").trimStart();
+
+        // Sin símbolos ni paréntesis
+        if (/[^A-Z0-9 ]/i.test(clean)) {
+            setLocalErrors({ ...localErrors, descripcion: "Solo se permiten letras y números, sin símbolos ni paréntesis." });
+            clean = clean.replace(/[^A-Z0-9 ]/gi, "");
+        } else {
+            setLocalErrors({ ...localErrors, descripcion: "" });
+        }
+
+        // Límite de 200 caracteres
+        if (clean.length > 200) {
+            setLocalErrors({ ...localErrors, descripcion: "Máximo 200 caracteres permitidos." });
+            clean = clean.slice(0, 200);
+        }
+
+        setTarea({ ...tarea, descripcion: clean });
+    };
+
+    // 📅 Fechas válidas: desde hoy hasta 1 mes máximo
+    const today = new Date().toISOString().split("T")[0];
+    const maxDate = new Date();
+    maxDate.setMonth(maxDate.getMonth() + 1);
+    const maxDateStr = maxDate.toISOString().split("T")[0];
+
+    // 🧠 Validar antes de enviar
+    const validateBeforeSubmit = () => {
+        const errs: any = {};
+
+        if (!tarea.proyecto_id) errs.proyecto_id = "Debe seleccionar un proyecto.";
+        if (!tarea.titulo.trim()) errs.titulo = "El título es obligatorio.";
+        if (!tarea.descripcion.trim()) errs.descripcion = "La descripción es obligatoria.";
+        if (!tarea.asignado_id) errs.asignado_id = "Debe seleccionar un responsable.";
+        if (!tarea.fecha_limite) errs.fecha_limite = "Debe seleccionar una fecha límite.";
+
+        // Validar rango de fecha
+        if (tarea.fecha_limite) {
+            const f = new Date(tarea.fecha_limite);
+            if (f < new Date(today)) {
+                errs.fecha_limite = "La fecha no puede ser anterior a hoy.";
+            } else if (f > maxDate) {
+                errs.fecha_limite = "La fecha no puede superar 30 días desde hoy.";
+            }
+        }
+
+        setErrors(errs);
+        return Object.keys(errs).length === 0;
     };
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (processing) return; // Previene doble clic
+        if (processing) return;
+
+        if (!validateBeforeSubmit()) return;
+
         setProcessing(true);
         setErrors({});
 
@@ -61,12 +135,14 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
                             <select
                                 name="proyecto_id"
                                 value={tarea.proyecto_id}
-                                onChange={handleChange}
+                                onChange={(e) => setTarea({ ...tarea, proyecto_id: e.target.value })}
                                 className={inputStyle}
                             >
                                 <option value="">-- Selecciona un proyecto --</option>
                                 {proyectos.map((p: any) => (
-                                    <option key={p.id} value={p.id}>{p.nombre}</option>
+                                    <option key={p.id} value={p.id}>
+                                        {p.nombre}
+                                    </option>
                                 ))}
                             </select>
                         )}
@@ -75,51 +151,57 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
 
                     {/* Título */}
                     <div>
-                        <InputLabel htmlFor="titulo" value="Título" className="text-gray-200 font-semibold" />
+                        <InputLabel htmlFor="titulo" value="Título de la tarea" className="text-gray-200 font-semibold" />
                         <TextInput
-                            name="titulo"
+                            id="titulo"
                             value={tarea.titulo}
-                            onChange={handleChange}
+                            onChange={(e) => validateTitulo(e.target.value)}
                             className={inputStyle}
-                            placeholder="Ej. Render preliminar del edificio A"
+                            placeholder="Ej. RENDER PRELIMINAR DEL EDIFICIO A"
+                            maxLength={50}
                         />
-                        <InputError message={errors.titulo} className="mt-2" />
+                        <InputError message={localErrors.titulo || errors.titulo} className="mt-2 text-red-400" />
                     </div>
 
                     {/* Descripción */}
                     <div>
                         <InputLabel htmlFor="descripcion" value="Descripción" className="text-gray-200 font-semibold" />
                         <textarea
-                            name="descripcion"
+                            id="descripcion"
                             value={tarea.descripcion}
-                            onChange={handleChange}
+                            onChange={(e) => validateDescripcion(e.target.value)}
                             className={inputStyle}
                             rows={3}
                             placeholder="Describe brevemente la tarea..."
+                            maxLength={200}
                         />
-                        <InputError message={errors.descripcion} className="mt-2" />
+                        <InputError message={localErrors.descripcion || errors.descripcion} className="mt-2 text-red-400" />
                     </div>
 
                     {/* Fecha y Prioridad */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <InputLabel htmlFor="fecha_limite" value="Fecha Límite" className="text-gray-200 font-semibold" />
+                            <InputLabel htmlFor="fecha_limite" value="Fecha límite" className="text-gray-200 font-semibold" />
                             <TextInput
                                 type="date"
+                                id="fecha_limite"
                                 name="fecha_limite"
+                                min={today}
+                                max={maxDateStr}
                                 value={tarea.fecha_limite}
-                                onChange={handleChange}
+                                onChange={(e) => setTarea({ ...tarea, fecha_limite: e.target.value })}
                                 className={inputStyle}
                             />
-                            <InputError message={errors.fecha_limite} className="mt-2" />
+                            <InputError message={errors.fecha_limite} className="mt-2 text-red-400" />
                         </div>
 
                         <div>
                             <InputLabel htmlFor="prioridad" value="Prioridad" className="text-gray-200 font-semibold" />
                             <select
+                                id="prioridad"
                                 name="prioridad"
                                 value={tarea.prioridad}
-                                onChange={handleChange}
+                                onChange={(e) => setTarea({ ...tarea, prioridad: e.target.value })}
                                 className={inputStyle}
                             >
                                 <option value="baja">Baja</option>
@@ -133,9 +215,10 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
                     <div>
                         <InputLabel htmlFor="asignado_id" value="Responsable" className="text-gray-200 font-semibold" />
                         <select
+                            id="asignado_id"
                             name="asignado_id"
                             value={tarea.asignado_id}
-                            onChange={handleChange}
+                            onChange={(e) => setTarea({ ...tarea, asignado_id: e.target.value })}
                             className={inputStyle}
                         >
                             <option value="">-- Selecciona un usuario --</option>
@@ -149,22 +232,22 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
                                 <option disabled>No hay usuarios disponibles</option>
                             )}
                         </select>
-                        <InputError message={errors.asignado_id} className="mt-2" />
+                        <InputError message={errors.asignado_id || (tarea.asignado_id === "" ? "Debe seleccionar un responsable." : "")} className="mt-2 text-red-400" />
                     </div>
 
                     {/* Botones */}
                     <div className="flex items-center justify-between pt-6 border-t border-gray-700">
-                        <PrimaryButton
-                            className="bg-[#2970E8] hover:bg-indigo-600 focus:bg-indigo-600 active:bg-indigo-700 shadow-md shadow-[#2970E8]/40 transform hover:scale-[1.02]"
+                        <button
+                            className="bg-[#B3E10F] text-gray-900 px-4 py-2 rounded-md hover:bg-lime-300 transition duration-150 text-sm font-bold shadow-md shadow-[#B3E10F]/30"
                             disabled={processing}
                         >
                             {processing ? "Creando..." : "CREAR TAREA"}
-                        </PrimaryButton>
+                        </button>
                         <Link
                             href={route("tareas.index")}
-                            className="text-[#B3E10F] hover:text-lime-400 font-semibold transition duration-150 ml-4"
+                            className="bg-red-700 hover:bg-red-600 px-4 py-2 rounded-md text-sm font-semibold transition duration-150 text-white"
                         >
-                            Cancelar
+                            Cancelar y volver
                         </Link>
                     </div>
                 </form>

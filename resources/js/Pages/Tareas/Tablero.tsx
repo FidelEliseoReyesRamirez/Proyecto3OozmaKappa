@@ -119,12 +119,12 @@ export default function Tablero() {
                                 </select>
                             </div>
                         </div>
-
                         {proyectoSeleccionado && isEmployee && (
-                            <Link href={route("tareas.create", { proyecto_id: proyectoSeleccionado })}>
-                                <PrimaryButton className="bg-[#2970E8] hover:bg-indigo-600">
-                                    Crear Tarea
-                                </PrimaryButton>
+                            <Link
+                                href={route("tareas.create", { proyecto_id: proyectoSeleccionado })}
+                                className="bg-[#B3E10F] text-gray-900 px-2 py-1 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-bold shadow-md shadow-[#B3E10F]/30"
+                            >
+                                Crear Tarea
                             </Link>
                         )}
                     </div>
@@ -207,7 +207,7 @@ export default function Tablero() {
                                 <div className="flex justify-end mt-5">
                                     <button
                                         onClick={cerrarModal}
-                                        className="bg-[#2970E8] hover:bg-indigo-600 px-4 py-2 rounded-md text-white font-semibold transition"
+                                        className="bg-red-700 hover:bg-red-600 px-2 py-1 rounded-md text-xs sm:text-sm font-medium transition duration-150 text-white"
                                     >
                                         Cerrar
                                     </button>

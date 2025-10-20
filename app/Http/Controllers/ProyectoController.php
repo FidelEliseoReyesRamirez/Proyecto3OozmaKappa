@@ -30,9 +30,8 @@ class ProyectoController extends Controller
         if ($userRole === 'cliente') {
             $query->where('cliente_id', $user->id);
         }
-        if ($userRole === 'admin') {}
-
-        elseif (in_array($userRole, ['arquitecto', 'ingeniero', 'admin'])) {
+        if ($userRole === 'admin') {
+        } elseif (in_array($userRole, ['arquitecto', 'ingeniero', 'admin'])) {
             $query->whereIn('id', function ($q) use ($user) {
                 $q->select('proyecto_id')
                     ->from('proyectos_usuarios')
@@ -176,41 +175,87 @@ class ProyectoController extends Controller
 
         $proyecto = Proyecto::findOrFail($id);
 
+        // ✅ Validación unificada (idéntica a store)
+        $messages = [
+            'archivo_bim.mimetypes' => 'El archivo BIM debe tener formato .bim o .ifc.',
+            'archivo_bim.max' => 'El archivo BIM no puede superar los 256 MB.',
+        ];
+
         $validated = $request->validate([
             'nombre' => ['required', 'string', 'max:150'],
             'descripcion' => ['nullable', 'string'],
             'responsable_id' => ['required', 'exists:users,id'],
             'cliente_id' => ['required', 'exists:users,id'],
             'fecha_inicio' => ['required', 'date'],
-            'archivo_bim' => ['nullable', 'file', 'mimes:bim,ifc', 'max:5242880'],
-        ]);
+            'archivo_bim' => [
+                'nullable',
+                'file',
+                'max:262144', // 256 MB
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $ext = strtolower($value->getClientOriginalExtension());
+                        if (!in_array($ext, ['bim', 'ifc'])) {
+                            $fail('El archivo BIM debe tener formato .bim o .ifc.');
+                        }
+                    }
+                },
+            ],
+        ], $messages);
 
-        $ultimaVersion = ProyectoVersion::where('proyecto_id', $proyecto->id)
-            ->orderByDesc('id')
-            ->first();
-        $nuevoNumero = $ultimaVersion ? intval(explode('.', ltrim($ultimaVersion->version, 'v'))[0]) + 1 : 1;
-        $versionActual = 'v' . $nuevoNumero . '.0';
+        // -------------------------
+        // Detectar cambios
+        // -------------------------
+        $descripcionCambia = trim($proyecto->descripcion ?? '') !== trim($validated['descripcion'] ?? '');
+        $responsableCambia = $proyecto->responsable_id != $validated['responsable_id'];
+        $hayArchivoNuevo = $request->hasFile('archivo_bim');
+        $mantieneArchivo = $request->boolean('mantener_archivo');
 
-        ProyectoVersion::create([
-            'proyecto_id' => $proyecto->id,
-            'descripcion_cambio' => 'Actualización del proyecto por ' . Auth::user()->name,
-            'autor_id' => Auth::id(),
-            'version' => $versionActual,
-            'datos_previos' => json_encode([
-                'descripcion' => $proyecto->descripcion,
-                'responsable_id' => $proyecto->responsable_id,
-                'fecha' => now()->toDateTimeString(),
-            ]),
-        ]);
-        $proyecto->update([
-            'descripcion' => $validated['descripcion'],
-            'responsable_id' => $validated['responsable_id'],
-        ]);
+        // -------------------------
+        // Escenario 4: Sin cambios ni archivo nuevo → no hacer nada
+        // -------------------------
+        if (!$descripcionCambia && !$responsableCambia && !$hayArchivoNuevo && $mantieneArchivo) {
+            return redirect()->route('proyectos.index')
+                ->with('info', 'No se detectaron cambios en el proyecto.');
+        }
 
-        if ($request->hasFile('archivo_bim')) {
+        // -------------------------
+        // Escenario 1: Cambios de texto → crear versión de información
+        // Escenario 2: Archivo nuevo → crear versión BIM
+        // Escenario 3: Ambos → crear en ambas
+        // -------------------------
+
+        // Bandera: saber si ya se creó versión de info
+        $versionInfoCreada = false;
+
+        // Si cambia descripción o responsable → registrar versión de información
+        if ($descripcionCambia || $responsableCambia) {
+            $ultimaVersion = ProyectoVersion::where('proyecto_id', $proyecto->id)
+                ->orderByDesc('id')
+                ->first();
+            $nuevoNumero = $ultimaVersion
+                ? intval(explode('.', ltrim($ultimaVersion->version, 'v'))[0]) + 1
+                : 1;
+            $versionActual = 'v' . $nuevoNumero . '.0';
+
+            ProyectoVersion::create([
+                'proyecto_id' => $proyecto->id,
+                'descripcion_cambio' => 'Actualización de información del proyecto por ' . Auth::user()->name,
+                'autor_id' => Auth::id(),
+                'version' => $versionActual,
+                'datos_previos' => json_encode([
+                    'descripcion' => $proyecto->descripcion,
+                    'responsable_id' => $proyecto->responsable_id,
+                    'fecha' => now()->toDateTimeString(),
+                ]),
+            ]);
+
+            $versionInfoCreada = true;
+        }
+
+        // Si hay nuevo archivo → crear versión BIM
+        if ($hayArchivoNuevo) {
             $versionBimActual = PlanoBim::where('proyecto_id', $proyecto->id)->count();
             $versionBim = 'v' . ($versionBimActual + 1) . '.0';
-
             $path = $request->file('archivo_bim')->store('planos_bim', 'public');
 
             PlanoBim::create([
@@ -220,29 +265,35 @@ class ProyectoController extends Controller
                 'version' => $versionBim,
                 'subido_por' => Auth::id(),
             ]);
-        } elseif ($request->has('mantener_archivo') && $request->mantener_archivo === 'true') {
-            $ultimoPlano = PlanoBim::where('proyecto_id', $proyecto->id)
-                ->latest()
-                ->first();
 
-            if ($ultimoPlano) {
-                PlanoBim::create([
-                    'proyecto_id' => $proyecto->id,
-                    'nombre' => $ultimoPlano->nombre,
-                    'archivo_url' => $ultimoPlano->archivo_url,
-                    'version' => 'v' . (PlanoBim::where('proyecto_id', $proyecto->id)->count() + 1) . '.0',
-                    'subido_por' => Auth::id(),
-                ]);
-            }
+            // Si también cambió información, no hacemos nada extra:
+            // ambas versiones ya quedan registradas correctamente
         }
 
+        // Actualizar datos del proyecto solo si cambian
+        if ($descripcionCambia || $responsableCambia) {
+            $proyecto->update([
+                'descripcion' => $validated['descripcion'],
+                'responsable_id' => $validated['responsable_id'],
+            ]);
+        }
+
+        // Notificar y redirigir
         NotificationService::send(
             $proyecto->responsable_id,
             "El proyecto '{$proyecto->nombre}' ha sido actualizado.",
             'avance'
         );
-        return redirect()->route('proyectos.index')->with('success', 'Se ha creado una nueva versión del proyecto.');
+
+        return redirect()->route('proyectos.index')
+            ->with('success', $versionInfoCreada && $hayArchivoNuevo
+                ? 'Se han creado nuevas versiones de información y documento BIM.'
+                : ($versionInfoCreada
+                    ? 'Se ha creado una nueva versión de información del proyecto.'
+                    : 'Se ha creado una nueva versión del documento BIM.'));
     }
+
+
 
 
     public function versiones($id)
