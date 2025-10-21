@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use App\Services\NotificationService;
+use Illuminate\Support\Facades\DB;
+use App\Models\HistorialPermiso;
 
 class ProyectoController extends Controller
 {
@@ -28,6 +30,15 @@ class ProyectoController extends Controller
         if ($userRole === 'cliente') {
             $query->where('cliente_id', $user->id);
         }
+        if ($userRole === 'admin') {
+        } elseif (in_array($userRole, ['arquitecto', 'ingeniero', 'admin'])) {
+            $query->whereIn('id', function ($q) use ($user) {
+                $q->select('proyecto_id')
+                    ->from('proyectos_usuarios')
+                    ->where('user_id', $user->id)
+                    ->where('permiso', 'editar');
+            });
+        }
 
         $proyectos = $query->get();
 
@@ -37,14 +48,22 @@ class ProyectoController extends Controller
         ]);
     }
 
+
     public function create()
     {
         if (strtolower(Auth::user()->rol) === 'cliente') {
             return redirect()->route('proyectos.index')->with('error', 'No tienes permiso para crear proyectos.');
         }
 
-        $clientes = User::where('rol', 'cliente')->get();
-        $responsables = User::whereIn('rol', ['arquitecto', 'ingeniero', 'admin'])->get();
+        $clientes = User::where('rol', 'cliente')
+            ->where('estado', 'activo')
+            ->where('eliminado', 0)
+            ->get();
+
+        $responsables = User::whereIn('rol', ['arquitecto', 'ingeniero', 'admin'])
+            ->where('estado', 'activo')
+            ->where('eliminado', 0)
+            ->get();
 
         return Inertia::render('GestionProyecto/Form', [
             'clientes' => $clientes,
@@ -66,6 +85,18 @@ class ProyectoController extends Controller
             'fecha_inicio' => 'required|date',
             'archivo_bim' => 'nullable|file',
         ]);
+
+        $clienteActivo = User::where('id', $request->cliente_id)
+            ->where('estado', 'activo')
+            ->exists();
+
+        $responsableActivo = User::where('id', $request->responsable_id)
+            ->where('estado', 'activo')
+            ->exists();
+
+        if (!$clienteActivo || !$responsableActivo) {
+            return redirect()->back()->with('error', 'El cliente o responsable seleccionado no está activo.');
+        }
 
         $proyecto = Proyecto::create([
             'nombre' => $request->nombre,
@@ -90,18 +121,29 @@ class ProyectoController extends Controller
             ]
         ]);
 
+        // -----------------------------------------------------------
+        // NOTIFICACIONES AL CREAR PROYECTO
+        // -----------------------------------------------------------
+
+        // Notificar al responsable
         NotificationService::send(
             $request->responsable_id,
             "Se te ha asignado el proyecto: {$proyecto->nombre}",
-            'tarea'
+            'proyecto',
+            url('/proyectos/' . $proyecto->id),
+            "Asignación de proyecto"
         );
 
+        // Notificar al cliente
         NotificationService::send(
             $request->cliente_id,
-            "Tu proyecto '{$proyecto->nombre}' ha sido creado.",
-            'tarea'
+            "Tu proyecto '{$proyecto->nombre}' ha sido creado correctamente.",
+            'proyecto',
+            url('/proyectos/' . $proyecto->id),
+            "Proyecto creado"
         );
 
+        // Si hay archivo BIM
         if ($request->hasFile('archivo_bim')) {
             $path = $request->file('archivo_bim')->store('planos_bim', 'public');
             PlanoBim::create([
@@ -111,10 +153,33 @@ class ProyectoController extends Controller
                 'version' => 'v1.0',
                 'subido_por' => Auth::id(),
             ]);
+
+            // Notificar subida de archivo BIM
+            NotificationService::sendToMany(
+                [$request->responsable_id, $request->cliente_id],
+                "Se ha subido el primer archivo BIM del proyecto '{$proyecto->nombre}'.",
+                'documento',
+                url('/proyectos/' . $proyecto->id),
+                "Archivo BIM cargado"
+            );
         }
 
         return redirect()->route('proyectos.index')->with('success', 'Proyecto creado correctamente.');
     }
+    public function show($id)
+    {
+        $proyecto = Proyecto::with(['cliente', 'responsable'])->findOrFail($id);
+
+        // Verificación de permisos
+        if (strtolower(Auth::user()->rol) === 'cliente' && $proyecto->cliente_id !== Auth::id()) {
+            abort(403, 'No tienes permiso para ver este proyecto.');
+        }
+
+        return Inertia::render('GestionProyecto/Show', [
+            'proyecto' => $proyecto,
+        ]);
+    }
+
 
     public function edit($id)
     {
@@ -123,8 +188,16 @@ class ProyectoController extends Controller
         }
 
         $proyecto = Proyecto::with('cliente', 'responsable')->findOrFail($id);
-        $clientes = User::where('rol', 'cliente')->get();
-        $responsables = User::whereIn('rol', ['arquitecto', 'ingeniero', 'admin'])->get();
+
+        $clientes = User::where('rol', 'cliente')
+            ->where('estado', 'activo')
+            ->where('eliminado', 0)
+            ->get();
+
+        $responsables = User::whereIn('rol', ['arquitecto', 'ingeniero', 'admin'])
+            ->where('estado', 'activo')
+            ->where('eliminado', 0)
+            ->get();
 
         return Inertia::render('GestionProyecto/Edit', [
             'proyecto' => $proyecto,
@@ -132,6 +205,7 @@ class ProyectoController extends Controller
             'responsables' => $responsables,
         ]);
     }
+
     public function update(Request $request, $id)
     {
         if (strtolower(Auth::user()->rol) === 'cliente') {
@@ -140,41 +214,71 @@ class ProyectoController extends Controller
 
         $proyecto = Proyecto::findOrFail($id);
 
+        $messages = [
+            'archivo_bim.mimetypes' => 'El archivo BIM debe tener formato .bim o .ifc.',
+            'archivo_bim.max' => 'El archivo BIM no puede superar los 256 MB.',
+        ];
+
         $validated = $request->validate([
             'nombre' => ['required', 'string', 'max:150'],
             'descripcion' => ['nullable', 'string'],
             'responsable_id' => ['required', 'exists:users,id'],
             'cliente_id' => ['required', 'exists:users,id'],
             'fecha_inicio' => ['required', 'date'],
-            'archivo_bim' => ['nullable', 'file', 'mimes:bim,ifc', 'max:5242880'],
-        ]);
+            'archivo_bim' => [
+                'nullable',
+                'file',
+                'max:262144',
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $ext = strtolower($value->getClientOriginalExtension());
+                        if (!in_array($ext, ['bim', 'ifc'])) {
+                            $fail('El archivo BIM debe tener formato .bim o .ifc.');
+                        }
+                    }
+                },
+            ],
+        ], $messages);
 
-        $ultimaVersion = ProyectoVersion::where('proyecto_id', $proyecto->id)
-            ->orderByDesc('id')
-            ->first();
-        $nuevoNumero = $ultimaVersion ? intval(explode('.', ltrim($ultimaVersion->version, 'v'))[0]) + 1 : 1;
-        $versionActual = 'v' . $nuevoNumero . '.0';
+        $descripcionCambia = trim($proyecto->descripcion ?? '') !== trim($validated['descripcion'] ?? '');
+        $responsableCambia = $proyecto->responsable_id != $validated['responsable_id'];
+        $hayArchivoNuevo = $request->hasFile('archivo_bim');
+        $mantieneArchivo = $request->boolean('mantener_archivo');
 
-        ProyectoVersion::create([
-            'proyecto_id' => $proyecto->id,
-            'descripcion_cambio' => 'Actualización del proyecto por ' . Auth::user()->name,
-            'autor_id' => Auth::id(),
-            'version' => $versionActual,
-            'datos_previos' => json_encode([
-                'descripcion' => $proyecto->descripcion,
-                'responsable_id' => $proyecto->responsable_id,
-                'fecha' => now()->toDateTimeString(),
-            ]),
-        ]);
-        $proyecto->update([
-            'descripcion' => $validated['descripcion'],
-            'responsable_id' => $validated['responsable_id'],
-        ]);
+        if (!$descripcionCambia && !$responsableCambia && !$hayArchivoNuevo && $mantieneArchivo) {
+            return redirect()->route('proyectos.index')
+                ->with('info', 'No se detectaron cambios en el proyecto.');
+        }
 
-        if ($request->hasFile('archivo_bim')) {
+        $versionInfoCreada = false;
+
+        if ($descripcionCambia || $responsableCambia) {
+            $ultimaVersion = ProyectoVersion::where('proyecto_id', $proyecto->id)
+                ->orderByDesc('id')
+                ->first();
+            $nuevoNumero = $ultimaVersion
+                ? intval(explode('.', ltrim($ultimaVersion->version, 'v'))[0]) + 1
+                : 1;
+            $versionActual = 'v' . $nuevoNumero . '.0';
+
+            ProyectoVersion::create([
+                'proyecto_id' => $proyecto->id,
+                'descripcion_cambio' => 'Actualización de información del proyecto por ' . Auth::user()->name,
+                'autor_id' => Auth::id(),
+                'version' => $versionActual,
+                'datos_previos' => json_encode([
+                    'descripcion' => $proyecto->descripcion,
+                    'responsable_id' => $proyecto->responsable_id,
+                    'fecha' => now()->toDateTimeString(),
+                ]),
+            ]);
+
+            $versionInfoCreada = true;
+        }
+
+        if ($hayArchivoNuevo) {
             $versionBimActual = PlanoBim::where('proyecto_id', $proyecto->id)->count();
             $versionBim = 'v' . ($versionBimActual + 1) . '.0';
-
             $path = $request->file('archivo_bim')->store('planos_bim', 'public');
 
             PlanoBim::create([
@@ -184,30 +288,43 @@ class ProyectoController extends Controller
                 'version' => $versionBim,
                 'subido_por' => Auth::id(),
             ]);
-        } elseif ($request->has('mantener_archivo') && $request->mantener_archivo === 'true') {
-            $ultimoPlano = PlanoBim::where('proyecto_id', $proyecto->id)
-                ->latest()
-                ->first();
-
-            if ($ultimoPlano) {
-                PlanoBim::create([
-                    'proyecto_id' => $proyecto->id,
-                    'nombre' => $ultimoPlano->nombre,
-                    'archivo_url' => $ultimoPlano->archivo_url,
-                    'version' => 'v' . (PlanoBim::where('proyecto_id', $proyecto->id)->count() + 1) . '.0',
-                    'subido_por' => Auth::id(),
-                ]);
-            }
         }
 
-        NotificationService::send(
-            $proyecto->responsable_id,
-            "El proyecto '{$proyecto->nombre}' ha sido actualizado.",
-            'avance'
-        );
-        return redirect()->route('proyectos.index')->with('success', 'Se ha creado una nueva versión del proyecto.');
-    }
+        if ($descripcionCambia || $responsableCambia) {
+            $proyecto->update([
+                'descripcion' => $validated['descripcion'],
+                'responsable_id' => $validated['responsable_id'],
+            ]);
+        }
 
+        // -----------------------------------------------------------
+        // NOTIFICACIONES AL ACTUALIZAR PROYECTO
+        // -----------------------------------------------------------
+
+        // Obtener colaboradores (todos los user_id con permiso editar)
+        $colaboradores = DB::table('proyectos_usuarios')
+            ->where('proyecto_id', $proyecto->id)
+            ->where('permiso', 'editar')
+            ->pluck('user_id')
+            ->toArray();
+
+        $destinatarios = array_merge([$proyecto->responsable_id, $proyecto->cliente_id], $colaboradores);
+
+        NotificationService::sendToMany(
+            $destinatarios,
+            "El proyecto '{$proyecto->nombre}' ha sido actualizado.",
+            'avance',
+            url('/proyectos/' . $proyecto->id),
+            'Proyecto actualizado'
+        );
+
+        return redirect()->route('proyectos.index')
+            ->with('success', $versionInfoCreada && $hayArchivoNuevo
+                ? 'Se han creado nuevas versiones de información y documento BIM.'
+                : ($versionInfoCreada
+                    ? 'Se ha creado una nueva versión de información del proyecto.'
+                    : 'Se ha creado una nueva versión del documento BIM.'));
+    }
 
     public function versiones($id)
     {
@@ -232,6 +349,7 @@ class ProyectoController extends Controller
             'versionesBim' => $versionesBim,
         ]);
     }
+
     public function cambiarEstado(Request $request, $id)
     {
         if (strtolower(Auth::user()->rol) === 'cliente') {
@@ -253,6 +371,105 @@ class ProyectoController extends Controller
 
         $proyecto->update($datos);
 
+        // Notificar cambio de estado a cliente, responsable y colaboradores
+        $colaboradores = DB::table('proyectos_usuarios')
+            ->where('proyecto_id', $proyecto->id)
+            ->where('permiso', 'editar')
+            ->pluck('user_id')
+            ->toArray();
+
+        $destinatarios = array_merge([$proyecto->responsable_id, $proyecto->cliente_id], $colaboradores);
+
+        NotificationService::sendToMany(
+            $destinatarios,
+            "El proyecto '{$proyecto->nombre}' ha cambiado de estado a '{$nuevoEstado}'.",
+            'proyecto',
+            url('/proyectos/' . $proyecto->id),
+            'Estado del proyecto actualizado'
+        );
+
         return redirect()->back()->with('success', 'Estado actualizado correctamente.');
+    }
+
+    public function gestionarPermisos($id)
+    {
+        $proyecto = Proyecto::findOrFail($id);
+
+        if (Auth::id() !== $proyecto->responsable_id) {
+            abort(403, 'No tienes permiso para gestionar este proyecto.');
+        }
+
+        $usuarios = User::whereIn('rol', ['arquitecto', 'ingeniero'])
+            ->where('id', '!=', $proyecto->responsable_id)
+            ->where('estado', 'activo')
+            ->select('id', 'name', 'email')
+            ->get();
+
+        $asignaciones = DB::table('proyectos_usuarios')
+            ->where('proyecto_id', $id)
+            ->get();
+
+        return Inertia::render('GestionProyecto/Permisos', [
+            'proyecto' => $proyecto,
+            'usuarios' => $usuarios,
+            'asignaciones' => $asignaciones,
+        ]);
+    }
+
+    public function actualizarPermisos(Request $request, $id)
+    {
+        $proyecto = Proyecto::findOrFail($id);
+
+        if (Auth::id() !== $proyecto->responsable_id) {
+            abort(403, 'No tienes permiso para editar permisos en este proyecto.');
+        }
+
+        $request->validate([
+            'permisos' => 'required|array',
+            'permisos.*.user_id' => 'required|exists:users,id',
+            'permisos.*.permiso' => 'required|in:ninguno,editar',
+        ]);
+
+        foreach ($request->permisos as $permiso) {
+            $actual = DB::table('proyectos_usuarios')
+                ->where('proyecto_id', $proyecto->id)
+                ->where('user_id', $permiso['user_id'])
+                ->value('permiso');
+            $usuarioValido = User::where('id', $permiso['user_id'])
+                ->where('estado', 'activo')
+                ->exists();
+
+            if (!$usuarioValido) {
+                continue;
+            }
+
+            if ($actual !== $permiso['permiso']) {
+                DB::table('proyectos_usuarios')
+                    ->updateOrInsert(
+                        ['proyecto_id' => $proyecto->id, 'user_id' => $permiso['user_id']],
+                        ['permiso' => $permiso['permiso'], 'asignado_en' => now()]
+                    );
+
+                HistorialPermiso::create([
+                    'proyecto_id' => $proyecto->id,
+                    'usuario_modificador_id' => Auth::id(),
+                    'usuario_afectado_id' => $permiso['user_id'],
+                    'permiso_asignado' => $permiso['permiso'],
+                    'fecha_cambio' => now(),
+                ]);
+
+                // Notificar al usuario afectado
+                NotificationService::send(
+                    $permiso['user_id'],
+                    "Se te ha asignado permiso '{$permiso['permiso']}' en el proyecto '{$proyecto->nombre}'.",
+                    'proyecto',
+                    url('/proyectos/' . $proyecto->id),
+                    'Permiso actualizado'
+                );
+            }
+        }
+
+        return redirect()->route('proyectos.index')
+            ->with('success', 'Permisos actualizados correctamente.');
     }
 }

@@ -6,7 +6,9 @@ import React, { useEffect, useMemo, useState } from "react";
 type Notificacion = {
   id: number;
   mensaje: string;
-  tipo: "tarea" | "reunion" | "avance" | "documento" | string;
+  asunto?: string;
+  url?: string;
+  tipo: "tarea" | "reunion" | "avance" | "documento" | "proyecto" | string;
   fecha_envio: string;
   leida: boolean;
 };
@@ -17,7 +19,7 @@ type PageProps = {
   notificaciones: Notificacion[];
 };
 
-// Modal simple y accesible
+// Modal simple
 function ConfirmModal({
   open,
   onClose,
@@ -41,12 +43,9 @@ function ConfirmModal({
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="confirm-title"
     >
       <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#0B1120] p-5 text-white shadow-2xl">
-        <h3 id="confirm-title" className="mb-2 text-lg font-semibold">
-          {title}
-        </h3>
+        <h3 className="mb-2 text-lg font-semibold">{title}</h3>
         <p className="mb-6 text-sm text-gray-300">{message}</p>
         <div className="flex items-center justify-end gap-3">
           <button
@@ -70,77 +69,71 @@ function ConfirmModal({
 export default function Index() {
   const { notificaciones } = usePage<PageProps>().props;
 
-  // Filtros + estado UI
+  // Estados
   const [panelOpen, setPanelOpen] = useState(false);
   const [q, setQ] = useState("");
-  const [tipo, setTipo] = useState<"" | "tarea" | "reunion" | "avance" | "documento">("");
-  const [desde, setDesde] = useState<string>("");
-  const [hasta, setHasta] = useState<string>("");
+  const [tipo, setTipo] = useState<
+    "" | "tarea" | "reunion" | "avance" | "documento" | "proyecto"
+  >("");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
   const [soloNoLeidas, setSoloNoLeidas] = useState(false);
 
-  // Validaciones de fecha
+  // Validación de fechas
   const dateError =
     desde && hasta && new Date(desde).getTime() > new Date(hasta).getTime()
       ? "La fecha inicial no puede ser mayor que la final."
       : "";
 
-  // Filtro aplicado (memoizado)
+  // Filtrado y orden
   const filtradas = useMemo(() => {
     let data = [...notificaciones];
 
     if (q.trim()) {
-      const text = q.trim().toLowerCase();
-      data = data.filter((n) => n.mensaje.toLowerCase().includes(text));
+      const text = q.toLowerCase();
+      data = data.filter(
+        (n) =>
+          n.mensaje.toLowerCase().includes(text) ||
+          (n.asunto && n.asunto.toLowerCase().includes(text))
+      );
     }
 
-    if (tipo) {
-      data = data.filter((n) => n.tipo === tipo);
-    }
-
-    if (desde) {
-      const d = new Date(desde).getTime();
-      data = data.filter((n) => new Date(n.fecha_envio).getTime() >= d);
-    }
+    if (tipo) data = data.filter((n) => n.tipo === tipo);
+    if (desde)
+      data = data.filter(
+        (n) => new Date(n.fecha_envio).getTime() >= new Date(desde).getTime()
+      );
 
     if (hasta) {
-      // Ajuste para incluir todo el día "hasta"
       const end = new Date(hasta);
       end.setHours(23, 59, 59, 999);
-      const t = end.getTime();
-      data = data.filter((n) => new Date(n.fecha_envio).getTime() <= t);
+      data = data.filter(
+        (n) => new Date(n.fecha_envio).getTime() <= end.getTime()
+      );
     }
 
-    if (soloNoLeidas) {
-      data = data.filter((n) => !n.leida);
-    }
+    if (soloNoLeidas) data = data.filter((n) => !n.leida);
 
-    // Orden más reciente primero
-    data.sort(
+    return data.sort(
       (a, b) =>
         new Date(b.fecha_envio).getTime() - new Date(a.fecha_envio).getTime()
     );
-
-    return data;
   }, [notificaciones, q, tipo, desde, hasta, soloNoLeidas]);
 
-  // Modal marcar todas
+  // Modal de confirmación
   const [confirmOpen, setConfirmOpen] = useState(false);
-
   const handleMarcarTodas = () => {
-    if (filtradas.length === 0) return;
-    setConfirmOpen(true);
+    if (filtradas.length > 0) setConfirmOpen(true);
   };
-
   const confirmMarcarTodas = () => {
     setConfirmOpen(false);
     router.post(route("notificaciones.marcarTodas"));
   };
-
   const markAsRead = (id: number) => {
     router.post(route("notificaciones.marcar", id));
   };
 
-  // Accesibilidad: cerrar panel con ESC
+  // Accesibilidad: ESC
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && panelOpen) setPanelOpen(false);
@@ -151,36 +144,26 @@ export default function Index() {
 
   return (
     <AuthenticatedLayout
-      header={
-        <h2 className="text-xl font-semibold leading-tight text-white">
-          Notificaciones
-        </h2>
-      }
+      header={<h2 className="text-xl font-semibold text-white">Notificaciones</h2>}
     >
       <Head title="Notificaciones" />
       <div className="mx-auto max-w-5xl p-6 text-white">
         {/* Barra superior */}
-        <div className="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setPanelOpen((v) => !v)}
-              className="rounded-md border border-gray-600 px-3 py-2 text-sm hover:bg-gray-800"
-              aria-expanded={panelOpen}
-              aria-controls="filtros-panel"
-            >
-              {panelOpen ? "Ocultar filtros" : "Mostrar filtros"}
-            </button>
-          </div>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <button
+            onClick={() => setPanelOpen((v) => !v)}
+            className="rounded-md border border-gray-600 px-3 py-2 text-sm hover:bg-gray-800"
+          >
+            {panelOpen ? "Ocultar filtros" : "Mostrar filtros"}
+          </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex gap-2">
             <Link
               href={route("dashboard")}
               className="rounded-md border border-gray-600 px-3 py-2 text-sm hover:bg-gray-800"
             >
               Volver al inicio
             </Link>
-
             <button
               onClick={handleMarcarTodas}
               disabled={filtradas.length === 0}
@@ -195,39 +178,47 @@ export default function Index() {
           </div>
         </div>
 
-        {/* Panel de filtros: cerrado por defecto */}
+        {/* Panel filtros */}
         <div
-          id="filtros-panel"
           className={`overflow-hidden rounded-xl border border-white/10 bg-[#0B1120] transition-all duration-300 ${
             panelOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
           }`}
         >
           <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex flex-col">
-              <label className="mb-1 text-xs uppercase tracking-wide text-gray-400">
+              <label className="mb-1 text-xs uppercase text-gray-400">
                 Buscar
               </label>
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Texto en el mensaje…"
+                placeholder="Texto o asunto..."
                 className="rounded-md border border-gray-600 bg-[#0B1120] px-3 py-2 text-sm text-gray-200 outline-none focus:border-[#B3E10F]"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="mb-1 text-xs uppercase tracking-wide text-gray-400">
+              <label className="mb-1 text-xs uppercase text-gray-400">
                 Tipo
               </label>
               <select
                 value={tipo}
                 onChange={(e) =>
-                  setTipo(e.target.value as "" | "tarea" | "reunion" | "avance" | "documento")
+                  setTipo(
+                    e.target.value as
+                      | ""
+                      | "tarea"
+                      | "reunion"
+                      | "avance"
+                      | "documento"
+                      | "proyecto"
+                  )
                 }
                 className="rounded-md border border-gray-600 bg-[#0B1120] px-3 py-2 text-sm text-gray-200 outline-none focus:border-[#B3E10F]"
               >
                 <option value="">Todos</option>
                 <option value="tarea">Tarea</option>
+                <option value="proyecto">Proyecto</option>
                 <option value="reunion">Reunión</option>
                 <option value="avance">Avance</option>
                 <option value="documento">Documento</option>
@@ -235,7 +226,7 @@ export default function Index() {
             </div>
 
             <div className="flex flex-col">
-              <label className="mb-1 text-xs uppercase tracking-wide text-gray-400">
+              <label className="mb-1 text-xs uppercase text-gray-400">
                 Desde
               </label>
               <input
@@ -248,7 +239,7 @@ export default function Index() {
             </div>
 
             <div className="flex flex-col">
-              <label className="mb-1 text-xs uppercase tracking-wide text-gray-400">
+              <label className="mb-1 text-xs uppercase text-gray-400">
                 Hasta
               </label>
               <input
@@ -273,7 +264,6 @@ export default function Index() {
             </div>
           </div>
 
-          {/* Errores de validación inline (sin alerts) */}
           {dateError && (
             <div className="border-t border-white/10 px-4 pb-4 pt-3">
               <div className="rounded-md border border-red-800 bg-red-900/30 px-3 py-2 text-sm text-red-200">
@@ -283,7 +273,7 @@ export default function Index() {
           )}
         </div>
 
-        {/* Contenedor de lista */}
+        {/* Lista */}
         <div className="mt-6 rounded-xl border border-white/10 bg-[#0B1120]">
           {filtradas.length === 0 ? (
             <div className="p-8 text-center text-sm text-gray-400">
@@ -292,10 +282,7 @@ export default function Index() {
           ) : (
             <ul className="divide-y divide-white/10">
               {filtradas.map((n) => (
-                <li
-                  key={n.id}
-                  className="flex items-start justify-between gap-4 p-4"
-                >
+                <li key={n.id} className="flex items-start justify-between gap-4 p-4">
                   <div className="min-w-0">
                     <div className="mb-1 flex flex-wrap items-center gap-2">
                       <span
@@ -308,9 +295,10 @@ export default function Index() {
                             ? "bg-emerald-900/40 text-emerald-300 border border-emerald-700/50"
                             : n.tipo === "documento"
                             ? "bg-amber-900/40 text-amber-300 border border-amber-700/50"
+                            : n.tipo === "proyecto"
+                            ? "bg-pink-900/40 text-pink-300 border border-pink-700/50"
                             : "bg-gray-800 text-gray-300 border border-gray-700"
                         }`}
-                        title={`Tipo: ${n.tipo}`}
                       >
                         {n.tipo}
                       </span>
@@ -320,9 +308,27 @@ export default function Index() {
                         </span>
                       )}
                     </div>
-                    <div className={`text-sm ${!n.leida ? "font-semibold" : ""}`}>
-                      {n.mensaje}
+
+                    {/* Asunto + mensaje + enlace */}
+                    <div className="text-sm">
+                      {n.asunto && (
+                        <div className="font-semibold text-white mb-0.5">{n.asunto}</div>
+                      )}
+                      <div className={`${!n.leida ? "font-medium" : "text-gray-300"}`}>
+                        {n.mensaje}
+                      </div>
+                      {n.url && (
+                        <a
+                          href={n.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 inline-block text-sm text-[#B3E10F] hover:underline"
+                        >
+                          Ver más →
+                        </a>
+                      )}
                     </div>
+
                     <div className="mt-1 text-xs text-gray-400">
                       {new Date(n.fecha_envio).toLocaleString()}
                     </div>
@@ -349,7 +355,6 @@ export default function Index() {
         </div>
       </div>
 
-      {/* Modal de confirmación */}
       <ConfirmModal
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}

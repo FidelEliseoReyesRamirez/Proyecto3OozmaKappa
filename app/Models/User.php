@@ -72,4 +72,14 @@ class User extends Authenticatable implements MustVerifyEmail
             ->where('eliminado', 0)
             ->orderBy('fecha_envio', 'desc');
     }
+    public function meetings()
+    {
+        return $this->belongsToMany(Meeting::class, 'reuniones_usuarios', 'user_id', 'reunion_id')
+            ->withPivot('asistio', 'eliminado')
+            ->wherePivot('eliminado', 0);
+    }
+    public function usersMeetings()
+    {
+        return $this->meetings();
+    }
 }

@@ -104,7 +104,7 @@ export default function Versiones() {
                 <div className="mt-8 flex justify-end">
                     <Link href={route("proyectos.index")}>
                         {/* El botón primario usa los colores DevelArq */}
-                        <PrimaryButton className="bg-[#2970E8] hover:bg-indigo-600 focus:bg-indigo-600 active:bg-indigo-700 shadow-md shadow-[#2970E8]/30">Volver a Proyectos</PrimaryButton>
+                        <button className="bg-red-700 hover:bg-red-600 px-2 py-1 rounded-md text-xs sm:text-sm font-medium transition duration-150 text-white">Volver a Proyectos</button>
                     </Link>
                 </div>
             </div>

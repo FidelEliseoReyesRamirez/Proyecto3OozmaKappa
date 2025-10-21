@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";
-import PrimaryButton from "@/Components/PrimaryButton";
 import TextInput from "@/Components/TextInput";
 import { router, Head, Link } from "@inertiajs/react";
 
@@ -14,33 +13,120 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
         prioridad: "media",
         asignado_id: "",
     });
+
     const [errors, setErrors] = useState<any>({});
+    const [localErrors, setLocalErrors] = useState<any>({});
     const [processing, setProcessing] = useState(false);
+    const [openResponsable, setOpenResponsable] = useState(false);
+    const [busquedaResponsable, setBusquedaResponsable] = useState("");
+
+    // estado del modal
+    const [modal, setModal] = useState({ visible: false, tipo: "", mensaje: "" });
 
     const inputStyle =
         "mt-1 block w-full bg-gray-900 border border-gray-700 text-gray-200 rounded-lg shadow-inner focus:border-[#2970E8] focus:ring-[#2970E8] transition duration-200 ease-in-out placeholder-gray-500";
 
-    const handleChange = (e: any) => {
-        setTarea({ ...tarea, [e.target.name]: e.target.value });
+    const dropdownStyle =
+        "absolute z-50 mt-1 w-full bg-gray-900 border border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto";
+
+    const usuariosFiltrados = usuarios.filter((u: any) =>
+        u.name.toLowerCase().includes(busquedaResponsable.toLowerCase())
+    );
+
+    // Cerrar menú al hacer clic fuera
+    useEffect(() => {
+        const close = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (!target.closest(".combo-responsables")) setOpenResponsable(false);
+        };
+        document.addEventListener("click", close);
+        return () => document.removeEventListener("click", close);
+    }, []);
+
+    const validateTitulo = (value: string) => {
+        let clean = value.replace(/\s+/g, " ").trimStart();
+        if (/[^A-Z0-9() ]/i.test(clean)) {
+            setLocalErrors({ ...localErrors, titulo: "Solo se permiten letras, números y paréntesis." });
+            clean = clean.replace(/[^A-Z0-9() ]/gi, "");
+        } else setLocalErrors({ ...localErrors, titulo: "" });
+
+        clean = clean.toUpperCase();
+        if (clean.length > 50) {
+            setLocalErrors({ ...localErrors, titulo: "Máximo 50 caracteres permitidos." });
+            clean = clean.slice(0, 50);
+        }
+        setTarea({ ...tarea, titulo: clean });
+    };
+
+    const validateDescripcion = (value: string) => {
+        let clean = value.replace(/\s+/g, " ").trimStart();
+        if (/[^A-Z0-9 ]/i.test(clean)) {
+            setLocalErrors({ ...localErrors, descripcion: "Solo se permiten letras y números, sin símbolos." });
+            clean = clean.replace(/[^A-Z0-9 ]/gi, "");
+        } else setLocalErrors({ ...localErrors, descripcion: "" });
+
+        if (clean.length > 200) {
+            setLocalErrors({ ...localErrors, descripcion: "Máximo 200 caracteres permitidos." });
+            clean = clean.slice(0, 200);
+        }
+        setTarea({ ...tarea, descripcion: clean });
+    };
+
+    const today = new Date().toISOString().split("T")[0];
+    const maxDate = new Date();
+    maxDate.setMonth(maxDate.getMonth() + 1);
+    const maxDateStr = maxDate.toISOString().split("T")[0];
+
+    const validateBeforeSubmit = () => {
+        const errs: any = {};
+        if (!tarea.proyecto_id) errs.proyecto_id = "Debe seleccionar un proyecto.";
+        if (!tarea.titulo.trim()) errs.titulo = "El título es obligatorio.";
+        if (!tarea.descripcion.trim()) errs.descripcion = "La descripción es obligatoria.";
+        if (!tarea.asignado_id) errs.asignado_id = "Debe seleccionar un responsable.";
+        if (!tarea.fecha_limite) errs.fecha_limite = "Debe seleccionar una fecha límite.";
+
+        if (tarea.fecha_limite) {
+            const f = new Date(tarea.fecha_limite);
+            if (f < new Date(today)) errs.fecha_limite = "La fecha no puede ser anterior a hoy.";
+            else if (f > maxDate) errs.fecha_limite = "La fecha no puede superar 30 días desde hoy.";
+        }
+
+        setErrors(errs);
+        return Object.keys(errs).length === 0;
+    };
+
+    const mostrarModal = (tipo: "exito" | "error", mensaje: string) => {
+        setModal({ visible: true, tipo, mensaje });
+        setTimeout(() => setModal({ visible: false, tipo: "", mensaje: "" }), 3500);
     };
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (processing) return; // Previene doble clic
+        if (processing) return;
+        if (!validateBeforeSubmit()) return;
+
         setProcessing(true);
         setErrors({});
 
         router.post(route("tareas.store"), tarea, {
-            onError: (errs) => {
-                setErrors(errs);
+            preserveScroll: true,
+            onSuccess: (page: any) => {
                 setProcessing(false);
+                mostrarModal("exito", "Tarea creada correctamente ✅");
+                setTimeout(() => {
+                    router.visit(route("tareas.index"));
+                }, 2000);
             },
-            onFinish: () => setProcessing(false),
+            onError: (errors: any) => {
+                const msg = errors?.message || "Este usuario no tiene permiso de acceder a esta tarea.";
+                setProcessing(false);
+                mostrarModal("error", msg);
+            },
         });
     };
 
     return (
-        <section className="flex justify-center items-center py-12 px-4 min-h-screen bg-gray-950">
+        <section className="flex justify-center items-center py-12 px-4 min-h-screen bg-gray-950 relative">
             <Head title="DEVELARQ | Crear Tarea" />
             <div className="w-full max-w-3xl bg-gray-900 border border-gray-800 p-8 md:p-10 rounded-xl shadow-xl shadow-gray-900/50">
                 <h2 className="text-3xl font-extrabold text-[#2970E8] mb-1 tracking-wider">CREAR TAREA</h2>
@@ -61,12 +147,14 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
                             <select
                                 name="proyecto_id"
                                 value={tarea.proyecto_id}
-                                onChange={handleChange}
+                                onChange={(e) => setTarea({ ...tarea, proyecto_id: e.target.value })}
                                 className={inputStyle}
                             >
                                 <option value="">-- Selecciona un proyecto --</option>
                                 {proyectos.map((p: any) => (
-                                    <option key={p.id} value={p.id}>{p.nombre}</option>
+                                    <option key={p.id} value={p.id}>
+                                        {p.nombre}
+                                    </option>
                                 ))}
                             </select>
                         )}
@@ -75,51 +163,55 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
 
                     {/* Título */}
                     <div>
-                        <InputLabel htmlFor="titulo" value="Título" className="text-gray-200 font-semibold" />
+                        <InputLabel htmlFor="titulo" value="Título de la tarea" className="text-gray-200 font-semibold" />
                         <TextInput
-                            name="titulo"
+                            id="titulo"
                             value={tarea.titulo}
-                            onChange={handleChange}
+                            onChange={(e) => validateTitulo(e.target.value)}
                             className={inputStyle}
-                            placeholder="Ej. Render preliminar del edificio A"
+                            placeholder="Ej. RENDER PRELIMINAR DEL EDIFICIO A"
+                            maxLength={50}
                         />
-                        <InputError message={errors.titulo} className="mt-2" />
+                        <InputError message={localErrors.titulo || errors.titulo} className="mt-2 text-red-400" />
                     </div>
 
                     {/* Descripción */}
                     <div>
                         <InputLabel htmlFor="descripcion" value="Descripción" className="text-gray-200 font-semibold" />
                         <textarea
-                            name="descripcion"
+                            id="descripcion"
                             value={tarea.descripcion}
-                            onChange={handleChange}
+                            onChange={(e) => validateDescripcion(e.target.value)}
                             className={inputStyle}
                             rows={3}
                             placeholder="Describe brevemente la tarea..."
+                            maxLength={200}
                         />
-                        <InputError message={errors.descripcion} className="mt-2" />
+                        <InputError message={localErrors.descripcion || errors.descripcion} className="mt-2 text-red-400" />
                     </div>
 
-                    {/* Fecha y Prioridad */}
+                    {/* Fecha y prioridad */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <InputLabel htmlFor="fecha_limite" value="Fecha Límite" className="text-gray-200 font-semibold" />
+                            <InputLabel htmlFor="fecha_limite" value="Fecha límite" className="text-gray-200 font-semibold" />
                             <TextInput
                                 type="date"
-                                name="fecha_limite"
+                                id="fecha_limite"
+                                min={today}
+                                max={maxDateStr}
                                 value={tarea.fecha_limite}
-                                onChange={handleChange}
+                                onChange={(e) => setTarea({ ...tarea, fecha_limite: e.target.value })}
                                 className={inputStyle}
                             />
-                            <InputError message={errors.fecha_limite} className="mt-2" />
+                            <InputError message={errors.fecha_limite} className="mt-2 text-red-400" />
                         </div>
 
                         <div>
                             <InputLabel htmlFor="prioridad" value="Prioridad" className="text-gray-200 font-semibold" />
                             <select
-                                name="prioridad"
+                                id="prioridad"
                                 value={tarea.prioridad}
-                                onChange={handleChange}
+                                onChange={(e) => setTarea({ ...tarea, prioridad: e.target.value })}
                                 className={inputStyle}
                             >
                                 <option value="baja">Baja</option>
@@ -129,46 +221,100 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
                         </div>
                     </div>
 
-                    {/* Responsable */}
-                    <div>
+                    {/* RESPONSABLE */}
+                    <div className="relative combo-responsables">
                         <InputLabel htmlFor="asignado_id" value="Responsable" className="text-gray-200 font-semibold" />
-                        <select
-                            name="asignado_id"
-                            value={tarea.asignado_id}
-                            onChange={handleChange}
-                            className={inputStyle}
+                        <div
+                            className={inputStyle + " cursor-pointer px-3 py-2.5 min-h-[42px] flex items-center text-sm"}
+                            onClick={() => setOpenResponsable(!openResponsable)}
                         >
-                            <option value="">-- Selecciona un usuario --</option>
-                            {usuarios.length > 0 ? (
-                                usuarios.map((u: any) => (
-                                    <option key={u.id} value={u.id}>
-                                        {u.name}
-                                    </option>
-                                ))
-                            ) : (
-                                <option disabled>No hay usuarios disponibles</option>
-                            )}
-                        </select>
-                        <InputError message={errors.asignado_id} className="mt-2" />
+                            {usuarios.find((u: any) => u.id === tarea.asignado_id)?.name || "Seleccione o escriba un responsable..."}
+                        </div>
+
+                        {openResponsable && (
+                            <div className={dropdownStyle}>
+                                <input
+                                    type="text"
+                                    autoFocus
+                                    maxLength={50}
+                                    className="w-full px-3 py-2.5 bg-gray-800 text-gray-200 text-sm border-b border-gray-700 focus:outline-none"
+                                    placeholder="Buscar responsable..."
+                                    value={busquedaResponsable}
+                                    onChange={(e) => setBusquedaResponsable(e.target.value)}
+                                />
+                                {usuariosFiltrados.length > 0 ? (
+                                    usuariosFiltrados.map((u: any) => (
+                                        <div
+                                            key={u.id}
+                                            onClick={() => {
+                                                setTarea({ ...tarea, asignado_id: u.id });
+                                                setOpenResponsable(false);
+                                                setBusquedaResponsable("");
+                                            }}
+                                            className={`px-3 py-2 text-sm hover:bg-[#2970E8] hover:text-white cursor-pointer ${
+                                                u.id === tarea.asignado_id
+                                                    ? "bg-[#1f5dc0] text-white"
+                                                    : "text-gray-200"
+                                            }`}
+                                        >
+                                            {u.name}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="px-3 py-2 text-gray-500 text-sm">Sin resultados</div>
+                                )}
+                            </div>
+                        )}
+                        <InputError message={errors.asignado_id} className="mt-2 text-red-400" />
                     </div>
 
                     {/* Botones */}
                     <div className="flex items-center justify-between pt-6 border-t border-gray-700">
-                        <PrimaryButton
-                            className="bg-[#2970E8] hover:bg-indigo-600 focus:bg-indigo-600 active:bg-indigo-700 shadow-md shadow-[#2970E8]/40 transform hover:scale-[1.02]"
+                        <button
+                            className="bg-[#B3E10F] text-gray-900 px-4 py-2 rounded-md hover:bg-lime-300 transition duration-150 text-sm font-bold shadow-md shadow-[#B3E10F]/30"
                             disabled={processing}
                         >
                             {processing ? "Creando..." : "CREAR TAREA"}
-                        </PrimaryButton>
+                        </button>
                         <Link
                             href={route("tareas.index")}
-                            className="text-[#B3E10F] hover:text-lime-400 font-semibold transition duration-150 ml-4"
+                            className="bg-red-700 hover:bg-red-600 px-4 py-2 rounded-md text-sm font-semibold transition duration-150 text-white"
                         >
-                            Cancelar
+                            Cancelar y volver
                         </Link>
                     </div>
                 </form>
             </div>
+
+            {/* MODAL VISUAL */}
+            {modal.visible && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
+                    <div
+                        className={`p-6 rounded-xl shadow-xl w-96 text-center ${
+                            modal.tipo === "exito"
+                                ? "bg-gray-900 border border-green-600"
+                                : "bg-gray-900 border border-red-600"
+                        }`}
+                    >
+                        <h3
+                            className={`text-lg font-bold mb-3 ${
+                                modal.tipo === "exito" ? "text-green-400" : "text-red-400"
+                            }`}
+                        >
+                            {modal.tipo === "exito" ? "Éxito" : "Error"}
+                        </h3>
+                        <p className="text-gray-200 mb-4">{modal.mensaje}</p>
+                        <button
+                            onClick={() => setModal({ visible: false, tipo: "", mensaje: "" })}
+                            className={`px-4 py-2 rounded-md text-white font-semibold ${
+                                modal.tipo === "exito" ? "bg-green-600 hover:bg-green-500" : "bg-red-600 hover:bg-red-500"
+                            }`}
+                        >
+                            Aceptar
+                        </button>
+                    </div>
+                </div>
+            )}
         </section>
     );
 }

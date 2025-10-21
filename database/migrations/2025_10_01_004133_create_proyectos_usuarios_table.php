@@ -12,6 +12,8 @@ return new class extends Migration {
             $table->foreignId('proyecto_id')->constrained('proyectos');
             $table->foreignId('user_id')->constrained('users');
             $table->string('rol_en_proyecto', 50)->nullable();
+            $table->enum('permiso', ['ver', 'editar'])->default('ver');
+            $table->timestamp('asignado_en')->nullable();
             $table->boolean('eliminado')->default(0);
             $table->timestamps();
         });

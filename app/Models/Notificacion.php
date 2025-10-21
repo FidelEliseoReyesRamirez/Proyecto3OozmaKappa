@@ -9,16 +9,19 @@ class Notificacion extends Model
 {
     use HasFactory;
 
-    protected $table = 'notificaciones';  
+    protected $table = 'notificaciones';
 
     protected $fillable = [
         'user_id',
         'mensaje',
         'tipo',
+        'url',
+        'asunto',
         'fecha_envio',
         'leida',
         'eliminado'
     ];
+
 
     protected $casts = [
         'fecha_envio' => 'datetime',

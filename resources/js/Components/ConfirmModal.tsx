@@ -15,11 +15,15 @@ export default function ConfirmModal({ open, onClose, onConfirm, message }: any)
                     <div className="flex justify-end space-x-3">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 bg-gray-700 rounded-md hover:bg-gray-600 transition"
+                            className="bg-red-700 hover:bg-red-600 px-4 py-2 rounded-md text-sm font-semibold text-white transition duration-150"
                         >
                             Cancelar
                         </button>
-                        <PrimaryButton onClick={onConfirm}>Confirmar</PrimaryButton>
+                        <button onClick={onConfirm}
+                            className="bg-[#B3E10F] text-gray-900 px-4 py-2 rounded-md hover:bg-lime-300 transition duration-150 text-sm font-bold shadow-md shadow-[#B3E10F]/30"
+                        >
+                            Confirmar
+                        </button>
                     </div>
                 </Dialog.Panel>
             </div>

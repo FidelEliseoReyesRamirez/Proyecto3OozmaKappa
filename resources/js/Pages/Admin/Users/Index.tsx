@@ -1,3 +1,4 @@
+import RedButton from '@/Components/RedButton';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
@@ -49,13 +50,13 @@ export default function UsersIndex() {
                         <div className="flex gap-2">
                             <Link 
                                 href={route('users.create')} 
-                                className="bg-[#2970E8] text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-150 text-sm font-semibold shadow-md shadow-[#2970E8]/30"
+                                className="bg-[#B3E10F] text-gray-900 px-2 py-1 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-bold shadow-md shadow-[#B3E10F]/30"
                             >
                                 Crear nuevo usuario
                             </Link>
                             <Link 
                                 href={route('users.eliminados')} 
-                                className="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-150 text-sm font-semibold shadow-md"
+                                className="bg-red-700 hover:bg-red-600 px-2 py-1 rounded-md text-xs sm:text-sm font-medium transition duration-150 text-white"
                             >
                                 Ver eliminados
                             </Link>
@@ -146,7 +147,7 @@ export default function UsersIndex() {
                                 </button>
                                 <button 
                                     onClick={confirmAction} 
-                                    className="px-4 py-2 bg-[#2970E8] text-white rounded-lg hover:bg-blue-600 transition duration-150 font-semibold shadow-md shadow-[#2970E8]/30"
+                                    className="bg-red-700 hover:bg-red-600 px-2 py-1 rounded-md text-xs sm:text-sm font-medium transition duration-150 text-white"
                                 >
                                     Confirmar
                                 </button>

@@ -43,12 +43,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/docs', [DocController::class, 'store'])->name('docs.store');
     Route::get('/docs/download/{documento}', [DocController::class, 'download'])->name('docs.download');
     Route::delete('/docs/{documento}', [DocController::class, 'destroy'])->name('docs.destroy');
+    Route::get('/docs/{documento}/edit', [DocController::class, 'edit'])->name('docs.edit');
+    Route::put('/docs/{documento}', [DocController::class, 'update'])->name('docs.update');
     // Proyectos
     Route::resource('proyectos', ProyectoController::class);
     Route::get('/proyectos/{id}/versiones', [ProyectoController::class, 'versiones'])
         ->name('proyectos.versiones');
     Route::patch('/proyectos/{id}/estado', [ProyectoController::class, 'cambiarEstado'])
         ->name('proyectos.cambiarEstado');
+    //Permisos proyectos
+    Route::get('/proyectos/{id}/permisos', [ProyectoController::class, 'gestionarPermisos'])->name('proyectos.permisos');
+    Route::post('/proyectos/{id}/permisos', [ProyectoController::class, 'actualizarPermisos'])->name('proyectos.permisos.actualizar');
+
     // Avances para clientes
     Route::get('/proyectos/{projectId}/timeline', [AvancesProyectoController::class, 'showTimeline'])
         ->name('projects.timeline');
@@ -119,4 +125,6 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/notificaciones/leidas/todas', [NotificacionController::class, 'marcarTodasComoLeidas'])
         ->name('notificaciones.marcarTodas');
+    Route::post('/notificaciones/{id}/eliminar', [NotificacionController::class, 'eliminar'])
+        ->name('notificaciones.eliminar');
 });
