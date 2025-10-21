@@ -26,37 +26,27 @@ class MeetingController extends Controller
             ->with(['project:id,nombre', 'users:id,name,apellido']);
 
         if ($userRole === 'cliente') {
-            $query->whereHas('users', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            });
+            $query->whereHas('users', fn($q) => $q->where('user_id', $user->id));
         } elseif (in_array($userRole, ['arquitecto', 'ingeniero'])) {
             $assignedProjectIds = $user->projects->pluck('id');
-
             if ($assignedProjectIds->isNotEmpty()) {
                 $query->whereIn('proyecto_id', $assignedProjectIds);
             } else {
-                $query->whereHas('users', function ($q) use ($user) {
-                    $q->where('user_id', $user->id);
-                });
+                $query->whereHas('users', fn($q) => $q->where('user_id', $user->id));
             }
         }
 
         $meetings = $query->get();
 
         $formattedMeetings = $meetings->map(function ($meeting) {
+            if (is_null($meeting->fecha_hora)) return null;
 
-            $start_time = $meeting->fecha_hora;
-
-            if (is_null($start_time)) {
-                return null;
-            }
-
-            $end_time = $start_time->copy()->addHour();
+            $end_time = $meeting->fecha_hora_fin ?? $meeting->fecha_hora->copy()->addHour();
 
             return [
                 'id' => $meeting->id,
                 'title' => $meeting->titulo,
-                'start' => $start_time->toDateTimeString(),
+                'start' => $meeting->fecha_hora->toDateTimeString(),
                 'end' => $end_time->toDateTimeString(),
                 'description' => $meeting->descripcion,
                 'projectId' => $meeting->proyecto_id,
@@ -65,15 +55,14 @@ class MeetingController extends Controller
             ];
         })->filter()->values();
 
-        $usersList = User::where('eliminado', 0)->get(['id', 'name', 'apellido'])->map(function ($u) {
-            return ['id' => $u->id, 'name' => "{$u->name} {$u->apellido}"];
-        });
+        $usersList = User::where('eliminado', 0)
+            ->get(['id', 'name', 'apellido'])
+            ->map(fn($u) => ['id' => $u->id, 'name' => "{$u->name} {$u->apellido}"]);
 
         $projectsList = Proyecto::where('eliminado', 0)
             ->where('estado', '!=', 'finalizado')
             ->get(['id', 'nombre'])
             ->map(fn($p) => ['id' => $p->id, 'name' => $p->nombre]);
-
 
         return Inertia::render('Calendar/CalendarIndex', [
             'meetings' => $formattedMeetings,
@@ -83,7 +72,7 @@ class MeetingController extends Controller
     }
 
     /**
-     * Almacena una nueva reunión en la base de datos.
+     * Crea una nueva reunión.
      */
     public function store(Request $request)
     {
@@ -105,32 +94,29 @@ class MeetingController extends Controller
         $fecha_fin = new \DateTime($validated['end']);
         $participantIds = $validated['participants'];
 
+        // Comprobar conflictos de horario
         $overlappingMeetingIds = Meeting::where('eliminado', 0)
             ->where(function ($query) use ($fecha_inicio, $fecha_fin) {
-
-                $start_col = 'fecha_hora';
-                $end_col_existing = DB::raw('DATE_ADD(fecha_hora, INTERVAL 1 HOUR)');
-
-                $query->where($start_col, '<', $fecha_fin)
-                    ->where($end_col_existing, '>', $fecha_inicio);
-            })->pluck('id');
-
+                $query->where('fecha_hora', '<', $fecha_fin)
+                      ->where('fecha_hora_fin', '>', $fecha_inicio);
+            })
+            ->pluck('id');
 
         if ($overlappingMeetingIds->isNotEmpty()) {
             $conflictingUsers = User::whereIn('id', $participantIds)
-                ->whereHas('usersMeetings', function ($query) use ($overlappingMeetingIds) {
-                    $query->whereIn('reuniones.id', $overlappingMeetingIds);
-                })
-                ->get(['name', 'apellido']);
+                ->whereHas('meetings', fn($q) =>
+                    $q->whereIn('reuniones.id', $overlappingMeetingIds)
+                )->get(['name', 'apellido']);
 
             if ($conflictingUsers->isNotEmpty()) {
                 $names = $conflictingUsers->pluck('name')->implode(', ');
-
                 return redirect()->back()->withErrors([
-                    'time_conflict' => "Conflicto de horario. Los siguientes participantes ya tienen una reunión agendada: {$names}.",
+                    'time_conflict' =>
+                        "Conflicto de horario. Los siguientes participantes ya tienen una reunión agendada: {$names}.",
                 ])->withInput();
             }
         }
+
         DB::beginTransaction();
         try {
             $meeting = Meeting::create([
@@ -138,13 +124,14 @@ class MeetingController extends Controller
                 'titulo' => $validated['title'],
                 'descripcion' => $validated['description'],
                 'fecha_hora' => $fecha_inicio,
+                'fecha_hora_fin' => $fecha_fin,
                 'creador_id' => $request->user()->id,
                 'eliminado' => 0,
             ]);
 
-            $pivotData = collect($participantIds)->mapWithKeys(function ($userId) {
-                return [$userId => ['asistio' => 0, 'eliminado' => 0]];
-            })->toArray();
+            $pivotData = collect($participantIds)->mapWithKeys(fn($userId) => [
+                $userId => ['asistio' => 0, 'eliminado' => 0]
+            ])->toArray();
 
             $meeting->users()->attach($pivotData);
 
@@ -153,16 +140,17 @@ class MeetingController extends Controller
                 "Se te ha asignado a una reunión: {$meeting->titulo}",
                 'reunion'
             );
-            DB::commit();
 
+            DB::commit();
             return redirect()->route('calendar')->with('success', 'Reunión creada exitosamente.');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Error interno al crear la reunión: ' . $e->getMessage());
         }
     }
+
     /**
-     * Actualiza la reunión especificada en la base de datos.
+     * Actualiza una reunión existente.
      */
     public function update(Request $request, Meeting $meeting)
     {
@@ -176,7 +164,7 @@ class MeetingController extends Controller
             'start' => 'required|date',
             'end' => 'required|date|after:start',
             'projectId' => 'required|exists:proyectos,id',
-            'participants' => 'required|array',
+            'participants' => 'required|array|min:1',
             'participants.*' => 'exists:users,id',
         ]);
 
@@ -184,21 +172,23 @@ class MeetingController extends Controller
             'titulo' => $validated['title'],
             'descripcion' => $validated['description'],
             'fecha_hora' => $validated['start'],
+            'fecha_hora_fin' => $validated['end'],
             'proyecto_id' => $validated['projectId'],
         ]);
 
         $meeting->users()->sync($validated['participants']);
-        $updatedUsers = $validated['participants'];
+
         NotificationService::sendToMany(
-            $updatedUsers,
+            $validated['participants'],
             "La reunión '{$meeting->titulo}' ha sido actualizada.",
             'reunion'
         );
+
         return Redirect::route('calendar')->with('success', 'Reunión actualizada exitosamente.');
     }
 
     /**
-     * Marca la reunión como eliminada (Borrado Lógico)
+     * Eliminación lógica.
      */
     public function destroy(Meeting $meeting)
     {
@@ -212,12 +202,9 @@ class MeetingController extends Controller
 
         try {
             $meeting->update(['eliminado' => 1]);
-
-            return Redirect::route('calendar')
-                ->with('success', 'La reunión se eliminó con éxito.');
+            return Redirect::route('calendar')->with('success', 'La reunión se eliminó con éxito.');
         } catch (\Exception $e) {
-            return Redirect::back()
-                ->with('error', 'Hubo un error al intentar eliminar la reunión: ' . $e->getMessage());
+            return Redirect::back()->with('error', 'Hubo un error al eliminar la reunión: ' . $e->getMessage());
         }
     }
 }

@@ -9,33 +9,36 @@ class Meeting extends Model
 {
     use HasFactory;
 
-    protected $table = 'reuniones'; 
-    
+    protected $table = 'reuniones';
+
     protected $casts = [
-        'fecha_hora' => 'datetime', 
+        'fecha_hora' => 'datetime',
+        'fecha_hora_fin' => 'datetime', // nuevo campo
     ];
 
     protected $fillable = [
-        'proyecto_id', 
-        'titulo', 
-        'descripcion', 
+        'proyecto_id',
+        'titulo',
+        'descripcion',
         'fecha_hora',
-        'creador_id', 
+        'fecha_hora_fin', // nuevo campo
+        'creador_id',
         'eliminado',
     ];
+
+    /** Relación: usuarios asignados a la reunión */
     public function users()
     {
         return $this->belongsToMany(
-            User::class, 
-            'reuniones_usuarios', 
-            'reunion_id',         
-            'user_id'             
-        );
+            User::class,
+            'reuniones_usuarios',
+            'reunion_id',
+            'user_id'
+        )->withPivot('asistio', 'eliminado')
+         ->wherePivot('eliminado', 0);
     }
-    
-    /**
-     * Relationship: Meeting belongs to Project (Proyecto).
-     */
+
+    /** Relación inversa: proyecto al que pertenece la reunión */
     public function project()
     {
         return $this->belongsTo(Proyecto::class, 'proyecto_id', 'id');
