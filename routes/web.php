@@ -125,4 +125,6 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/notificaciones/leidas/todas', [NotificacionController::class, 'marcarTodasComoLeidas'])
         ->name('notificaciones.marcarTodas');
+    Route::post('/notificaciones/{id}/eliminar', [NotificacionController::class, 'eliminar'])
+        ->name('notificaciones.eliminar');
 });

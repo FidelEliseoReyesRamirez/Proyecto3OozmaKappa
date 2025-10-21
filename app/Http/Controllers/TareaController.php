@@ -11,6 +11,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\NotificationService;
 
 class TareaController extends Controller
 {
@@ -89,9 +90,6 @@ class TareaController extends Controller
         ]);
     }
 
-
-
-
     /**
      * Guarda una nueva tarea.
      */
@@ -144,6 +142,33 @@ class TareaController extends Controller
                 'fecha_cambio' => now(),
             ]);
 
+            // -----------------------------------------------------------
+            // 🔔 NOTIFICACIONES AL CREAR TAREA
+            // -----------------------------------------------------------
+            $proyecto = Proyecto::find($tarea->proyecto_id);
+            $responsable = $proyecto->responsable_id ?? null;
+            $cliente = $proyecto->cliente_id ?? null;
+
+            $colaboradores = DB::table('proyectos_usuarios')
+                ->where('proyecto_id', $proyecto->id)
+                ->where('permiso', 'editar')
+                ->pluck('user_id')
+                ->toArray();
+
+            $destinatarios = array_unique(array_merge(
+                [$tarea->asignado_id, Auth::id()],
+                [$responsable, $cliente],
+                $colaboradores
+            ));
+
+            NotificationService::sendToMany(
+                $destinatarios,
+                "Se ha creado la tarea '{$tarea->titulo}' en el proyecto '{$proyecto->nombre}'.",
+                'tarea',
+                url('/proyectos/' . $proyecto->id),
+                'Nueva tarea creada'
+            );
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Tarea creada correctamente ✅'
@@ -156,7 +181,6 @@ class TareaController extends Controller
             ], 500);
         }
     }
-
 
     /**
      * Cambia el estado de una tarea (para el Kanban).
@@ -183,6 +207,35 @@ class TareaController extends Controller
                 'cambio' => "Cambio de estado: {$estadoAnterior} → {$nuevoEstado}",
                 'fecha_cambio' => now(),
             ]);
+
+            // -----------------------------------------------------------
+            // 🔔 NOTIFICACIONES AL CAMBIAR ESTADO
+            // -----------------------------------------------------------
+            $proyecto = Proyecto::find($tarea->proyecto_id);
+            $responsable = $proyecto->responsable_id ?? null;
+            $cliente = $proyecto->cliente_id ?? null;
+
+            $colaboradores = DB::table('proyectos_usuarios')
+                ->where('proyecto_id', $proyecto->id)
+                ->where('permiso', 'editar')
+                ->pluck('user_id')
+                ->toArray();
+
+            $destinatarios = array_unique(array_merge(
+                [$tarea->asignado_id, $tarea->creado_por],
+                [$responsable, $cliente],
+                $colaboradores
+            ));
+
+            $mensaje = "La tarea '{$tarea->titulo}' ha cambiado de estado: {$estadoAnterior} → {$nuevoEstado}.";
+
+            NotificationService::sendToMany(
+                $destinatarios,
+                $mensaje,
+                'tarea',
+                url('/proyectos/' . $proyecto->id),
+                'Actualización de tarea'
+            );
         }
 
         return response()->json(['success' => true]);
