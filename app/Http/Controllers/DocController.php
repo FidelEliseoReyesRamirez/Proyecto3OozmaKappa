@@ -95,7 +95,7 @@ class DocController extends Controller
             'titulo' => 'required|string|max:150',
             'descripcion' => 'nullable|string|max:1000',
             'proyecto_id' => 'required|exists:proyectos,id',
-            'archivo' => 'required|file|max:5242880',
+            'archivo' => 'required|file|max:102400',
             'archivo_tipo' => ['required', Rule::in(['PDF', 'Excel', 'Word'])],
         ]);
 
@@ -234,7 +234,7 @@ class DocController extends Controller
         'titulo' => 'nullable|string|max:150',
         'descripcion' => 'nullable|string|max:1000',
         'proyecto_id' => 'nullable|exists:proyectos,id',
-        'archivo' => 'nullable|file|max:5242880',
+        'archivo' => 'nullable|file|max:102400',
         'archivo_tipo' => ['required_with:archivo', Rule::in(['PDF', 'Excel', 'Word', 'Otro'])],
     ]);
     $updateData['nombre'] = !empty($validated['titulo']) 
