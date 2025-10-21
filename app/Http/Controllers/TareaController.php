@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class TareaController extends Controller
 {
@@ -62,20 +63,21 @@ class TareaController extends Controller
         $user = Auth::user();
 
         if (strtolower($user->rol) === 'cliente') {
-            return redirect()->route('tareas.index')->with('error', 'No tienes permiso para crear tareas.');
+            abort(403, 'No tienes permiso para crear tareas.');
         }
 
         $proyectos = Proyecto::select('id', 'nombre')->get();
 
         $usuarios = collect();
 
-        // Si ya se seleccionó un proyecto, filtrar usuarios con permiso 'editar'
         if ($proyecto_id) {
+            // Solo usuarios con permiso editar
             $usuarios = DB::table('proyectos_usuarios')
                 ->join('users', 'users.id', '=', 'proyectos_usuarios.user_id')
                 ->where('proyectos_usuarios.proyecto_id', $proyecto_id)
                 ->where('proyectos_usuarios.permiso', 'editar')
                 ->where('users.estado', 'activo')
+                ->where('users.eliminado', 0)
                 ->select('users.id', 'users.name', 'users.email')
                 ->get();
         }
@@ -87,57 +89,74 @@ class TareaController extends Controller
         ]);
     }
 
+
+
+
     /**
      * Guarda una nueva tarea.
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'proyecto_id' => 'required|exists:proyectos,id',
-            'titulo' => 'required|string|max:255',
-            'descripcion' => 'nullable|string',
-            'fecha_limite' => 'required|date',
-            'prioridad' => 'required|in:baja,media,alta',
-            'asignado_id' => 'required|exists:users,id',
-        ]);
+        try {
+            $validated = $request->validate([
+                'proyecto_id' => 'required|exists:proyectos,id',
+                'titulo' => 'required|string|max:255',
+                'descripcion' => 'nullable|string',
+                'fecha_limite' => 'required|date',
+                'prioridad' => 'required|in:baja,media,alta',
+                'asignado_id' => 'required|exists:users,id',
+            ]);
 
-        // 🧠 Verificar que el usuario asignado esté activo y tenga permiso 'editar' en ese proyecto
-        $asignadoValido = DB::table('proyectos_usuarios')
-            ->join('users', 'users.id', '=', 'proyectos_usuarios.user_id')
-            ->where('proyectos_usuarios.proyecto_id', $validated['proyecto_id'])
-            ->where('proyectos_usuarios.user_id', $validated['asignado_id'])
-            ->where('proyectos_usuarios.permiso', 'editar')
-            ->where('users.estado', 'activo')
-            ->exists();
+            // Verificar permisos del usuario asignado
+            $asignadoValido = DB::table('proyectos_usuarios')
+                ->join('users', 'users.id', '=', 'proyectos_usuarios.user_id')
+                ->where('proyectos_usuarios.proyecto_id', $validated['proyecto_id'])
+                ->where('proyectos_usuarios.user_id', $validated['asignado_id'])
+                ->where('proyectos_usuarios.permiso', 'editar')
+                ->where('users.estado', 'activo')
+                ->exists();
 
-        if (!$asignadoValido) {
-            return redirect()->back()->with('error', 'El usuario asignado no tiene permiso o no está activo.');
+            if (!$asignadoValido) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Este usuario no tiene permiso de acceder a esta tarea.'
+                ], 403);
+            }
+
+            $tarea = Tarea::create([
+                'proyecto_id' => $validated['proyecto_id'],
+                'titulo' => $validated['titulo'],
+                'descripcion' => $validated['descripcion'] ?? '',
+                'fecha_limite' => $validated['fecha_limite'],
+                'prioridad' => $validated['prioridad'],
+                'asignado_id' => $validated['asignado_id'],
+                'estado' => 'pendiente',
+                'creado_por' => Auth::id(),
+            ]);
+
+            TareaHistorial::create([
+                'proyecto_id' => $tarea->proyecto_id,
+                'tarea_id' => $tarea->id,
+                'usuario_id' => Auth::id(),
+                'estado_anterior' => 'pendiente',
+                'estado_nuevo' => null,
+                'cambio' => 'Creación de la tarea (estado inicial pendiente)',
+                'fecha_cambio' => now(),
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Tarea creada correctamente ✅'
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Ocurrió un error al crear la tarea.',
+                'debug' => $e->getMessage()
+            ], 500);
         }
-
-        $tarea = Tarea::create([
-            'proyecto_id' => $validated['proyecto_id'],
-            'titulo' => $validated['titulo'],
-            'descripcion' => $validated['descripcion'] ?? '',
-            'fecha_limite' => $validated['fecha_limite'],
-            'prioridad' => $validated['prioridad'],
-            'asignado_id' => $validated['asignado_id'],
-            'estado' => 'pendiente',
-            'creado_por' => Auth::id(),
-        ]);
-
-        // 🧠 Historial inicial
-        TareaHistorial::create([
-            'proyecto_id' => $tarea->proyecto_id,
-            'tarea_id' => $tarea->id,
-            'usuario_id' => Auth::id(),
-            'estado_anterior' => 'pendiente',
-            'estado_nuevo' => null,
-            'cambio' => 'Creación de la tarea (estado inicial pendiente)',
-            'fecha_cambio' => now(),
-        ]);
-
-        return redirect()->route('tareas.index')->with('success', 'Tarea creada correctamente.');
     }
+
 
     /**
      * Cambia el estado de una tarea (para el Kanban).
