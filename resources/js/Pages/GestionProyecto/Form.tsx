@@ -2,7 +2,7 @@ import InputError from "@/Components/InputError";
 import InputLabel from "@/Components/InputLabel";
 import TextInput from "@/Components/TextInput";
 import { Link, useForm, Head } from "@inertiajs/react";
-import { FormEventHandler, useEffect } from "react";
+import { FormEventHandler, useState } from "react";
 
 export default function Form({ proyecto, clientes, responsables }: any) {
     const { data, setData, post, processing, errors } = useForm<{
@@ -12,21 +12,24 @@ export default function Form({ proyecto, clientes, responsables }: any) {
         fecha_inicio: string;
         responsable_id: string;
         archivo_bim: File | null;
-    }>({
-        nombre: proyecto?.nombre || "",
-        cliente_id: proyecto?.cliente_id || "",
-        descripcion: proyecto?.descripcion || "",
-        fecha_inicio: proyecto?.fecha_inicio || "",
-        responsable_id: proyecto?.responsable_id || "",
-        archivo_bim: null,
-    });
+    }>(
+        {
+            nombre: proyecto?.nombre || "",
+            cliente_id: proyecto?.cliente_id || "",
+            descripcion: proyecto?.descripcion || "",
+            fecha_inicio: proyecto?.fecha_inicio || "",
+            responsable_id: proyecto?.responsable_id || "",
+            archivo_bim: null,
+        }
+    );
+
+    const [showModal, setShowModal] = useState(false);
+    const [modalMessage, setModalMessage] = useState("");
 
     const routeName = proyecto ? "proyectos.update" : "proyectos.store";
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-
-        // Prevención: evita enviar si hay errores visibles
         if (!validarCampos()) return;
 
         if (proyecto) {
@@ -36,23 +39,21 @@ export default function Form({ proyecto, clientes, responsables }: any) {
         }
     };
 
-    // ---------- VALIDACIONES FRONTEND AUTOMÁTICAS ----------
-
     const validarCampos = () => {
         if (data.nombre.trim() === "" || data.nombre.length > 150) {
-            alert("El nombre no puede estar vacío ni superar 150 caracteres.");
+            mostrarModal("El nombre no puede estar vacío ni superar 150 caracteres.");
             return false;
         }
         if (!data.cliente_id) {
-            alert("Debe seleccionar un cliente válido.");
+            mostrarModal("Debe seleccionar un cliente válido.");
             return false;
         }
         if (!data.responsable_id) {
-            alert("Debe seleccionar un responsable válido.");
+            mostrarModal("Debe seleccionar un responsable válido.");
             return false;
         }
         if (!data.fecha_inicio) {
-            alert("Debe ingresar la fecha de inicio del proyecto.");
+            mostrarModal("Debe ingresar la fecha de inicio del proyecto.");
             return false;
         }
 
@@ -60,47 +61,44 @@ export default function Form({ proyecto, clientes, responsables }: any) {
             const ext = data.archivo_bim.name.split(".").pop()?.toLowerCase();
             const validExt = ["bim", "ifc"];
             if (!validExt.includes(ext || "")) {
-                alert("Formato de archivo no permitido. Solo .bim o .ifc");
+                mostrarModal("Formato de archivo no permitido. Solo .bim o .ifc.");
                 return false;
             }
             if (data.archivo_bim.size > 256 * 1024 * 1024) {
-                alert("El archivo supera los 256 MB permitidos.");
+                mostrarModal("El archivo supera los 256 MB permitidos.");
                 return false;
             }
         }
         return true;
     };
 
-    // ---------- RESTRICCIONES INMEDIATAS EN INPUTS ----------
+    const mostrarModal = (mensaje: string) => {
+        setModalMessage(mensaje);
+        setShowModal(true);
+    };
+
+    const cerrarModal = () => {
+        setShowModal(false);
+        setModalMessage("");
+    };
 
     const handleNombre = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const valor = e.target.value;
-
-        // Evitar solo espacios o múltiples espacios consecutivos
-        let limpio = valor.replace(/\s{2,}/g, " ").trimStart();
-
-        // Máximo 150 caracteres
-        if (limpio.length > 150) limpio = limpio.substring(0, 150);
-
-        setData("nombre", limpio);
+        let valor = e.target.value.replace(/\s{2,}/g, " ").trimStart();
+        if (valor.length > 150) valor = valor.substring(0, 150);
+        setData("nombre", valor);
     };
 
     const handleDescripcion = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        // Permite hasta 500 caracteres como buena práctica
         let texto = e.target.value.replace(/\s{2,}/g, " ").trimStart();
         if (texto.length > 500) texto = texto.substring(0, 500);
         setData("descripcion", texto);
     };
 
-    // ---------- ESTILOS ----------
-
     const inputFieldStyles =
         "mt-1 block w-full bg-gray-900 border border-gray-700 text-white rounded-lg shadow-inner focus:border-[#2970E8] focus:ring-[#2970E8] transition duration-200 ease-in-out placeholder-gray-500";
 
-    // ---------- COMPONENTE ----------
-
     return (
-        <section className="flex justify-center items-center py-12 px-4 min-h-screen bg-gray-950">
+        <section className="flex justify-center items-center py-12 px-4 min-h-screen bg-gray-950 relative">
             <Head title="DEVELARQ | Crear Proyecto" />
 
             <div className="w-full max-w-4xl bg-gray-900 border border-gray-800 p-8 md:p-10 rounded-xl shadow-lg shadow-gray-900/50">
@@ -112,7 +110,6 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                 </p>
 
                 <form onSubmit={submit} className="space-y-6" noValidate>
-                    {/* NOMBRE */}
                     <div>
                         <InputLabel htmlFor="nombre" value="Nombre del Proyecto" className="text-gray-200 font-semibold" />
                         <TextInput
@@ -124,13 +121,10 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                             placeholder="Ej: Torre de Oficinas Central Park"
                             maxLength={150}
                         />
-                        <p className="text-xs text-gray-400 mt-1">
-                            {data.nombre.length}/150 caracteres
-                        </p>
+                        <p className="text-xs text-gray-400 mt-1">{data.nombre.length}/150 caracteres</p>
                         <InputError className="mt-2" message={errors.nombre} />
                     </div>
 
-                    {/* DESCRIPCIÓN */}
                     <div>
                         <InputLabel htmlFor="descripcion" value="Descripción Detallada del Proyecto" className="text-gray-200 font-semibold" />
                         <textarea
@@ -142,13 +136,10 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                             placeholder="Breve resumen de los alcances y metas del proyecto."
                             maxLength={500}
                         />
-                        <p className="text-xs text-gray-400 mt-1">
-                            {data.descripcion?.length || 0}/500 caracteres
-                        </p>
+                        <p className="text-xs text-gray-400 mt-1">{data.descripcion?.length || 0}/500 caracteres</p>
                         <InputError className="mt-2" message={errors.descripcion} />
                     </div>
 
-                    {/* CLIENTE Y RESPONSABLE */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-700">
                         <div>
                             <InputLabel htmlFor="cliente" value="Cliente Asociado" className="text-gray-200 font-semibold" />
@@ -161,9 +152,7 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                             >
                                 <option value="" disabled>-- Seleccione un cliente --</option>
                                 {clientes.map((c: any) => (
-                                    <option key={c.id} value={c.id}>
-                                        {c.name}
-                                    </option>
+                                    <option key={c.id} value={c.id}>{c.name}</option>
                                 ))}
                             </select>
                             <InputError className="mt-2" message={errors.cliente_id} />
@@ -180,9 +169,7 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                             >
                                 <option value="" disabled>-- Seleccione un responsable --</option>
                                 {responsables.map((r: any) => (
-                                    <option key={r.id} value={r.id}>
-                                        {r.name}
-                                    </option>
+                                    <option key={r.id} value={r.id}>{r.name}</option>
                                 ))}
                             </select>
                             <InputError className="mt-2" message={errors.responsable_id} />
@@ -202,7 +189,6 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                         </div>
                     </div>
 
-                    {/* ARCHIVO BIM */}
                     <div className="pt-4 border-t border-gray-700">
                         <InputLabel htmlFor="archivo_bim" value="Archivo BIM Inicial (.ifc, .bim)" className="text-gray-200 font-semibold" />
                         <input
@@ -217,13 +203,10 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                                 hover:file:bg-indigo-600 transition duration-150 cursor-pointer"
                             onChange={(e) => setData("archivo_bim", e.target.files?.[0] || null)}
                         />
-                        <p className="mt-1 text-xs text-gray-500">
-                            Formatos soportados: .ifc, .bim. Máx. 256MB.
-                        </p>
+                        <p className="mt-1 text-xs text-gray-500">Formatos soportados: .ifc, .bim. Máx. 256MB.</p>
                         <InputError className="mt-2" message={errors.archivo_bim} />
                     </div>
 
-                    {/* BOTONES */}
                     <div className="flex items-center justify-between pt-6 border-t border-gray-700">
                         <button
                             type="submit"
@@ -241,6 +224,22 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                     </div>
                 </form>
             </div>
+
+            {/* MODAL DE VALIDACIÓN */}
+            {showModal && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
+                    <div className="bg-gray-900 border border-gray-700 p-6 rounded-xl shadow-xl w-96 text-center">
+                        <h3 className="text-[#B3E10F] text-lg font-bold mb-3">Atención</h3>
+                        <p className="text-gray-200 mb-6">{modalMessage}</p>
+                        <button
+                            onClick={cerrarModal}
+                            className="bg-[#2970E8] px-4 py-2 rounded-md text-white font-semibold hover:bg-[#1f5dc0] transition duration-150"
+                        >
+                            Entendido
+                        </button>
+                    </div>
+                </div>
+            )}
         </section>
     );
 }
