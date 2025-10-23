@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 use App\Services\NotificationService;
 use App\Models\DescargaHistorial;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class DocController extends Controller
 {
@@ -22,10 +23,11 @@ class DocController extends Controller
         $user = $request->user();
         $userRole = strtolower($user->rol);
 
-        $query = Documento::query()->where('eliminado', 0)->with(['project:id,nombre']);
+        $query = Documento::query()
+            ->where('eliminado', 0)
+            ->with(['project:id,nombre']);
 
         if ($userRole !== 'admin') {
-
             $projectIds = $user->projects->pluck('id');
 
             if ($projectIds->isNotEmpty()) {
@@ -43,16 +45,17 @@ class DocController extends Controller
 
         return Inertia::render('Docs/DocIndex', [
             'documents' => $documents->map(function ($doc) {
-                $downloadUrl = route('docs.download', $doc->id);
-                $extension = pathinfo($doc->archivo_url, PATHINFO_EXTENSION);
+                $downloadUrl = $doc->archivo_url ? route('docs.download', $doc->id) : null;
+                $extension = $doc->archivo_url ? strtoupper(pathinfo($doc->archivo_url, PATHINFO_EXTENSION)) : 'URL';
 
                 return [
                     'id' => $doc->id,
                     'titulo' => $doc->nombre,
                     'descripcion' => $doc->descripcion,
                     'archivo_url' => $downloadUrl,
+                    'enlace_externo' => $doc->enlace_externo,
                     'tipo' => $doc->tipo,
-                    'extension' => strtoupper($extension),
+                    'extension' => $extension,
                     'fecha_subida' => $doc->created_at->format('d/m/Y H:i'),
                     'proyecto_id' => $doc->proyecto_id,
                     'proyecto_nombre' => $doc->project->nombre ?? 'N/A',
@@ -63,6 +66,9 @@ class DocController extends Controller
         ]);
     }
 
+    /**
+     * Formulario de creación
+     */
     public function create(Request $request)
     {
         if (strtolower($request->user()->rol) === 'cliente') {
@@ -79,100 +85,135 @@ class DocController extends Controller
     }
 
     /**
-     * Almacena un nuevo documento y asegura que el usuario esté vinculado al proyecto.
+     * Almacena un nuevo documento (archivo o enlace).
      */
     public function store(Request $request)
     {
-        $user = $request->user();
-        $userRole = strtolower($user->rol);
-
-        if ($userRole === 'cliente') {
-            return back()->with('error', 'No tienes permiso para subir documentos.');
-        }
-
         $validated = $request->validate([
             'titulo' => 'required|string|max:150',
             'descripcion' => 'nullable|string|max:1000',
             'proyecto_id' => 'required|exists:proyectos,id',
-            'archivo' => 'required|file|max:102400',
-            'archivo_tipo' => ['required', Rule::in(['PDF', 'Excel', 'Word'])],
+            'archivo' => 'nullable|file|max:51200',
+            'enlace_externo' => 'nullable|url|max:500',
+            'archivo_tipo' => 'required|in:PDF,Excel,Word,URL',
         ]);
 
-        $file = $request->file('archivo');
-        $fileType = $validated['archivo_tipo'];
-        $ruta_archivo_almacenada = null;
-        $projectId = $validated['proyecto_id'];
+        $tipo = $validated['archivo_tipo'];
+        $archivo_url = null;
+
+        if ($request->hasFile('archivo')) {
+            $file = $request->file('archivo');
+            $path = $file->store('documentos', 'public');
+            $archivo_url = '/storage/' . $path;
+        } elseif (!empty($validated['enlace_externo'])) {
+            $tipo = 'URL';
+            $archivo_url = $validated['enlace_externo'];
+        } else {
+            return back()->withErrors([
+                'archivo' => 'Debes subir un archivo o ingresar un enlace externo válido (Drive, OneDrive, etc.).'
+            ]);
+        }
 
         try {
-            $ruta_archivo_almacenada = $file->store('documents');
-
-            if ($userRole !== 'admin') {
-                try {
-                    $user->projects()->syncWithoutDetaching([
-                        $projectId => [
-                            'rol_en_proyecto' => $userRole,
-                            'eliminado' => 0
-                        ]
-                    ]);
-                } catch (\Exception $e) {
-                }
-            }
-
             $documento = Documento::create([
-                'proyecto_id' => $projectId,
                 'nombre' => $validated['titulo'],
-                'descripcion' => $validated['descripcion'],
-                'archivo_url' => $ruta_archivo_almacenada,
-                'tipo' => $fileType,
-                'subido_por' => $user->id,
-                'eliminado' => 0,
+                'descripcion' => $validated['descripcion'] ?? null,
+                'proyecto_id' => $validated['proyecto_id'],
+                'archivo_url' => $archivo_url,
+                'tipo' => $tipo,
+
+                'subido_por' => Auth::id(),
+
             ]);
 
-            // -----------------------------------------------------------
-            // NOTIFICACIÓN AL SUBIR DOCUMENTO
-            // -----------------------------------------------------------
-            $proyecto = Proyecto::find($projectId);
-            $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
+            /** @var \App\Models\Proyecto|null $proyecto */
+            $proyecto = Proyecto::find($validated['proyecto_id']);
 
-            NotificationService::sendToMany(
-                $usuariosProyecto,
-                "Se ha subido un nuevo documento '{$documento->nombre}' al proyecto '{$proyecto->nombre}'.",
-                'documento',
-                url('/proyectos/' . $proyecto->id),
-                'Nuevo documento agregado'
-            );
+            if ($proyecto instanceof Proyecto) {
+                $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
 
-            return redirect()->route('docs.index')->with('success', 'Documento subido exitosamente.');
-        } catch (\Exception $e) {
-            if (!empty($ruta_archivo_almacenada)) {
-                Storage::delete($ruta_archivo_almacenada);
+                NotificationService::sendToMany(
+                    $usuariosProyecto,
+                    "Se ha subido un nuevo documento '{$documento->nombre}' al proyecto '{$proyecto->nombre}'.",
+                    'documento',
+                    url('/proyectos/' . (string)$proyecto->id),
+                    'Nuevo documento'
+                );
             }
 
-            return back()->withInput()->with('error', 'Error al subir el archivo o guardar documento: ' . $e->getMessage());
+            return redirect()->route('docs.index')->with('success', 'Documento registrado correctamente.');
+        } catch (\Exception $e) {
+            Log::error('Error al guardar documento: ' . $e->getMessage());
+            return back()->with('error', 'Ocurrió un error al guardar el documento.')->withInput();
         }
     }
 
+    public function restore($id)
+    {
+        $documento = Documento::findOrFail($id);
+
+        if (strtolower(request()->user()->rol) === 'cliente') {
+            return back()->with('error', 'No tienes permiso para restaurar documentos.');
+        }
+
+        $documento->update([
+            'eliminado' => 0,
+            'fecha_eliminacion' => null
+        ]);
+
+        return back()->with('success', 'Documento restaurado correctamente.');
+    }
+    public function trash()
+    {
+        $documents = Documento::where('eliminado', 1)
+            ->orderByDesc('fecha_eliminacion')
+            ->with('project')
+            ->get()
+            ->map(function ($doc) {
+                return [
+                    'id' => $doc->id,
+                    'titulo' => $doc->nombre,
+                    'descripcion' => $doc->descripcion,
+                    'tipo' => $doc->tipo,
+                    'fecha_subida' => $doc->created_at->format('d/m/Y H:i'),
+                    'fecha_eliminacion' => $doc->fecha_eliminacion
+                        ? $doc->fecha_eliminacion->format('d/m/Y H:i')
+                        : null,
+                    'proyecto_nombre' => $doc->project->nombre ?? 'N/A',
+                    'dias_restantes' => $doc->fecha_eliminacion
+                        ? max(0, 30 - now()->diffInDays($doc->fecha_eliminacion))
+                        : null,
+                ];
+            });
+
+        return Inertia::render('Docs/DocTrash', [
+            'documents' => $documents,
+            'userRole' => strtolower(optional(request()->user())->rol ?? ''),
+        ]);
+    }
+
+
+    /**
+     * Descarga de documentos
+     */
     public function download(Documento $documento)
     {
         $user = request()->user();
         $userRole = strtolower($user->rol);
-        $hasPermission = false;
 
-        if ($userRole === 'admin') {
-            $hasPermission = true;
-        } else {
-            $assignedProjectIds = $user->projects->pluck('id');
-
-            if ($assignedProjectIds->contains($documento->proyecto_id)) {
-                $hasPermission = true;
-            }
-        }
+        $hasPermission = $userRole === 'admin' ||
+            $user->projects->pluck('id')->contains($documento->proyecto_id);
 
         if (!$hasPermission) {
             abort(403, 'No tienes permiso para descargar este documento.');
         }
 
-        if (!Storage::exists($documento->archivo_url)) {
+        // Si es URL, redirige directamente al enlace externo
+        if ($documento->tipo === 'URL') {
+            return redirect()->away($documento->archivo_url);
+        }
+
+        if (!$documento->archivo_url || !Storage::exists($documento->archivo_url)) {
             abort(404, 'El archivo no fue encontrado en el servidor.');
         }
 
@@ -182,14 +223,11 @@ class DocController extends Controller
                 'documento_id' => $documento->id,
             ]);
 
-            // -----------------------------------------------------------
-            // NOTIFICACIÓN DE DESCARGA (opcional)
-            // -----------------------------------------------------------
             $proyecto = Proyecto::find($documento->proyecto_id);
-            $responsable = $proyecto->responsable_id ?? null;
-            if ($responsable) {
+
+            if ($proyecto && $proyecto->responsable_id) {
                 NotificationService::send(
-                    $responsable,
+                    $proyecto->responsable_id,
                     "El usuario {$user->name} ha descargado el documento '{$documento->nombre}' del proyecto '{$proyecto->nombre}'.",
                     'documento',
                     url('/proyectos/' . $proyecto->id),
@@ -197,13 +235,17 @@ class DocController extends Controller
                 );
             }
         } catch (\Exception $e) {
-            Log::error("Fallo al registrar descarga para User ID: {$user->id}, Documento ID: {$documento->id}. Error: " . $e->getMessage());
+            Log::error("Fallo al registrar descarga: " . $e->getMessage());
         }
 
         $extension = pathinfo($documento->archivo_url, PATHINFO_EXTENSION);
         return Storage::download($documento->archivo_url, $documento->nombre . '.' . $extension);
     }
 
+
+    /**
+     * Elimina (lógico) un documento
+     */
     public function destroy(Documento $documento)
     {
         if (strtolower(request()->user()->rol) === 'cliente') {
@@ -211,28 +253,33 @@ class DocController extends Controller
         }
 
         try {
-            $documento->update(['eliminado' => 1]);
+            $documento->update([
+                'eliminado' => 1,
+                'fecha_eliminacion' => now(),
+            ]);
 
-            // -----------------------------------------------------------
-            // NOTIFICACIÓN AL ELIMINAR DOCUMENTO
-            // -----------------------------------------------------------
             $proyecto = Proyecto::find($documento->proyecto_id);
             $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
 
             NotificationService::sendToMany(
                 $usuariosProyecto,
-                "El documento '{$documento->nombre}' ha sido eliminado del proyecto '{$proyecto->nombre}'.",
+                "El documento '{$documento->nombre}' ha sido enviado a la papelera del proyecto '{$proyecto->nombre}'.",
                 'documento',
                 url('/proyectos/' . $proyecto->id),
                 'Documento eliminado'
             );
 
-            return back()->with('success', 'Documento eliminado.');
+            return back()->with('success', 'Documento movido a la papelera.');
         } catch (\Exception $e) {
             return back()->with('error', 'Error al eliminar el documento: ' . $e->getMessage());
         }
     }
 
+
+
+    /**
+     * Formulario de edición
+     */
     public function edit(Documento $documento)
     {
         $userRole = strtolower(request()->user()->rol);
@@ -252,11 +299,15 @@ class DocController extends Controller
                 'descripcion' => $documento->descripcion ?? '',
                 'proyecto_id' => $documento->proyecto_id,
                 'tipo' => $documento->tipo ?? '',
+                'enlace_externo' => $documento->enlace_externo ?? '',
             ],
             'projectsList' => $projectsList,
         ]);
     }
 
+    /**
+     * Actualiza documento
+     */
     public function update(Request $request, Documento $documento)
     {
         $userRole = strtolower($request->user()->rol);
@@ -269,44 +320,33 @@ class DocController extends Controller
             'titulo' => 'nullable|string|max:150',
             'descripcion' => 'nullable|string|max:1000',
             'proyecto_id' => 'nullable|exists:proyectos,id',
-            'archivo' => 'nullable|file|max:102400',
-            'archivo_tipo' => ['required_with:archivo', Rule::in(['PDF', 'Excel', 'Word', 'Otro'])],
+            'archivo' => 'nullable|file|max:51200',
+            'enlace_externo' => 'nullable|url|max:500',
+            'archivo_tipo' => ['nullable', Rule::in(['PDF', 'Excel', 'Word', 'Otro'])],
         ]);
 
-        $updateData['nombre'] = !empty($validated['titulo'])
-            ? $validated['titulo']
-            : $documento->nombre;
+        $updateData = [
+            'nombre' => $validated['titulo'] ?? $documento->nombre,
+            'descripcion' => $validated['descripcion'] ?? $documento->descripcion,
+            'proyecto_id' => $validated['proyecto_id'] ?? $documento->proyecto_id,
+            'enlace_externo' => $validated['enlace_externo'] ?? $documento->enlace_externo,
+        ];
 
-        $updateData['descripcion'] = !empty($validated['descripcion'])
-            ? $validated['descripcion']
-            : $documento->descripcion;
+        try {
+            if ($request->file('archivo')) {
+                $file = $request->file('archivo');
 
-        $updateData['proyecto_id'] = $validated['proyecto_id']
-            ?? $documento->proyecto_id;
-
-        if ($request->file('archivo')) {
-            $file = $request->file('archivo');
-
-            try {
                 if (!empty($documento->archivo_url) && Storage::exists($documento->archivo_url)) {
                     Storage::delete($documento->archivo_url);
                 }
 
                 $ruta_archivo_almacenada = $file->store('documents');
                 $updateData['archivo_url'] = $ruta_archivo_almacenada;
-                $updateData['tipo'] = $validated['archivo_tipo'];
-            } catch (\Exception $e) {
-                Log::error("Error al reemplazar archivo para documento ID {$documento->id}: " . $e->getMessage());
-                return back()->withInput()->with('error', 'Error al cambiar el archivo: ' . $e->getMessage());
+                $updateData['tipo'] = $validated['archivo_tipo'] ?? $documento->tipo;
             }
-        }
 
-        try {
             $documento->update($updateData);
 
-            // -----------------------------------------------------------
-            // NOTIFICACIÓN AL ACTUALIZAR DOCUMENTO
-            // -----------------------------------------------------------
             $proyecto = Proyecto::find($updateData['proyecto_id']);
             $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
 

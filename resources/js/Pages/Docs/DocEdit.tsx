@@ -1,10 +1,10 @@
-// resources/js/Pages/Docs/DocEdit.tsx
-
-import React, { FormEventHandler } from 'react';
+import React, { FormEventHandler, useMemo, useState } from 'react';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'; 
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { PageProps } from '@/types';
-import InputError from '@/Components/InputError'; 
+
+type FileType = 'PDF' | 'Excel' | 'Word' | 'Otro';
+
 interface ProjectOption {
     id: number;
     name: string;
@@ -16,6 +16,7 @@ interface DocumentData {
     descripcion: string;
     proyecto_id: number | null;
     tipo: string;
+    enlace_externo?: string | null;
 }
 
 interface DocEditProps extends PageProps {
@@ -25,145 +26,257 @@ interface DocEditProps extends PageProps {
 
 const DocEdit: React.FC = () => {
     const { document, projectsList } = usePage<DocEditProps>().props;
-    
-    const safeProjectId = (document.proyecto_id ?? '').toString(); 
 
-    const { data, setData, put, processing, errors } = useForm({
-        titulo: document.titulo ?? '', 
-        descripcion: document.descripcion ?? '', 
-        proyecto_id: safeProjectId,
-        archivo: null as File | null,          
-        archivo_tipo: document.tipo ?? '',     
+    const { data, setData, put, processing, errors, clearErrors } = useForm({
+        titulo: document.titulo || '',
+        descripcion: document.descripcion || '',
+        proyecto_id: document.proyecto_id ? document.proyecto_id.toString() : '',
+        archivo: null as File | null,
+        enlace_externo: document.enlace_externo || '',
+        archivo_tipo: (document.tipo as FileType) || 'PDF',
     });
 
-    const inputStyle = "mt-1 block w-full border border-gray-700 bg-[#080D15] text-white rounded-md shadow-inner py-2 px-3 focus:outline-none focus:ring-[#2970E8] focus:border-[#2970E8] sm:text-sm transition duration-150";
-    const labelStyle = "block text-sm font-bold text-gray-300";
+    const [showSizeModal, setShowSizeModal] = useState(false);
+    const [showTypeModal, setShowTypeModal] = useState(false);
+    const [frontendError, setFrontendError] = useState('');
+    const [uploadMode, setUploadMode] = useState<'archivo' | 'enlace'>(
+        document.enlace_externo ? 'enlace' : 'archivo'
+    );
+    const [projectSearch, setProjectSearch] = useState('');
+
+    const allowedTypes = useMemo(
+        () => [
+            { label: 'Documento PDF', value: 'PDF' as FileType, extensions: ['.pdf'] },
+            { label: 'Hoja de Cálculo (Excel)', value: 'Excel' as FileType, extensions: ['.xls', '.xlsx', '.xlsm'] },
+            { label: 'Documento de Word', value: 'Word' as FileType, extensions: ['.doc', '.docx'] },
+        ],
+        []
+    );
+
+    const acceptFileTypes = allowedTypes
+        .find((t) => t.value === data.archivo_tipo)
+        ?.extensions.join(',') || '.pdf,.xls,.xlsx,.xlsm,.doc,.docx';
+
+    const isValidURL = (url: string): boolean => /^(https?:\/\/)[^\s$.?#].[^\s]*$/i.test(url);
+
+    const isValidFileType = (fileName: string): boolean => {
+        const validExtensions = ['.pdf', '.xls', '.xlsx', '.xlsm', '.doc', '.docx'];
+        const ext = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
+        return validExtensions.includes(ext);
+    };
+
+    const filteredProjects = projectsList.filter((p) =>
+        p.name.toLowerCase().includes(projectSearch.toLowerCase())
+    );
+
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        
+        setFrontendError('');
+        clearErrors();
+
+        if (uploadMode === 'archivo' && !data.archivo) {
+            setFrontendError('Debes seleccionar un archivo válido.');
+            return;
+        }
+
+        if (uploadMode === 'enlace' && (!data.enlace_externo || !isValidURL(data.enlace_externo))) {
+            setFrontendError('El enlace externo no es válido. Debe comenzar con http:// o https://');
+            return;
+        }
+
         put(route('docs.update', document.id), {
-            onSuccess: () => {
-                router.get(route('docs.index'));
-            },
-            onError: (err) => {
-                console.error("Error al actualizar el documento:", err);
-            }
+            onSuccess: () => router.visit(route('docs.index')),
         });
     };
-    
-    const handleBack = () => {
-        router.get(route('docs.index'));
-    };
-    
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files ? e.target.files[0] : null;
-        setData('archivo', file);
 
-        if (file) {
-            const name = file.name.toLowerCase();
-            let tipo = 'Otro';
-            if (name.endsWith('.pdf')) {
-                tipo = 'PDF';
-            } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
-                tipo = 'Excel';
-            } else if (name.endsWith('.docx') || name.endsWith('.doc')) {
-                tipo = 'Word';
-            }
-            setData('archivo_tipo', tipo);
-        } else {
-            setData('archivo_tipo', document.tipo ?? ''); 
-        }
-    };
+    const inputStyle =
+        'mt-1 block w-full border border-gray-700 bg-[#080D15] text-white rounded-md shadow-inner py-2 px-3 focus:outline-none focus:ring-[#2970E8] focus:border-[#2970E8] sm:text-sm transition duration-150';
+    const labelStyle = 'block text-sm font-bold text-gray-300';
 
     return (
         <AuthenticatedLayout
             header={<h2 className="font-extrabold text-xl text-[#B3E10F] leading-tight tracking-wider">EDITAR DOCUMENTO</h2>}
         >
-            <Head title={`Editar: ${document.titulo || 'Documento sin título'}`} /> 
+            <Head title={`Editar: ${document.titulo || 'Documento sin título'}`} />
 
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     <div className="bg-[#0B1120] overflow-hidden shadow-2xl sm:rounded-xl p-8 border border-gray-800/80">
-                        
                         <form onSubmit={submit} className="space-y-6">
-                            
-                            {/* Campo Título */}
+                            {/* Título */}
                             <div>
                                 <label htmlFor="titulo" className={labelStyle}>
                                     Título del Documento
                                 </label>
                                 <input
                                     id="titulo"
-                                    name="titulo"
                                     type="text"
-                                    value={data.titulo} 
-                                    autoComplete="off" 
+                                    value={data.titulo}
                                     onChange={(e) => setData('titulo', e.target.value)}
+                                    required
                                     className={inputStyle}
                                 />
-                                <InputError message={errors.titulo} className="mt-2 text-red-400" />
+                                {errors.titulo && <p className="text-red-400 text-sm mt-1">{errors.titulo}</p>}
                             </div>
 
-                            {/* Campo Descripción (ya era opcional) */}
+                            {/* Descripción */}
                             <div>
                                 <label htmlFor="descripcion" className={labelStyle}>
                                     Descripción (Opcional)
                                 </label>
                                 <textarea
                                     id="descripcion"
-                                    name="descripcion"
-                                    value={data.descripcion} 
-                                    autoComplete="off"
+                                    value={data.descripcion}
                                     onChange={(e) => setData('descripcion', e.target.value)}
                                     rows={3}
                                     className={inputStyle}
-                                ></textarea>
-                                <InputError message={errors.descripcion} className="mt-2 text-red-400" />
+                                />
                             </div>
 
-                            {/* Grupo de Radio Buttons para seleccionar Proyecto */}
+                            {/* Proyecto (combo buscable) */}
                             <div>
-                                <label className={`${labelStyle} mb-2`}>
+                                <label htmlFor="proyecto_id" className={labelStyle}>
                                     Proyecto Asociado
                                 </label>
-                                <div className="mt-2 space-y-2 max-h-48 overflow-y-auto p-4 bg-[#080D15] border border-gray-700 rounded-md shadow-inner">
-                                    {projectsList.map(project => (
-                                        <div key={project.id} className="flex items-center">
-                                            <input
-                                                id={`project-${project.id}`}
-                                                name="proyecto_id"
-                                                type="radio"
-                                                value={project.id.toString()}
-                                                checked={data.proyecto_id === project.id.toString()} 
-                                                onChange={(e) => setData('proyecto_id', e.target.value)}
-                                                className="h-4 w-4 text-[#B3E10F] bg-gray-900 border-gray-600 focus:ring-[#B3E10F]"
-                                            />
-                                            <label 
-                                                htmlFor={`project-${project.id}`} 
-                                                className="ml-3 block text-sm font-medium text-gray-300 cursor-pointer"
-                                            >
-                                                {project.name}
-                                            </label>
-                                        </div>
-                                    ))}
-                                </div>
-                                <InputError message={errors.proyecto_id} className="mt-2 text-red-400" />
+                                <input
+                                    type="text"
+                                    maxLength={100}
+                                    placeholder="Buscar proyecto..."
+                                    value={projectSearch}
+                                    onChange={(e) => setProjectSearch(e.target.value)}
+                                    className="mt-1 mb-2 w-full border border-gray-700 bg-[#080D15] text-white rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-[#B3E10F]/70 focus:border-[#B3E10F]/70"
+                                />
+                                <select
+                                    id="proyecto_id"
+                                    value={data.proyecto_id}
+                                    onChange={(e) => setData('proyecto_id', e.target.value)}
+                                    className={inputStyle}
+                                >
+                                    {filteredProjects.length > 0 ? (
+                                        filteredProjects.map((p) => (
+                                            <option key={p.id} value={p.id}>
+                                                {p.name}
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <option value="">Sin resultados</option>
+                                    )}
+                                </select>
                             </div>
 
-                            {/* Botones de Acción */}
+                            {/* Tipo de documento */}
+                            <div>
+                                <label htmlFor="archivo_tipo" className={labelStyle}>
+                                    Tipo de Documento
+                                </label>
+                                <select
+                                    id="archivo_tipo"
+                                    value={data.archivo_tipo}
+                                    onChange={(e) => setData('archivo_tipo', e.target.value as FileType)}
+                                    className={inputStyle}
+                                >
+                                    {allowedTypes.map((t) => (
+                                        <option key={t.value} value={t.value}>
+                                            {t.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Modo de subida */}
+                            <div>
+                                <label className={labelStyle}>Modo de actualización</label>
+                                <div className="flex items-center gap-6 mt-2">
+                                    <label className="flex items-center gap-2 text-gray-200">
+                                        <input
+                                            type="radio"
+                                            name="uploadMode"
+                                            checked={uploadMode === 'archivo'}
+                                            onChange={() => {
+                                                setUploadMode('archivo');
+                                                setData('enlace_externo', '');
+                                            }}
+                                            className="accent-[#B3E10F]"
+                                        />
+                                        Subir nuevo archivo
+                                    </label>
+                                    <label className="flex items-center gap-2 text-gray-200">
+                                        <input
+                                            type="radio"
+                                            name="uploadMode"
+                                            checked={uploadMode === 'enlace'}
+                                            onChange={() => {
+                                                setUploadMode('enlace');
+                                                setData('archivo', null);
+                                            }}
+                                            className="accent-[#2970E8]"
+                                        />
+                                        Enlace externo
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Archivo o enlace */}
+                            {uploadMode === 'archivo' ? (
+                                <div>
+                                    <label htmlFor="archivo" className={labelStyle}>
+                                        Subir Archivo (PDF, Word o Excel, máx. 50 MB)
+                                    </label>
+                                    <input
+                                        id="archivo"
+                                        type="file"
+                                        accept={acceptFileTypes}
+                                        onChange={(e) => {
+                                            const file = e.target.files ? e.target.files[0] : null;
+                                            if (!file) return;
+                                            if (!isValidFileType(file.name)) {
+                                                setShowTypeModal(true);
+                                                e.target.value = '';
+                                                return;
+                                            }
+                                            if (file.size > 50 * 1024 * 1024) {
+                                                setShowSizeModal(true);
+                                                e.target.value = '';
+                                                return;
+                                            }
+                                            setData('archivo', file);
+                                        }}
+                                        className="mt-1 block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#2970E8] file:text-white hover:file:bg-blue-600 transition duration-150"
+                                    />
+                                </div>
+                            ) : (
+                                <div>
+                                    <label htmlFor="enlace_externo" className={labelStyle}>
+                                        Enlace Externo (Drive, OneDrive, etc.)
+                                    </label>
+                                    <input
+                                        id="enlace_externo"
+                                        type="url"
+                                        value={data.enlace_externo}
+                                        onChange={(e) => setData('enlace_externo', e.target.value)}
+                                        placeholder="https://drive.google.com/..."
+                                        className={inputStyle}
+                                    />
+                                </div>
+                            )}
+
+                            {frontendError && (
+                                <p className="text-red-400 font-semibold text-sm mt-2 text-center">{frontendError}</p>
+                            )}
+
+                            {/* Botones */}
                             <div className="flex items-center justify-end pt-4 border-t border-gray-700">
                                 <button
-                                    onClick={handleBack}
-                                    type="button" 
-                                    className="bg-red-700 hover:bg-red-600 px-3 py-2 rounded-md text-sm font-medium transition duration-150 text-white"
+                                    type="button"
+                                    onClick={() => router.visit(route('docs.index'))}
+                                    className="bg-red-700 hover:bg-red-600 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition duration-150 text-white"
                                 >
-                                    Cancelar y Regresar
+                                    Cancelar
                                 </button>
-                                
                                 <button
-                                    type="submit" 
                                     disabled={processing}
-                                    className="ml-4 bg-[#B3E10F] text-gray-900 px-3 py-2 rounded-md hover:bg-lime-300 transition duration-150 text-sm font-bold shadow-md shadow-[#B3E10F]/30 disabled:opacity-60 disabled:cursor-not-allowed"
+                                    type="submit"
+                                    className="ml-4 bg-[#B3E10F] text-gray-900 px-3 py-2 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-bold shadow-md shadow-[#B3E10F]/30 disabled:opacity-50"
                                 >
                                     {processing ? 'Guardando...' : 'Guardar Cambios'}
                                 </button>
@@ -172,6 +285,44 @@ const DocEdit: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Modal: tamaño excedido */}
+            {showSizeModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+                    <div className="bg-[#0F172A] text-center p-6 rounded-xl shadow-2xl border border-lime-400/50 w-11/12 max-w-md">
+                        <h2 className="text-xl font-bold text-lime-400 mb-2">Archivo demasiado grande</h2>
+                        <p className="text-gray-300 text-sm mb-4">
+                            No se pueden subir archivos mayores a <span className="text-white font-semibold">50 MB</span>.<br />
+                            Usa un <span className="text-lime-300">enlace externo</span> como Drive o OneDrive.
+                        </p>
+                        <button
+                            onClick={() => setShowSizeModal(false)}
+                            className="bg-lime-400 text-gray-900 px-4 py-2 rounded-md font-semibold hover:bg-lime-300 transition duration-150"
+                        >
+                            Entendido
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: tipo inválido */}
+            {showTypeModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+                    <div className="bg-[#0F172A] text-center p-6 rounded-xl shadow-2xl border border-red-500/50 w-11/12 max-w-md">
+                        <h2 className="text-xl font-bold text-red-400 mb-2">Tipo de archivo no permitido</h2>
+                        <p className="text-gray-300 text-sm mb-4">
+                            Solo se permiten documentos reales: <span className="text-white font-semibold">PDF, Word o Excel</span>.<br />
+                            No se aceptan imágenes, videos ni ejecutables.
+                        </p>
+                        <button
+                            onClick={() => setShowTypeModal(false)}
+                            className="bg-red-500 text-white px-4 py-2 rounded-md font-semibold hover:bg-red-400 transition duration-150"
+                        >
+                            Entendido
+                        </button>
+                    </div>
+                </div>
+            )}
         </AuthenticatedLayout>
     );
 };

@@ -55,6 +55,14 @@ Route::middleware(['auth', 'prevent.manual'])->group(function () {
     Route::delete('/docs/{documento}', [DocController::class, 'destroy'])->name('docs.destroy');
     Route::get('/docs/{documento}/edit', [DocController::class, 'edit'])->name('docs.edit');
     Route::put('/docs/{documento}', [DocController::class, 'update'])->name('docs.update');
+    // Papelera y restauración de documentos
+    Route::get('/docs/trash', [DocController::class, 'trash'])->name('docs.trash');
+    Route::patch('/docs/{id}/restore', [DocController::class, 'restore'])->name('docs.restore');
+
+    // Purga manual de documentos (solo admin)
+    Route::middleware('role:admin')->group(function () {
+        Route::delete('/docs/purge', [DocController::class, 'purgeOld'])->name('docs.purge');
+    });
 
     // Proyectos
     Route::resource('proyectos', ProyectoController::class);

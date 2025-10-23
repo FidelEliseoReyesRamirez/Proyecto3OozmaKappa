@@ -12,7 +12,7 @@ return new class extends Migration {
             $table->string('nombre', 150);
             $table->text('descripcion')->nullable();
             $table->string('archivo_url', 255);
-            $table->enum('tipo', ['PDF','Excel','Word']);
+            $table->enum('tipo', ['PDF','Excel','Word','URL']);
             $table->timestamp('fecha_subida')->useCurrent();
             $table->foreignId('subido_por')->nullable()->constrained('users');
             $table->boolean('eliminado')->default(0);
