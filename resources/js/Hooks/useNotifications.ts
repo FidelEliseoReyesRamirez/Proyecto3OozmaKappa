@@ -33,7 +33,7 @@ export function useNotifications() {
 
     if (lastSeenId && parseInt(lastSeenId) !== newestId) {
       const audio = new Audio("/sounds/notification.mp3");
-      audio.play().catch(() => {});
+      audio.play().catch(() => { });
     }
 
     localStorage.setItem("last_notification_id", newestId.toString());
@@ -92,15 +92,19 @@ export function useNotifications() {
     }
   };
 
-  // ✅ NUEVO: acción al hacer click en la notificación
+  //  acción al hacer click en la notificación
   const handleClickNotification = (noti: Notificacion) => {
     // Marcar como leída
     markAsRead(noti.id);
 
-    // Si tiene URL → redirigir
     if (noti.url) {
-      window.location.href = noti.url;
-    } else {
+      router.visit(noti.url, {
+        onError: () => {
+          router.visit(route("notificaciones.index"));
+        },
+      });
+    }
+    else {
       // Si no tiene URL, solo cierra el dropdown
       setOpen(false);
     }

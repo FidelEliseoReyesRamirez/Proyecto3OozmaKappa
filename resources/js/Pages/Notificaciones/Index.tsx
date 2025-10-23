@@ -167,11 +167,10 @@ export default function Index() {
             <button
               onClick={handleMarcarTodas}
               disabled={filtradas.length === 0}
-              className={`rounded-md px-3 py-2 text-sm font-medium ${
-                filtradas.length === 0
-                  ? "cursor-not-allowed bg-gray-600 text-gray-300"
-                  : "bg-[#B3E10F] text-black hover:bg-lime-500"
-              }`}
+              className={`rounded-md px-3 py-2 text-sm font-medium ${filtradas.length === 0
+                ? "cursor-not-allowed bg-gray-600 text-gray-300"
+                : "bg-[#B3E10F] text-black hover:bg-lime-500"
+                }`}
             >
               Marcar todas como leídas
             </button>
@@ -180,9 +179,8 @@ export default function Index() {
 
         {/* Panel filtros */}
         <div
-          className={`overflow-hidden rounded-xl border border-white/10 bg-[#0B1120] transition-all duration-300 ${
-            panelOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
-          }`}
+          className={`overflow-hidden rounded-xl border border-white/10 bg-[#0B1120] transition-all duration-300 ${panelOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
+            }`}
         >
           <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex flex-col">
@@ -206,12 +204,12 @@ export default function Index() {
                 onChange={(e) =>
                   setTipo(
                     e.target.value as
-                      | ""
-                      | "tarea"
-                      | "reunion"
-                      | "avance"
-                      | "documento"
-                      | "proyecto"
+                    | ""
+                    | "tarea"
+                    | "reunion"
+                    | "avance"
+                    | "documento"
+                    | "proyecto"
                   )
                 }
                 className="rounded-md border border-gray-600 bg-[#0B1120] px-3 py-2 text-sm text-gray-200 outline-none focus:border-[#B3E10F]"
@@ -286,19 +284,18 @@ export default function Index() {
                   <div className="min-w-0">
                     <div className="mb-1 flex flex-wrap items-center gap-2">
                       <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${
-                          n.tipo === "tarea"
-                            ? "bg-blue-900/40 text-blue-300 border border-blue-700/50"
-                            : n.tipo === "reunion"
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${n.tipo === "tarea"
+                          ? "bg-blue-900/40 text-blue-300 border border-blue-700/50"
+                          : n.tipo === "reunion"
                             ? "bg-purple-900/40 text-purple-300 border border-purple-700/50"
                             : n.tipo === "avance"
-                            ? "bg-emerald-900/40 text-emerald-300 border border-emerald-700/50"
-                            : n.tipo === "documento"
-                            ? "bg-amber-900/40 text-amber-300 border border-amber-700/50"
-                            : n.tipo === "proyecto"
-                            ? "bg-pink-900/40 text-pink-300 border border-pink-700/50"
-                            : "bg-gray-800 text-gray-300 border border-gray-700"
-                        }`}
+                              ? "bg-emerald-900/40 text-emerald-300 border border-emerald-700/50"
+                              : n.tipo === "documento"
+                                ? "bg-amber-900/40 text-amber-300 border border-amber-700/50"
+                                : n.tipo === "proyecto"
+                                  ? "bg-pink-900/40 text-pink-300 border border-pink-700/50"
+                                  : "bg-gray-800 text-gray-300 border border-gray-700"
+                          }`}
                       >
                         {n.tipo}
                       </span>
@@ -318,15 +315,22 @@ export default function Index() {
                         {n.mensaje}
                       </div>
                       {n.url && (
-                        <a
-                          href={n.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          onClick={() => {
+                            markAsRead(n.id);
+                            if (n.url) {
+                              router.visit(n.url, {
+                                preserveScroll: true,
+                                onError: () => router.visit(route("notificaciones.index")),
+                              });
+                            }
+                          }}
                           className="mt-1 inline-block text-sm text-[#B3E10F] hover:underline"
                         >
-                          Ver más →
-                        </a>
+                          Ver más
+                        </button>
                       )}
+
                     </div>
 
                     <div className="mt-1 text-xs text-gray-400">
