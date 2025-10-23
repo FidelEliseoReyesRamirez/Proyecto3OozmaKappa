@@ -14,70 +14,53 @@ class Handler extends ExceptionHandler
 {
     public function render($request, Throwable $e)
     {
-        // ARCHIVO MUY GRANDE (413 Payload Too Large)
+        // ARCHIVO MUY GRANDE (413)
         if ($e instanceof PostTooLargeException) {
-            if ($request->header('X-Inertia')) {
-                return back()
-                    ->with('error', 'El archivo que intentas subir excede el tamaño máximo permitido (100 MB).')
-                    ->withInput();
-            }
-
-            return response()->view('errors.generic', [
-                'code' => 413,
+            return Inertia::render('Errors/FileTooLarge', [
                 'title' => 'Archivo demasiado grande',
                 'message' => 'El archivo que intentas subir excede el tamaño máximo permitido (100 MB).',
-            ], 413);
+            ])->toResponse($request)->setStatusCode(413);
         }
 
-        // ACCESO DENEGADO (403 Forbidden)
-        if ($e instanceof AuthorizationException || ($e instanceof HttpException && $e->getStatusCode() === 403)) {
-            if ($request->header('X-Inertia')) {
-                return Inertia::render('Errors/Forbidden', [
-                    'title' => 'Acceso denegado',
-                    'message' => 'No tienes permiso para acceder a esta sección o realizar esta acción.',
-                ])->toResponse($request)->setStatusCode(403);
-            }
-
-            return response()->view('errors.generic', [
-                'code' => 403,
+        // 403 - Acceso denegado
+        if (
+            $e instanceof AuthorizationException ||
+            ($e instanceof HttpException && $e->getStatusCode() === 403)
+        ) {
+            return Inertia::render('Errors/Forbidden', [
                 'title' => 'Acceso denegado',
                 'message' => 'No tienes permiso para acceder a esta sección o realizar esta acción.',
-            ], 403);
+            ])->toResponse($request)->setStatusCode(403);
         }
 
-        // PÁGINA NO ENCONTRADA (404 Not Found)
-        if ($e instanceof NotFoundHttpException) {
-            if ($request->header('X-Inertia')) {
-                return Inertia::render('Errors/NotFound', [
-                    'title' => 'Página no encontrada',
-                    'message' => 'La página que buscas no existe o ha sido eliminada.',
-                ])->toResponse($request)->setStatusCode(404);
+        // 404 - Página o recurso no encontrado (también ModelNotFound)
+        if (
+            $e instanceof NotFoundHttpException ||
+            $e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException
+        ) {
+
+            // Forzar respuesta Inertia incluso sin cabecera
+            if ($request->expectsJson() || $request->isXmlHttpRequest()) {
+                return response()->json(['message' => 'Página no encontrada'], 404);
             }
 
-            return response()->view('errors.generic', [
-                'code' => 404,
+            return Inertia::render('Errors/NotFound', [
                 'title' => 'Página no encontrada',
                 'message' => 'La página que buscas no existe o ha sido eliminada.',
-            ], 404);
+            ])->toResponse($request)->setStatusCode(404);
         }
 
-        // ERROR INTERNO DEL SERVIDOR (500)
-        if ($e instanceof HttpException && $e->getStatusCode() === 500) {
-            if ($request->header('X-Inertia')) {
-                return Inertia::render('Errors/ServerError', [
-                    'title' => 'Error interno del servidor',
-                    'message' => 'Ha ocurrido un problema inesperado. Intenta nuevamente o contacta al administrador.',
-                ])->toResponse($request)->setStatusCode(500);
-            }
-
-            return response()->view('errors.generic', [
-                'code' => 500,
+        // 500 - Error interno del servidor
+        if (
+            $e instanceof HttpException &&
+            $e->getStatusCode() === 500
+        ) {
+            return Inertia::render('Errors/ServerError', [
                 'title' => 'Error interno del servidor',
                 'message' => 'Ha ocurrido un problema inesperado. Intenta nuevamente o contacta al administrador.',
-            ], 500);
+            ])->toResponse($request)->setStatusCode(500);
         }
 
-        // Otros errores no manejados
         return parent::render($request, $e);
     }
 }

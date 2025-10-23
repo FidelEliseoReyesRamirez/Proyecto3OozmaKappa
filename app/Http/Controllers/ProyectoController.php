@@ -168,7 +168,12 @@ class ProyectoController extends Controller
     }
     public function show($id)
     {
-        $proyecto = Proyecto::with(['cliente', 'responsable'])->findOrFail($id);
+        // Buscar el proyecto, o devolver 404 si no existe
+        $proyecto = Proyecto::with(['cliente', 'responsable'])->find($id);
+
+        if (!$proyecto) {
+            abort(404, 'Proyecto no encontrado');
+        }
 
         // Verificación de permisos
         if (strtolower(Auth::user()->rol) === 'cliente' && $proyecto->cliente_id !== Auth::id()) {
@@ -179,6 +184,7 @@ class ProyectoController extends Controller
             'proyecto' => $proyecto,
         ]);
     }
+
 
 
     public function edit($id)
