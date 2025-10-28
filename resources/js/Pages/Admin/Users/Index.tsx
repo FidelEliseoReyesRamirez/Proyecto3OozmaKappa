@@ -12,20 +12,34 @@ export default function UsersIndex() {
 
     const confirmAction = () => {
         if (!modal.user) return;
-        const { id, rol } = modal.user;
+        const { id, rol, estado } = modal.user;
 
-        const adminsActivos = usuarios.filter((u: any) => u.rol === 'admin' && u.estado === 'activo' && u.eliminado === 0);
+        // Contar admins activos actuales
+        const adminsActivos = usuarios.filter(
+            (u: any) => u.rol === 'admin' && u.estado === 'activo' && u.eliminado === 0
+        );
 
-        if (rol === 'admin' && adminsActivos.length <= 1) {
+        // Si es un admin y solo queda uno, impedir DESACTIVAR o ELIMINAR (no activar)
+        if (
+            rol === 'admin' &&
+            adminsActivos.length <= 1 &&
+            (modal.type === 'estado' && estado === 'activo' || modal.type === 'eliminar')
+        ) {
             setModal({ type: 'error', user: modal.user });
             return;
         }
 
-        if (auth.user.id === id && rol === 'admin' && (modal.type === 'estado' || modal.type === 'eliminar')) {
+        // Evitar que un admin se desactive o elimine a sí mismo
+        if (
+            auth.user.id === id &&
+            rol === 'admin' &&
+            (modal.type === 'estado' || modal.type === 'eliminar')
+        ) {
             setModal({ type: 'errorSelf', user: modal.user });
             return;
         }
 
+        // Si pasa validaciones, ejecutar la acción
         if (modal.type === 'estado') {
             router.patch(route('users.updateEstado', id));
         }
@@ -36,6 +50,7 @@ export default function UsersIndex() {
 
         closeModal();
     };
+
 
     return (
         <AuthenticatedLayout
@@ -85,18 +100,16 @@ export default function UsersIndex() {
                                         <td className="p-2 border border-gray-800 text-gray-400 font-mono text-xs">{u.email}</td>
                                         <td className="p-2 border border-gray-800 text-gray-500">{u.telefono}</td>
                                         <td className="p-2 border border-gray-800">
-                                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                                u.rol === 'admin' ? 'bg-red-800 text-red-100' :
-                                                u.rol === 'cliente' ? 'bg-[#B3E10F]/20 text-[#B3E10F]' :
-                                                'bg-[#2970E8]/30 text-[#2970E8]'
-                                            }`}>
+                                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${u.rol === 'admin' ? 'bg-red-800 text-red-100' :
+                                                    u.rol === 'cliente' ? 'bg-[#B3E10F]/20 text-[#B3E10F]' :
+                                                        'bg-[#2970E8]/30 text-[#2970E8]'
+                                                }`}>
                                                 {u.rol}
                                             </span>
                                         </td>
                                         <td className="p-2 border border-gray-800">
-                                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                                u.estado === 'activo' ? 'bg-green-700 text-green-100' : 'bg-gray-500 text-white'
-                                            }`}>
+                                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${u.estado === 'activo' ? 'bg-green-700 text-green-100' : 'bg-gray-500 text-white'
+                                                }`}>
                                                 {u.estado}
                                             </span>
                                         </td>
@@ -109,9 +122,8 @@ export default function UsersIndex() {
                                             </Link>
                                             <button
                                                 onClick={() => openModal('estado', u)}
-                                                className={`px-2 py-1 rounded-md text-xs sm:text-sm font-medium transition duration-150 ${
-                                                    u.estado === 'activo' ? 'bg-red-700 hover:bg-red-600' : 'bg-green-700 hover:bg-green-600'
-                                                } text-white`}
+                                                className={`px-2 py-1 rounded-md text-xs sm:text-sm font-medium transition duration-150 ${u.estado === 'activo' ? 'bg-red-700 hover:bg-red-600' : 'bg-green-700 hover:bg-green-600'
+                                                    } text-white`}
                                             >
                                                 {u.estado === 'activo' ? 'Desactivar arreglar' : 'Activar arreglar'}
                                             </button>
