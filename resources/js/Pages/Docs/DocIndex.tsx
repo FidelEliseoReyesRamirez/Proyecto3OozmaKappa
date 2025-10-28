@@ -213,8 +213,8 @@ const DocIndex: React.FC = () => {
                                                     setProjectOpen(false);
                                                 }}
                                                 className={`px-3 py-2 text-sm cursor-pointer ${filterProyecto === String(proj.id)
-                                                        ? 'bg-[#1f5dc0] text-white'
-                                                        : 'text-gray-200 hover:bg-[#2970E8] hover:text-white'
+                                                    ? 'bg-[#1f5dc0] text-white'
+                                                    : 'text-gray-200 hover:bg-[#2970E8] hover:text-white'
                                                     }`}
                                             >
                                                 {proj.name}
@@ -276,16 +276,42 @@ const DocIndex: React.FC = () => {
                                             <th className="px-6 py-3 text-left uppercase tracking-wider">Título</th>
                                             <th className="px-6 py-3 text-left uppercase tracking-wider">Proyecto</th>
                                             <th className="px-6 py-3 text-left uppercase tracking-wider">Tipo</th>
+                                            <th className="px-6 py-3 text-left uppercase tracking-wider">URL / Enlace</th>
                                             <th className="px-6 py-3 text-left uppercase tracking-wider">Fecha</th>
                                             <th className="px-6 py-3 text-left uppercase tracking-wider">Acciones</th>
                                         </tr>
                                     </thead>
+
                                     <tbody className="bg-[#080D15] divide-y divide-gray-800/50">
                                         {filteredDocuments.map((doc) => (
                                             <tr key={doc.id} className="hover:bg-gray-800/50 transition duration-150">
                                                 <td className="px-6 py-4 text-sm font-semibold text-[#2970E8]">{doc.titulo}</td>
                                                 <td className="px-6 py-4 text-sm font-medium text-[#B3E10F]">{doc.proyecto_nombre}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-300">{doc.tipo}</td>
+                                                <td className="px-6 py-4 text-sm text-blue-400 truncate max-w-[180px]">
+                                                    {doc.tipo === 'URL' && doc.enlace_externo ? (
+                                                        <a
+                                                            href={doc.enlace_externo}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="hover:text-[#B3E10F] underline"
+                                                        >
+                                                            {doc.enlace_externo}
+                                                        </a>
+                                                    ) : doc.archivo_url ? (
+                                                        <a
+                                                            href={doc.archivo_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="hover:text-[#B3E10F] underline"
+                                                        >
+                                                            {doc.archivo_url}
+                                                        </a>
+                                                    ) : (
+                                                        <span className="text-gray-500">–</span>
+                                                    )}
+                                                </td>
+
                                                 <td className="px-6 py-4 text-sm text-gray-400">{doc.fecha_subida}</td>
                                                 <td className="px-6 py-4 flex flex-wrap gap-2 text-sm font-medium">
                                                     {doc.tipo === 'URL' ? (

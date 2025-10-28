@@ -15,7 +15,7 @@ interface WelcomeProps {
 const Welcome: React.FC<WelcomeProps> = ({ auth }) => {
     return (
         <div className="relative z-0 min-h-screen bg-[#121212] text-white antialiased">
-
+ 
             <Head title="DEVELARQ | Transformación BIM y Outsourcing" />
 
             {/* 1. Barra de Navegación  */}
