@@ -178,7 +178,7 @@ function confirmDelete(document: Documento) {
                             <select
                                 value={filterTipo}
                                 onChange={(e) => setFilterTipo(e.target.value)}
-                                className="px-3 py-2 rounded-md bg-[#080D15] text-white border border-gray-700 text-sm focus:ring-2 focus:ring-[#2970E8]"
+                                className="px-3 py-2 rounded-md bg-[#080D15] text-white border border-gray-700 text-sm focus:ring-2 focus:ring-[#2970E8] pr-8"
                             >
                                 <option value="">Tipo: Todos</option>
                                 <option value="PDF">PDF</option>
@@ -260,7 +260,7 @@ function confirmDelete(document: Documento) {
                             <select
                                 value={order}
                                 onChange={(e) => setOrder(e.target.value as 'desc' | 'asc')}
-                                className="px-3 py-2 rounded-md bg-[#080D15] text-white border border-gray-700 text-sm focus:ring-2 focus:ring-[#2970E8]"
+                                className="px-3 py-2 rounded-md bg-[#080D15] text-white border border-gray-700 text-sm focus:ring-2 focus:ring-[#2970E8] pr-8"
                             >
                                 <option value="desc">Más recientes primero</option>
                                 <option value="asc">Más antiguos primero</option>

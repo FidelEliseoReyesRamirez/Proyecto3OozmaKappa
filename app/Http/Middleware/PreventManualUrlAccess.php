@@ -48,15 +48,15 @@ class PreventManualUrlAccess
         // Si la petición no es Inertia y no está en la lista blanca → redirigir
         if (
             !$request->headers->has('X-Inertia') &&
-            !in_array($request->getPathInfo(), $allowed)
+            !in_array($request->getPathInfo(), $allowed) 
+            && strpos($request->getPathInfo(), '/verify-email/') !== 0
         ) {
             Log::warning('🚫 [PreventManualUrlAccess] Acceso manual bloqueado', [
                 'path' => $request->getPathInfo(),
                 'user_id' => optional($request->user())->id,
             ]);
-
             // Redirige al dashboard en lugar de error 403
-            return redirect()->route('dashboard');
+            return redirect()->route('login');
         }
 
         // Permitir continuar normalmente

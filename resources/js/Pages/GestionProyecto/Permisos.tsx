@@ -15,7 +15,7 @@ export default function Permisos({ proyecto, usuarios, asignaciones }: any) {
             return {
                 user_id: u.id,
                 nombre: u.name,
-                permiso: asignado ? asignado.permiso : "ver",
+                permiso: asignado ? asignado.permiso : "ninguno",
             };
         })
     );
@@ -36,7 +36,7 @@ export default function Permisos({ proyecto, usuarios, asignaciones }: any) {
     return (
         <section className="flex justify-center items-center py-12 px-4 min-h-screen bg-gray-950">
             <Head title={`Permisos - ${proyecto.nombre}`} />
-            <div className="w-full max-w-4xl bg-gray-900 border border-gray-800 p-8 md:p-10 rounded-xl shadow-xl shadow-gray-900/50">
+            <div className="w-full max-w-4xl bg-gray-900 border border-gray-800 p-10 md:p-10 rounded-xl shadow-xl shadow-gray-900/50">
                 <h2 className="text-3xl font-extrabold text-[#2970E8] mb-1 tracking-wider">
                     Permisos de Proyecto
                 </h2>
@@ -58,7 +58,7 @@ export default function Permisos({ proyecto, usuarios, asignaciones }: any) {
                                         <select
                                             value={p.permiso}
                                             onChange={(e) => handleChange(p.user_id, e.target.value as "ver" | "editar")}
-                                            className="bg-gray-800 border border-gray-700 rounded-md text-white px-3 py-1"
+                                            className="bg-gray-800 border border-gray-700 rounded-md text-white px-3 py-1 pr-8"
                                         >
                                             <option value="ninguno">Sin acceso</option>
                                             <option value="editar">Puede editar</option>

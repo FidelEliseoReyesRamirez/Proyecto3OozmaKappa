@@ -172,7 +172,7 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                             className={inputFieldStyles}
                         />
                         {openCliente && (
-                            <ul className="max-h-48 overflow-y-auto bg-gray-800 rounded-md mt-2 border border-gray-700">
+                            <ul className="max-h-48 overflow-y-auto text-white bg-gray-800 rounded-md mt-2 border border-gray-700">
                                 {filteredClientes.length > 0 ? (
                                     filteredClientes.map((c: any) => (
                                         <li
@@ -208,7 +208,7 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                             className={inputFieldStyles}
                         />
                         {openResponsable && (
-                            <ul className="max-h-48 overflow-y-auto bg-gray-800 rounded-md mt-2 border border-gray-700">
+                            <ul className="max-h-48 overflow-y-auto bg-gray-800 rounded-md mt-2 border text-white border-gray-700">
                                 {filteredResponsables.length > 0 ? (
                                     filteredResponsables.map((r: any) => (
                                         <li

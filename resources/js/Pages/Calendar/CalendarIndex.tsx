@@ -197,7 +197,7 @@ export default function CalendarIndex({ meetings: initialMeetings, usersList, pr
                             <select
                                 value={filterProject}
                                 onChange={(e) => setFilterProject(e.target.value === 'todos' ? 'todos' : Number(e.target.value))}
-                                className="bg-gray-800 border border-gray-600 rounded-md px-3 py-1.5 text-sm"
+                                className="bg-gray-800 border border-gray-600 rounded-md px-3 py-1.5 text-sm pr-8"
                             >
                                 <option value="todos">Todos los proyectos</option>
                                 {projectsList.map((p) => (
@@ -210,7 +210,7 @@ export default function CalendarIndex({ meetings: initialMeetings, usersList, pr
                             <select
                                 value={filterUser}
                                 onChange={(e) => setFilterUser(e.target.value === 'todos' ? 'todos' : Number(e.target.value))}
-                                className="bg-gray-800 border border-gray-600 rounded-md px-3 py-1.5 text-sm"
+                                className="bg-gray-800 border border-gray-600 rounded-md px-3 py-1.5 text-sm pr-8"
                             >
                                 <option value="todos">Todos los participantes</option>
                                 {usersList.map((u) => (

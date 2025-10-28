@@ -38,6 +38,8 @@ class TareaController extends Controller
     {
         $tareas = Tarea::with(['asignado'])
             ->where('proyecto_id', $id)
+            // 🚨 CORRECCIÓN 1: Excluir tareas marcadas como eliminadas (si usas 'eliminado' como soft delete)
+            ->where('eliminado', 0) 
             ->orderBy('prioridad', 'desc')
             ->get();
 
@@ -130,6 +132,8 @@ class TareaController extends Controller
                 'asignado_id' => $validated['asignado_id'],
                 'estado' => 'pendiente',
                 'creado_por' => Auth::id(),
+                // Asegurar que se guarda como NO eliminado
+                'eliminado' => 0, 
             ]);
 
             TareaHistorial::create([
@@ -169,11 +173,13 @@ class TareaController extends Controller
                 'Nueva tarea creada'
             );
 
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Tarea creada correctamente ✅'
-            ], 200);
+            // 🚨 CORRECCIÓN 2: Redirección robusta con el ID del proyecto
+            return redirect()->route('tareas.index', [
+                'proyecto_id' => $validated['proyecto_id'] 
+            ])->with('success', 'Tarea creada correctamente ✅');
+
         } catch (\Throwable $e) {
+            // Aseguramos que solo haya un catch Throwable (eliminando la redundancia)
             return response()->json([
                 'status' => 'error',
                 'message' => 'Ocurrió un error al crear la tarea.',

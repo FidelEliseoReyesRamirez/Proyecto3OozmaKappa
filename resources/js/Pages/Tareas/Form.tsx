@@ -3,8 +3,13 @@ import InputLabel from "@/Components/InputLabel";
 import InputError from "@/Components/InputError";
 import TextInput from "@/Components/TextInput";
 import { router, Head, Link } from "@inertiajs/react";
+// Importar el nuevo componente modular
+import ModalMensaje from "./ModalMensaje"; // Asegúrate de que la ruta sea correcta
 
 export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any) {
+    // ... (Mantener todos los estados, constantes y funciones de lógica)
+    
+    // ESTADOS
     const [tarea, setTarea] = useState({
         proyecto_id: proyectoSeleccionado ?? "",
         titulo: "",
@@ -23,16 +28,19 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
     // estado del modal
     const [modal, setModal] = useState({ visible: false, tipo: "", mensaje: "" });
 
+    // CONSTANTES DE ESTILO
     const inputStyle =
-        "mt-1 block w-full bg-gray-900 border border-gray-700 text-gray-200 rounded-lg shadow-inner focus:border-[#2970E8] focus:ring-[#2970E8] transition duration-200 ease-in-out placeholder-gray-500";
+        "mt-1 block w-full bg-gray-900 border border-gray-700 text-white rounded-lg shadow-inner focus:border-[#2970E8] focus:ring-[#2970E8] transition duration-200 ease-in-out placeholder-gray-500";
 
     const dropdownStyle =
         "absolute z-50 mt-1 w-full bg-gray-900 border border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto";
 
+    // DATOS FILTRADOS
     const usuariosFiltrados = usuarios.filter((u: any) =>
         u.name.toLowerCase().includes(busquedaResponsable.toLowerCase())
     );
 
+    // EFECTOS
     // Cerrar menú al hacer clic fuera
     useEffect(() => {
         const close = (e: MouseEvent) => {
@@ -43,6 +51,7 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
         return () => document.removeEventListener("click", close);
     }, []);
 
+    // FUNCIONES DE VALIDACIÓN
     const validateTitulo = (value: string) => {
         let clean = value.replace(/\s+/g, " ").trimStart();
         if (/[^A-Z0-9() ]/i.test(clean)) {
@@ -72,6 +81,7 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
         setTarea({ ...tarea, descripcion: clean });
     };
 
+    // CÁLCULO DE FECHAS
     const today = new Date().toISOString().split("T")[0];
     const maxDate = new Date();
     maxDate.setMonth(maxDate.getMonth() + 1);
@@ -100,6 +110,8 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
         setTimeout(() => setModal({ visible: false, tipo: "", mensaje: "" }), 3500);
     };
 
+    const closeModal = () => setModal({ visible: false, tipo: "", mensaje: "" });
+
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         if (processing) return;
@@ -114,7 +126,7 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
                 setProcessing(false);
                 mostrarModal("exito", "Tarea creada correctamente ✅");
                 setTimeout(() => {
-                    router.visit(route("tareas.index"));
+                    router.visit(route("tareas.index", { proyecto_id: tarea.proyecto_id }));
                 }, 2000);
             },
             onError: (errors: any) => {
@@ -125,6 +137,7 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
         });
     };
 
+    // JSX DEL COMPONENTE
     return (
         <section className="flex justify-center items-center py-12 px-4 min-h-screen bg-gray-950 relative">
             <Head title="DEVELARQ | Crear Tarea" />
@@ -133,6 +146,7 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
                 <p className="mb-8 text-md text-[#B3E10F]">Asigna una nueva tarea a un proyecto existente.</p>
 
                 <form onSubmit={submit} className="space-y-6">
+                    {/* ... (Contenido del formulario idéntico) */}
                     {/* Proyecto */}
                     <div>
                         <InputLabel htmlFor="proyecto_id" value="Proyecto" className="text-gray-200 font-semibold" />
@@ -287,32 +301,13 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
                 </form>
             </div>
 
-            {/* MODAL VISUAL */}
-            {modal.visible && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
-                    <div
-                        className={`p-6 rounded-xl shadow-xl w-96 text-center ${modal.tipo === "exito"
-                                ? "bg-gray-900 border border-green-600"
-                                : "bg-gray-900 border border-red-600"
-                            }`}
-                    >
-                        <h3
-                            className={`text-lg font-bold mb-3 ${modal.tipo === "exito" ? "text-green-400" : "text-red-400"
-                                }`}
-                        >
-                            {modal.tipo === "exito" ? "Éxito" : "Error"}
-                        </h3>
-                        <p className="text-gray-200 mb-4">{modal.mensaje}</p>
-                        <button
-                            onClick={() => setModal({ visible: false, tipo: "", mensaje: "" })}
-                            className={`px-4 py-2 rounded-md text-white font-semibold ${modal.tipo === "exito" ? "bg-green-600 hover:bg-green-500" : "bg-red-600 hover:bg-red-500"
-                                }`}
-                        >
-                            Aceptar
-                        </button>
-                    </div>
-                </div>
-            )}
+            <ModalMensaje
+                visible={modal.visible}
+                tipo={modal.tipo as "exito" | "error" | ""}
+                mensaje={modal.mensaje}
+                onClose={closeModal}
+            />
+
         </section>
     );
 }

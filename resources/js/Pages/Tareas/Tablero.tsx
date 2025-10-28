@@ -1,36 +1,60 @@
 import { useState, useEffect } from "react";
-import { router, Link, Head, usePage } from "@inertiajs/react";
+import { router, Link, Head, usePage } from "@inertiajs/react"; // Se elimina useLocation
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import PrimaryButton from "@/Components/PrimaryButton";
 
 export default function Tablero() {
     const pageProps = usePage().props as any;
-    const { proyectos, auth } = pageProps;
+    const { proyectos, auth, flash } = pageProps; 
+    
+    // 💡 SOLUCIÓN: Acceder a la URL a través de usePage() para obtener los parámetros.
+    const url = usePage().url;
+    const initialProjectId = new URLSearchParams(url.split('?')[1] || "").get('proyecto_id') || "";
+    
+    const [proyectoSeleccionado, setProyectoSeleccionado] = useState(initialProjectId);
+    
     const [usuarios, setUsuarios] = useState<any[]>(pageProps.usuarios || []);
     const userRole = auth.user?.rol;
     const isEmployee = ["admin", "arquitecto", "ingeniero"].includes(userRole);
 
-    const [proyectoSeleccionado, setProyectoSeleccionado] = useState("");
     const [tareas, setTareas] = useState<any[]>([]);
     const [usuarioFiltro, setUsuarioFiltro] = useState("todos");
     const [dragged, setDragged] = useState<any>(null);
     const [historial, setHistorial] = useState<any[]>([]);
     const [tareaSeleccionada, setTareaSeleccionada] = useState<any>(null);
     const [mostrarModal, setMostrarModal] = useState(false);
-
+    
     useEffect(() => {
         if (proyectoSeleccionado) {
-            fetch(`/tareas/proyecto/${proyectoSeleccionado}`)
-                .then(res => res.json())
+            const projectIdString = String(proyectoSeleccionado); 
+            
+            fetch(`/tareas/proyecto/${projectIdString}`)
+                .then(res => {
+                    if (!res.ok) {
+                        console.error(`Error en la petición: Estado HTTP ${res.status}.`);
+                        throw new Error("Respuesta no válida.");
+                    }
+                    return res.json();
+                })
                 .then(data => {
                     setTareas(data.tareas);
                     setUsuarios(data.usuarios);
+                })
+                .catch(err => {
+                    console.error("Fallo al obtener datos del proyecto:", err);
                 });
+        } else {
+            setTareas([]);
+            setUsuarios([]);
         }
-    }, [proyectoSeleccionado]);
+    }, [proyectoSeleccionado]); 
 
-
-
+    useEffect(() => {
+        if (flash?.success) {
+            console.log("Mensaje de éxito:", flash.success);
+        }
+    }, [flash]);
+    
     const onDrop = (_e: any, nuevoEstado: string) => {
         if (!dragged) return;
 
@@ -44,7 +68,6 @@ export default function Tablero() {
             {
                 preserveScroll: true,
                 onSuccess: () => {
-
                     console.log("Estado actualizado correctamente");
                 },
                 onError: (err) => {
@@ -74,7 +97,6 @@ export default function Tablero() {
         setHistorial([]);
     };
 
-    // Aplicar filtro por usuario antes de renderizar
     const tareasFiltradas = tareas.filter((t: any) => {
         if (usuarioFiltro === "todos") return true;
         return t.asignado_id === parseInt(usuarioFiltro);
@@ -94,13 +116,13 @@ export default function Tablero() {
                     {/* ENCABEZADO */}
                     <div className="flex flex-col sm:flex-row justify-between items-center mb-6 px-2 sm:px-6 mt-4">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center sm:space-x-4 w-full sm:w-auto gap-4">
-                            <div className="w-full sm:w-auto">
-                                <label className="block sm:inline mr-2 text-[#B3E10F] font-semibold">Proyecto:</label>
+                            <div className="flex flex-col sm:flex-row gap-2 items-center">
+                                <label className="text-[#B3E10F] font-semibold">
+                                    Proyecto:
+                                </label>
                                 <select
-                                    className="bg-[#0B1120] border border-gray-700 rounded-md p-2 text-white w-full sm:w-auto"
-                                    value={proyectoSeleccionado}
-                                    onChange={(e) => setProyectoSeleccionado(e.target.value)}
-                                >
+                                    className="bg-[#080D15] border border-gray-600 rounded-lg p-2 text-white text-sm focus:ring-[#B3E10F] focus:border-[#B3E10F] appearance-none pr-8"
+                                    value={proyectoSeleccionado} onChange={(e) => setProyectoSeleccionado(e.target.value)}>
                                     <option value="">-- Selecciona un proyecto --</option>
                                     {proyectos.map((p: any) => (
                                         <option key={p.id} value={p.id}>{p.nombre}</option>
@@ -109,17 +131,19 @@ export default function Tablero() {
                             </div>
 
                             <div className="w-full sm:w-auto">
-                                <label className="block sm:inline mr-2 text-[#B3E10F] font-semibold">Responsable:</label>
-                                <select
-                                    className="bg-[#0B1120] border border-gray-700 rounded-md p-2 text-white w-full sm:w-auto"
-                                    value={usuarioFiltro}
-                                    onChange={(e) => setUsuarioFiltro(e.target.value)}
-                                >
-                                    <option value="todos">Todos</option>
-                                    {usuarios.map((u: any) => (
-                                        <option key={u.id} value={u.id}>{u.name}</option>
-                                    ))}
-                                </select>
+                                <div className="flex flex-col sm:flex-row gap-2 items-center">
+                                    <label className="text-[#B3E10F] font-semibold">
+                                        Responsable:
+                                    </label>
+                                    <select
+                                        className="bg-[#080D15] border border-gray-600 rounded-lg p-2 text-white text-sm focus:ring-[#B3E10F] focus:border-[#B3E10F] appearance-none pr-8"
+                                        value={usuarioFiltro} onChange={(e) => setUsuarioFiltro(e.target.value)}>
+                                        <option value="todos">Todos</option>
+                                        {usuarios.map((u: any) => (
+                                            <option key={u.id} value={u.id}>{u.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         </div>
 

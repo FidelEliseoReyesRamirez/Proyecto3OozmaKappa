@@ -105,7 +105,7 @@ export default function Login({
                                 type={showPassword ? 'text' : 'password'}
                                 name="password"
                                 value={data.password}
-                                className="block w-full bg-black border-white text-white placeholder-gray-500 focus:border-[#2970E8] focus:ring-[#2970E8] pr-10 rounded-md"
+                                className="block w-full bg-black border-white text-black placeholder-gray-500 focus:border-[#2970E8] focus:ring-[#2970E8] pr-10 rounded-md"
                                 autoComplete="current-password"
                                
                                 onChange={(e) => setData('password', e.target.value)}
