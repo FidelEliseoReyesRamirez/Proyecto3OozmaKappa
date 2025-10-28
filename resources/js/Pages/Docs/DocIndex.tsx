@@ -313,44 +313,48 @@ const DocIndex: React.FC = () => {
                                                 </td>
 
                                                 <td className="px-6 py-4 text-sm text-gray-400">{doc.fecha_subida}</td>
-                                                <td className="px-6 py-4 flex flex-wrap gap-2 text-sm font-medium">
-                                                    {doc.tipo === 'URL' ? (
-                                                        <a
-                                                            href={doc.archivo_url || doc.enlace_externo || '#'}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="bg-blue-700 hover:bg-blue-600 px-2 py-1 rounded-md text-xs font-medium text-white transition"
-                                                        >
-                                                            Abrir Enlace
-                                                        </a>
-                                                    ) : (
-                                                        doc.archivo_url && (
-                                                            <button
-                                                                onClick={() => handleDownload(doc)}
-                                                                className="bg-[#B3E10F] text-gray-900 px-2 py-1 rounded-md hover:bg-lime-300 text-xs font-bold shadow-md shadow-[#B3E10F]/30"
+                                                <td className="px-6 py-4 border-t border-gray-800">
+                                                    <div className="flex flex-col sm:flex-row justify-center items-center gap-2 w-full text-sm font-medium">
+                                                        {doc.tipo === 'URL' ? (
+                                                            <a
+                                                                href={doc.archivo_url || doc.enlace_externo || '#'}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="bg-blue-700 hover:bg-blue-600 px-3 py-1 rounded-md text-xs sm:text-sm font-medium text-white w-full sm:w-auto text-center transition"
                                                             >
-                                                                Descargar
-                                                            </button>
-                                                        )
-                                                    )}
+                                                                Abrir Enlace
+                                                            </a>
+                                                        ) : (
+                                                            doc.archivo_url && (
+                                                                <button
+                                                                    onClick={() => handleDownload(doc)}
+                                                                    className="bg-[#B3E10F] text-gray-900 px-3 py-1 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-bold shadow-md shadow-[#B3E10F]/30 w-full sm:w-auto text-center"
+                                                                >
+                                                                    Descargar
+                                                                </button>
+                                                            )
+                                                        )}
 
-                                                    {isInternalUser && (
-                                                        <>
-                                                            <Link
-                                                                href={route('docs.edit', doc.id)}
-                                                                className="bg-blue-500 hover:bg-blue-400 px-2 py-1 rounded-md text-xs font-medium text-white"
-                                                            >
-                                                                Editar
-                                                            </Link>
-                                                            <button
-                                                                onClick={() => openModal('delete', doc)}
-                                                                className="bg-red-700 hover:bg-red-600 px-2 py-1 rounded-md text-xs font-medium text-white"
-                                                            >
-                                                                Eliminar
-                                                            </button>
-                                                        </>
-                                                    )}
+                                                        {isInternalUser && (
+                                                            <>
+                                                                <Link
+                                                                    href={route('docs.edit', doc.id)}
+                                                                    className="bg-blue-500 hover:bg-blue-400 px-3 py-1 rounded-md text-xs sm:text-sm font-medium text-white w-full sm:w-auto text-center transition"
+                                                                >
+                                                                    Editar
+                                                                </Link>
+
+                                                                <button
+                                                                    onClick={() => openModal('delete', doc)}
+                                                                    className="bg-red-700 hover:bg-red-600 px-3 py-1 rounded-md text-xs sm:text-sm font-medium text-white w-full sm:w-auto text-center transition"
+                                                                >
+                                                                    Eliminar
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </td>
+
                                             </tr>
                                         ))}
                                     </tbody>

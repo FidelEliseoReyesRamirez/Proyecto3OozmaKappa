@@ -101,8 +101,8 @@ export default function UsersIndex() {
                                         <td className="p-2 border border-gray-800 text-gray-500">{u.telefono}</td>
                                         <td className="p-2 border border-gray-800">
                                             <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${u.rol === 'admin' ? 'bg-red-800 text-red-100' :
-                                                    u.rol === 'cliente' ? 'bg-[#B3E10F]/20 text-[#B3E10F]' :
-                                                        'bg-[#2970E8]/30 text-[#2970E8]'
+                                                u.rol === 'cliente' ? 'bg-[#B3E10F]/20 text-[#B3E10F]' :
+                                                    'bg-[#2970E8]/30 text-[#2970E8]'
                                                 }`}>
                                                 {u.rol}
                                             </span>
@@ -113,27 +113,34 @@ export default function UsersIndex() {
                                                 {u.estado}
                                             </span>
                                         </td>
-                                        <td className="p-2 border border-gray-800 space-x-1 sm:space-x-2">
-                                            <Link
-                                                href={route('users.edit', u.id)}
-                                                className="bg-[#B3E10F] text-gray-900 px-2 py-1 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-bold shadow-md shadow-[#B3E10F]/30"
-                                            >
-                                                Editar
-                                            </Link>
-                                            <button
-                                                onClick={() => openModal('estado', u)}
-                                                className={`px-2 py-1 rounded-md text-xs sm:text-sm font-medium transition duration-150 ${u.estado === 'activo' ? 'bg-red-700 hover:bg-red-600' : 'bg-green-700 hover:bg-green-600'
-                                                    } text-white`}
-                                            >
-                                                {u.estado === 'activo' ? 'Desactivar arreglar' : 'Activar arreglar'}
-                                            </button>
-                                            <button
-                                                onClick={() => openModal('eliminar', u)}
-                                                className="bg-gray-700 text-red-400 px-2 py-1 rounded-md hover:bg-gray-600 transition duration-150 text-xs sm:text-sm font-medium border border-transparent hover:border-red-400"
-                                            >
-                                                Eliminar
-                                            </button>
+                                        <td className="p-2 border border-gray-800">
+                                            <div className="flex flex-col sm:flex-row justify-center items-center gap-2">
+                                                <Link
+                                                    href={route('users.edit', u.id)}
+                                                    className="bg-[#B3E10F] text-gray-900 px-2 py-1 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-bold shadow-md shadow-[#B3E10F]/30 w-full sm:w-auto text-center"
+                                                >
+                                                    Editar
+                                                </Link>
+
+                                                <button
+                                                    onClick={() => openModal('estado', u)}
+                                                    className={`px-2 py-1 rounded-md text-xs sm:text-sm font-medium transition duration-150 w-full sm:w-auto text-white ${u.estado === 'activo'
+                                                            ? 'bg-red-700 hover:bg-red-600'
+                                                            : 'bg-green-700 hover:bg-green-600'
+                                                        }`}
+                                                >
+                                                    {u.estado === 'activo' ? 'Desactivar' : 'Activar'}
+                                                </button>
+
+                                                <button
+                                                    onClick={() => openModal('eliminar', u)}
+                                                    className="bg-gray-700 text-red-400 px-2 py-1 rounded-md hover:bg-gray-600 transition duration-150 text-xs sm:text-sm font-medium border border-transparent hover:border-red-400 w-full sm:w-auto text-center"
+                                                >
+                                                    Eliminar
+                                                </button>
+                                            </div>
                                         </td>
+
                                     </tr>
                                 ))}
                             </tbody>

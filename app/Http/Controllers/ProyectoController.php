@@ -83,8 +83,24 @@ class ProyectoController extends Controller
             'descripcion' => 'nullable|string',
             'responsable_id' => 'required|exists:users,id',
             'fecha_inicio' => 'required|date',
-            'archivo_bim' => 'nullable|file',
+            'archivo_bim' => [
+                'nullable',
+                'file',
+                'max:2097152', // 2 GB en kilobytes
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $ext = strtolower($value->getClientOriginalExtension());
+                        if (!in_array($ext, ['bim', 'ifc', 'zip', 'ifczip'])) {
+                            $fail('El archivo BIM debe tener formato .bim, .ifc o .ifczip.');
+                        }
+                    }
+                },
+            ],
+
+        ], [
+            'archivo_bim.max' => 'El archivo BIM no puede superar los 1.5 GB.',
         ]);
+
 
         $clienteActivo = User::where('id', $request->cliente_id)
             ->where('estado', 'activo')
@@ -234,16 +250,17 @@ class ProyectoController extends Controller
             'archivo_bim' => [
                 'nullable',
                 'file',
-                'max:262144',
+                'max:2097152', // 2 GB en kilobytes
                 function ($attribute, $value, $fail) {
                     if ($value) {
                         $ext = strtolower($value->getClientOriginalExtension());
-                        if (!in_array($ext, ['bim', 'ifc'])) {
-                            $fail('El archivo BIM debe tener formato .bim o .ifc.');
+                        if (!in_array($ext, ['bim', 'ifc', 'zip', 'ifczip'])) {
+                            $fail('El archivo BIM debe tener formato .bim, .ifc o .ifczip.');
                         }
                     }
                 },
             ],
+
         ], $messages);
 
         $descripcionCambia = trim($proyecto->descripcion ?? '') !== trim($validated['descripcion'] ?? '');

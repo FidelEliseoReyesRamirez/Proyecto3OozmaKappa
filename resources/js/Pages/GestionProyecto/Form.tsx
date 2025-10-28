@@ -2,10 +2,10 @@ import InputError from "@/Components/InputError";
 import InputLabel from "@/Components/InputLabel";
 import TextInput from "@/Components/TextInput";
 import { Link, useForm, Head } from "@inertiajs/react";
-import { FormEventHandler, useState, useEffect } from "react";
+import { FormEventHandler, useState } from "react";
 
 export default function Form({ proyecto, clientes, responsables }: any) {
-    const { data, setData, post, processing, errors } = useForm<{
+    const { data, setData, post, errors } = useForm<{
         nombre: string;
         cliente_id: string;
         descripcion?: string;
@@ -21,12 +21,16 @@ export default function Form({ proyecto, clientes, responsables }: any) {
         archivo_bim: null,
     });
 
+
     const [showModal, setShowModal] = useState(false);
     const [modalMessage, setModalMessage] = useState("");
     const [clienteSearch, setClienteSearch] = useState("");
     const [responsableSearch, setResponsableSearch] = useState("");
     const [openCliente, setOpenCliente] = useState(false);
     const [openResponsable, setOpenResponsable] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadTime, setUploadTime] = useState<number | null>(null);
+    const [uploading, setUploading] = useState(false);
 
     const routeName = proyecto ? "proyectos.update" : "proyectos.store";
 
@@ -37,11 +41,13 @@ export default function Form({ proyecto, clientes, responsables }: any) {
         r.name.toLowerCase().includes(responsableSearch.toLowerCase())
     );
 
-    const submit: FormEventHandler = (e) => {
-        e.preventDefault();
-        if (!validarCampos()) return;
-        if (proyecto) post(route(routeName, proyecto.id), { forceFormData: true });
-        else post(route(routeName));
+    const mostrarModal = (mensaje: string) => {
+        setModalMessage(mensaje);
+        setShowModal(true);
+    };
+    const cerrarModal = () => {
+        setShowModal(false);
+        setModalMessage("");
     };
 
     const validarCampos = () => {
@@ -61,56 +67,83 @@ export default function Form({ proyecto, clientes, responsables }: any) {
             mostrarModal("Debe ingresar la fecha de inicio del proyecto.");
             return false;
         }
+
         if (data.archivo_bim) {
             const ext = data.archivo_bim.name.split(".").pop()?.toLowerCase();
-            if (!["bim", "ifc"].includes(ext || "")) {
-                mostrarModal("Formato de archivo no permitido. Solo .bim o .ifc.");
+            const formatosPermitidos = ["ifc", "rvt", "nwd", "glb", "gltf"];
+            const maxSizeBytes = 1.5 * 1024 * 1024 * 1024; // 1.5 GB
+
+            if (!formatosPermitidos.includes(ext || "")) {
+                mostrarModal("Formato no permitido. Solo .ifc, .rvt, .nwd, .glb o .gltf.");
                 return false;
             }
-            if (data.archivo_bim.size > 256 * 1024 * 1024) {
-                mostrarModal("El archivo supera los 256 MB permitidos.");
+            if (data.archivo_bim.size > maxSizeBytes) {
+                mostrarModal("El archivo supera el límite de 1.5 GB permitido.");
                 return false;
             }
         }
         return true;
     };
 
-    const mostrarModal = (mensaje: string) => {
-        setModalMessage(mensaje);
-        setShowModal(true);
+    const submit: FormEventHandler = (e) => {
+        e.preventDefault();
+        if (!validarCampos()) return;
+
+        setUploading(true);
+        setUploadProgress(0);
+
+        const start = Date.now();
+
+        const options: any = {
+            forceFormData: true, // convierte automáticamente todo a FormData
+            onProgress: (progress: any) => {
+                if (progress.total && progress.loaded) {
+                    const percent = Math.round((progress.loaded / progress.total) * 100);
+                    const elapsed = (Date.now() - start) / 1000;
+                    const rate = progress.loaded / elapsed;
+                    const remaining = (progress.total - progress.loaded) / rate;
+                    setUploadProgress(percent);
+                    setUploadTime(remaining);
+                }
+            },
+            onSuccess: () => {
+                setUploading(false);
+                mostrarModal("Proyecto creado correctamente. Redirigiendo...");
+                setTimeout(() => {
+                    window.location.href = route("proyectos.index");
+                }, 1200);
+            },
+            onError: () => {
+                setUploading(false);
+                mostrarModal("Error al crear el proyecto. Verifica los datos.");
+            },
+            onFinish: () => {
+                setUploading(false);
+            },
+        };
+
+        if (proyecto) {
+            // modo edición
+            post(route("proyectos.update", proyecto.id), options);
+        } else {
+            // modo creación
+            post(route("proyectos.store"), options);
+        }
     };
 
-    const cerrarModal = () => {
-        setShowModal(false);
-        setModalMessage("");
-    };
 
     const inputFieldStyles =
         "mt-1 block w-full bg-gray-900 border border-gray-700 text-white rounded-lg shadow-inner focus:border-[#2970E8] focus:ring-[#2970E8] transition duration-200 ease-in-out placeholder-gray-500";
 
-    const dropdownStyle =
-        "absolute z-50 mt-1 w-full bg-gray-900 border border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto";
-
-    useEffect(() => {
-        const close = (e: MouseEvent) => {
-            const target = e.target as HTMLElement;
-            if (!target.closest(".combo-clientes")) setOpenCliente(false);
-            if (!target.closest(".combo-responsables")) setOpenResponsable(false);
-        };
-        document.addEventListener("click", close);
-        return () => document.removeEventListener("click", close);
-    }, []);
-
     return (
         <section className="flex justify-center items-center py-12 px-4 min-h-screen bg-gray-950 relative">
             <Head title="DEVELARQ | Crear Proyecto" />
-
             <div className="w-full max-w-4xl bg-gray-900 border border-gray-800 p-8 md:p-10 rounded-xl shadow-lg shadow-gray-900/50">
                 <h2 className="text-3xl font-extrabold text-[#2970E8] mb-1 tracking-wider">
                     {proyecto ? "EDITAR PROYECTO" : "CREAR NUEVO PROYECTO"}
                 </h2>
                 <p className="mb-8 text-md text-[#B3E10F]">
-                    ✨ Define los parámetros del proyecto y asigna a tu equipo principal.
+                    ✨ Define los parámetros del proyecto y sube tu modelo BIM.
                 </p>
 
                 <form onSubmit={submit} className="space-y-6" noValidate>
@@ -123,116 +156,85 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                             value={data.nombre}
                             onChange={(e) => setData("nombre", e.target.value)}
                             required
-                            placeholder="Ej: Torre de Oficinas Central Park"
-                            maxLength={150}
                         />
-                        <p className="text-xs text-gray-400 mt-1">{data.nombre.length}/150 caracteres</p>
                         <InputError className="mt-2" message={errors.nombre} />
                     </div>
 
-                    {/* CLIENTE Y RESPONSABLE */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-700">
+                    {/* CLIENTE */}
+                    <div>
+                        <InputLabel htmlFor="cliente_id" value="Cliente" className="text-gray-200 font-semibold" />
+                        <input
+                            type="text"
+                            placeholder="Buscar cliente..."
+                            value={clienteSearch}
+                            onFocus={() => setOpenCliente(true)}
+                            onChange={(e) => setClienteSearch(e.target.value)}
+                            className={inputFieldStyles}
+                        />
+                        {openCliente && (
+                            <ul className="max-h-48 overflow-y-auto bg-gray-800 rounded-md mt-2 border border-gray-700">
+                                {filteredClientes.length > 0 ? (
+                                    filteredClientes.map((c: any) => (
+                                        <li
+                                            key={c.id}
+                                            onClick={() => {
+                                                setData("cliente_id", c.id);
+                                                setClienteSearch(c.name);
+                                                setOpenCliente(false);
+                                            }}
+                                            className={`px-3 py-2 cursor-pointer hover:bg-[#2970E8] hover:text-white ${data.cliente_id === c.id ? "bg-[#2970E8]/40" : ""
+                                                }`}
+                                        >
+                                            {c.name}
+                                        </li>
+                                    ))
+                                ) : (
+                                    <li className="px-3 py-2 text-gray-400">Sin coincidencias</li>
+                                )}
+                            </ul>
+                        )}
+                        <InputError className="mt-2" message={errors.cliente_id} />
+                    </div>
 
-                        {/* CLIENTE CON BUSCADOR VISUAL */}
-                        <div className="relative combo-clientes">
-                            <InputLabel htmlFor="cliente" value="Cliente Asociado" className="text-gray-200 font-semibold" />
-                            <div
-                                className={
-                                    inputFieldStyles +
-                                    " cursor-pointer px-3 py-2.5 min-h-[42px] flex items-center text-sm"
-                                }
-                                onClick={() => setOpenCliente(!openCliente)}
-                            >
-                                {clientes.find((c: any) => c.id === data.cliente_id)?.name ||
-                                    "Seleccione o escriba un cliente..."}
-                            </div>
-
-                            {openCliente && (
-                                <div className="absolute z-50 mt-1 w-full bg-gray-900 border border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                    <input
-                                        type="text"
-                                        autoFocus
-                                        maxLength={50}
-                                        className="w-full px-3 py-2.5 bg-gray-800 text-gray-200 text-sm border-b border-gray-700 focus:outline-none"
-                                        placeholder="Buscar cliente..."
-                                        value={clienteSearch}
-                                        onChange={(e) => setClienteSearch(e.target.value)}
-                                    />
-                                    {filteredClientes.length > 0 ? (
-                                        filteredClientes.map((c: any) => (
-                                            <div
-                                                key={c.id}
-                                                onClick={() => {
-                                                    setData("cliente_id", c.id);
-                                                    setOpenCliente(false);
-                                                    setClienteSearch("");
-                                                }}
-                                                className={`px-3 py-2 text-sm hover:bg-[#2970E8] hover:text-white cursor-pointer ${c.id === data.cliente_id ? "bg-[#1f5dc0] text-white" : "text-gray-200"
-                                                    }`}
-                                            >
-                                                {c.name}
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="px-3 py-2 text-gray-500 text-sm">Sin resultados</div>
-                                    )}
-                                </div>
-                            )}
-                            <InputError className="mt-2" message={errors.cliente_id} />
-                        </div>
-
-                        {/* RESPONSABLE CON BUSCADOR VISUAL */}
-                        <div className="relative combo-responsables">
-                            <InputLabel htmlFor="responsable" value="Responsable Principal" className="text-gray-200 font-semibold" />
-                            <div
-                                className={
-                                    inputFieldStyles +
-                                    " cursor-pointer px-3 py-2.5 min-h-[42px] flex items-center text-sm"
-                                }
-                                onClick={() => setOpenResponsable(!openResponsable)}
-                            >
-                                {responsables.find((r: any) => r.id === data.responsable_id)?.name ||
-                                    "Seleccione o escriba un responsable..."}
-                            </div>
-
-                            {openResponsable && (
-                                <div className="absolute z-50 mt-1 w-full bg-gray-900 border border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                    <input
-                                        type="text"
-                                        autoFocus
-                                        maxLength={50}
-                                        className="w-full px-3 py-2.5 bg-gray-800 text-gray-200 text-sm border-b border-gray-700 focus:outline-none"
-                                        placeholder="Buscar responsable..."
-                                        value={responsableSearch}
-                                        onChange={(e) => setResponsableSearch(e.target.value)}
-                                    />
-                                    {filteredResponsables.length > 0 ? (
-                                        filteredResponsables.map((r: any) => (
-                                            <div
-                                                key={r.id}
-                                                onClick={() => {
-                                                    setData("responsable_id", r.id);
-                                                    setOpenResponsable(false);
-                                                    setResponsableSearch("");
-                                                }}
-                                                className={`px-3 py-2 text-sm hover:bg-[#2970E8] hover:text-white cursor-pointer ${r.id === data.responsable_id ? "bg-[#1f5dc0] text-white" : "text-gray-200"
-                                                    }`}
-                                            >
-                                                {r.name}
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="px-3 py-2 text-gray-500 text-sm">Sin resultados</div>
-                                    )}
-                                </div>
-                            )}
-                            <InputError className="mt-2" message={errors.responsable_id} />
-                        </div>
+                    {/* RESPONSABLE */}
+                    <div>
+                        <InputLabel htmlFor="responsable_id" value="Responsable" className="text-gray-200 font-semibold" />
+                        <input
+                            type="text"
+                            placeholder="Buscar responsable..."
+                            value={responsableSearch}
+                            onFocus={() => setOpenResponsable(true)}
+                            onChange={(e) => setResponsableSearch(e.target.value)}
+                            className={inputFieldStyles}
+                        />
+                        {openResponsable && (
+                            <ul className="max-h-48 overflow-y-auto bg-gray-800 rounded-md mt-2 border border-gray-700">
+                                {filteredResponsables.length > 0 ? (
+                                    filteredResponsables.map((r: any) => (
+                                        <li
+                                            key={r.id}
+                                            onClick={() => {
+                                                setData("responsable_id", r.id);
+                                                setResponsableSearch(r.name);
+                                                setOpenResponsable(false);
+                                            }}
+                                            className={`px-3 py-2 cursor-pointer hover:bg-[#2970E8] hover:text-white ${data.responsable_id === r.id ? "bg-[#2970E8]/40" : ""
+                                                }`}
+                                        >
+                                            {r.name}
+                                        </li>
+                                    ))
+                                ) : (
+                                    <li className="px-3 py-2 text-gray-400">Sin coincidencias</li>
+                                )}
+                            </ul>
+                        )}
+                        <InputError className="mt-2" message={errors.responsable_id} />
                     </div>
 
                     {/* FECHA */}
                     <div>
-                        <InputLabel htmlFor="fecha_inicio" value="Fecha de Inicio del Proyecto" className="text-gray-200 font-semibold" />
+                        <InputLabel htmlFor="fecha_inicio" value="Fecha de Inicio" className="text-gray-200 font-semibold" />
                         <TextInput
                             id="fecha_inicio"
                             type="date"
@@ -244,14 +246,25 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                         <InputError className="mt-2" message={errors.fecha_inicio} />
                     </div>
 
+                    {/* DESCRIPCIÓN */}
+                    <div>
+                        <InputLabel htmlFor="descripcion" value="Descripción del Proyecto" className="text-gray-200 font-semibold" />
+                        <textarea
+                            id="descripcion"
+                            className={`${inputFieldStyles} h-28 resize-none`}
+                            value={data.descripcion || ""}
+                            onChange={(e) => setData("descripcion", e.target.value)}
+                        />
+                    </div>
+
                     {/* ARCHIVO BIM */}
                     <div className="pt-4 border-t border-gray-700">
-                        <InputLabel htmlFor="archivo_bim" value="Archivo BIM Inicial (.ifc, .bim)" className="text-gray-200 font-semibold" />
+                        <InputLabel htmlFor="archivo_bim" value="Archivo BIM / Modelo 3D" className="text-gray-200 font-semibold" />
                         <input
                             id="archivo_bim"
                             type="file"
-                            accept=".bim,.ifc"
-                            className="mt-1 block w-50% text-sm text-gray-300
+                            accept=".ifc,.rvt,.nwd,.glb,.gltf"
+                            className="mt-1 block w-full text-sm text-gray-300 truncate
                                 file:mr-4 file:py-2 file:px-4
                                 file:rounded-full file:border-0
                                 file:text-sm file:font-bold
@@ -259,24 +272,44 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                                 hover:file:bg-indigo-600 transition duration-150 cursor-pointer"
                             onChange={(e) => setData("archivo_bim", e.target.files?.[0] || null)}
                         />
-                        <p className="mt-1 text-xs text-gray-500">Formatos soportados: .ifc, .bim. Máx. 256MB.</p>
+                        <p className="text-xs text-gray-400 mt-2">
+                            Tamaño máximo: <span className="text-[#B3E10F]">1.5 GB</span>. Formatos: .ifc, .rvt, .nwd, .glb, .gltf
+                        </p>
                         <InputError className="mt-2" message={errors.archivo_bim} />
                     </div>
 
-                    {/* BOTONES */}
+                    {/* PROGRESO */}
+                    {uploading && (
+                        <div className="mt-6">
+                            <div className="w-full bg-gray-800 rounded-full h-4 overflow-hidden">
+                                <div
+                                    className="bg-[#B3E10F] h-4 rounded-full transition-all duration-300"
+                                    style={{ width: `${uploadProgress}%` }}
+                                ></div>
+                            </div>
+                            <p className="text-gray-300 mt-2 text-sm">
+                                Progreso: {uploadProgress}%{" "}
+                                {uploadTime ? `(Tiempo restante: ${Math.ceil(uploadTime)} s)` : ""}
+                            </p>
+                        </div>
+                    )}
+
                     <div className="flex items-center justify-between pt-6 border-t border-gray-700">
                         <button
                             type="submit"
-                            disabled={processing}
-                            className="bg-[#B3E10F] text-gray-900 px-3 py-2 rounded-md hover:bg-lime-300 transition duration-150 text-sm font-bold shadow-md shadow-[#B3E10F]/30"
+                            disabled={uploading}
+                            className={`px-3 py-2 rounded-md text-sm font-bold transition duration-150 shadow-md ${uploading
+                                ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                                : "bg-[#B3E10F] text-gray-900 hover:bg-lime-300 shadow-[#B3E10F]/30"
+                                }`}
                         >
-                            {proyecto ? "ACTUALIZAR PROYECTO" : "GUARDAR PROYECTO"}
+                            {uploading ? "Subiendo..." : "GUARDAR PROYECTO"}
                         </button>
                         <Link
                             href={route("proyectos.index")}
-                            className="bg-red-700 hover:bg-red-600 px-3 py-2 rounded-md text-sm font-medium transition duration-150 text-white"
+                            className="bg-red-700 hover:bg-red-600 px-3 py-2 rounded-md text-sm font-medium text-white transition duration-150"
                         >
-                            Cancelar y Volver
+                            Cancelar
                         </Link>
                     </div>
                 </form>

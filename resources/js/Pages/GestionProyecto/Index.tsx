@@ -120,11 +120,10 @@ export default function ProyectosIndex() {
                                                     handleEstadoChange(proyecto, e.target.value)
                                                 }
                                                 disabled={!isEmployee}
-                                                className={`rounded-md p-1 text-sm sm:text-base font-medium ${
-                                                    isEmployee
+                                                className={`rounded-md p-1 text-sm sm:text-base font-medium ${isEmployee
                                                         ? "bg-[#0B1120] border-gray-600 hover:border-[#B3E10F] text-white"
                                                         : "bg-gray-800 border-gray-800 text-gray-500 cursor-not-allowed"
-                                                }`}
+                                                    }`}
                                             >
                                                 <option value="activo">Activo</option>
                                                 <option value="en progreso">En progreso</option>
@@ -132,30 +131,35 @@ export default function ProyectosIndex() {
                                             </select>
                                         </td>
 
-                                        <td className="p-3 border border-gray-800 space-y-1 sm:space-y-0 sm:space-x-2 flex flex-col sm:flex-row justify-center items-center">
-                                            {isEmployee && (
+                                        <td className="p-3 border border-gray-800">
+                                            <div className="flex flex-col sm:flex-row justify-center items-center gap-2 w-full">
+                                                {isEmployee && (
+                                                    <Link
+                                                        href={route("proyectos.edit", proyecto.id)}
+                                                        className="bg-[#B3E10F] text-gray-900 px-3 py-1 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-bold shadow-md shadow-[#B3E10F]/30 w-full sm:w-auto text-center"
+                                                    >
+                                                        Editar
+                                                    </Link>
+                                                )}
+
                                                 <Link
-                                                    href={route("proyectos.edit", proyecto.id)}
-                                                    className="bg-[#B3E10F] text-gray-900 px-3 py-1 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-bold shadow-md shadow-[#B3E10F]/30"
+                                                    href={route("proyectos.versiones", proyecto.id)}
+                                                    className="bg-[#2970E8] text-white px-3 py-1 rounded-md hover:bg-blue-600 transition duration-150 text-xs sm:text-sm font-semibold shadow-md shadow-[#2970E8]/30 w-full sm:w-auto text-center"
                                                 >
-                                                    Editar
+                                                    Versiones
                                                 </Link>
-                                            )}
-                                            <Link
-                                                href={route("proyectos.versiones", proyecto.id)}
-                                                className="bg-[#2970E8] text-white px-3 py-1 rounded-md hover:bg-blue-600 transition duration-150 text-xs sm:text-sm font-semibold shadow-md shadow-[#2970E8]/30"
-                                            >
-                                                Versiones
-                                            </Link>
-                                            {auth.user.id === proyecto.responsable_id && (
-                                                <Link
-                                                    href={route("proyectos.permisos", proyecto.id)}
-                                                    className="bg-gray-700 text-white px-3 py-1 rounded-md hover:bg-gray-600 transition duration-150 text-xs sm:text-sm font-semibold border border-transparent hover:border-gray-400 shadow-md"
-                                                >
-                                                    Permisos
-                                                </Link>
-                                            )}
+
+                                                {auth.user.id === proyecto.responsable_id && (
+                                                    <Link
+                                                        href={route("proyectos.permisos", proyecto.id)}
+                                                        className="bg-gray-700 text-white px-3 py-1 rounded-md hover:bg-gray-600 transition duration-150 text-xs sm:text-sm font-semibold border border-transparent hover:border-gray-400 shadow-md w-full sm:w-auto text-center"
+                                                    >
+                                                        Permisos
+                                                    </Link>
+                                                )}
+                                            </div>
                                         </td>
+
                                     </tr>
                                 ))}
                             </tbody>
