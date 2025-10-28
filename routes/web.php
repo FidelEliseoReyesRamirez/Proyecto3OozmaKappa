@@ -38,6 +38,7 @@ Route::get('/dashboard', function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'prevent.manual'])->group(function () {
+
     // Perfil
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -48,20 +49,26 @@ Route::middleware(['auth', 'prevent.manual'])->group(function () {
     Route::resource('meetings', MeetingController::class)->only(['store', 'update', 'destroy']);
 
     // Documentos
-    Route::get('/docs', [DocController::class, 'index'])->name('docs.index');
-    Route::get('/docs/create', [DocController::class, 'create'])->name('docs.create');
-    Route::post('/docs', [DocController::class, 'store'])->name('docs.store');
-    Route::get('/docs/download/{documento}', [DocController::class, 'download'])->name('docs.download');
-    Route::delete('/docs/{documento}', [DocController::class, 'destroy'])->name('docs.destroy');
-    Route::get('/docs/{documento}/edit', [DocController::class, 'edit'])->name('docs.edit');
-    Route::put('/docs/{documento}', [DocController::class, 'update'])->name('docs.update');
-    // Papelera y restauración de documentos
-    Route::get('/docs/trash', [DocController::class, 'trash'])->name('docs.trash');
-    Route::patch('/docs/{id}/restore', [DocController::class, 'restore'])->name('docs.restore');
+    Route::prefix('docs')->name('docs.')->group(function () {
+        Route::get('/', [DocController::class, 'index'])->name('index');
+        Route::get('/create', [DocController::class, 'create'])->name('create');
+        Route::post('/', [DocController::class, 'store'])->name('store');
 
-    // Purga manual de documentos (solo admin)
-    Route::middleware('role:admin')->group(function () {
-        Route::delete('/docs/purge', [DocController::class, 'purgeOld'])->name('docs.purge');
+        // ✅ Ruta de descarga — protegida, pero permitida por el middleware
+        Route::get('/download/{documento}', [DocController::class, 'download'])
+            ->middleware(['auth', 'prevent.manual'])
+            ->name('download');
+
+        Route::delete('/{documento}', [DocController::class, 'destroy'])->name('destroy');
+        Route::get('/{documento}/edit', [DocController::class, 'edit'])->name('edit');
+        Route::put('/{documento}', [DocController::class, 'update'])->name('update');
+
+        // Papelera y restauración
+        Route::get('/trash', [DocController::class, 'trash'])->name('trash');
+        Route::patch('/{id}/restore', [DocController::class, 'restore'])->name('restore');
+
+        // Purga manual (solo admin)
+        Route::middleware('role:admin')->delete('/purge', [DocController::class, 'purgeOld'])->name('purge');
     });
 
     // Proyectos
@@ -73,7 +80,7 @@ Route::middleware(['auth', 'prevent.manual'])->group(function () {
     Route::get('/proyectos/{id}/permisos', [ProyectoController::class, 'gestionarPermisos'])->name('proyectos.permisos');
     Route::post('/proyectos/{id}/permisos', [ProyectoController::class, 'actualizarPermisos'])->name('proyectos.permisos.actualizar');
 
-    // Avances para clientes
+    // Avances de proyectos
     Route::get('/proyectos/{projectId}/timeline', [AvancesProyectoController::class, 'showTimeline'])->name('projects.timeline');
     Route::get('/mis-avances', [AvancesProyectoController::class, 'showClientTimeline'])->name('avances.index');
     Route::post('/projects/{id}/update-status', [AvancesProyectoController::class, 'updateStatus'])->name('projects.updateStatus');
@@ -127,7 +134,7 @@ require __DIR__ . '/auth.php';
 
 /*
 |--------------------------------------------------------------------------
-| Rutas para notificaciones
+| Rutas de notificaciones
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'prevent.manual'])->group(function () {

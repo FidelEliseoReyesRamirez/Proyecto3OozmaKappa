@@ -121,15 +121,12 @@ class DocController extends Controller
                 'proyecto_id' => $validated['proyecto_id'],
                 'archivo_url' => $archivo_url,
                 'tipo' => $tipo,
-
                 'subido_por' => Auth::id(),
-
             ]);
 
-            /** @var \App\Models\Proyecto|null $proyecto */
             $proyecto = Proyecto::find($validated['proyecto_id']);
 
-            if ($proyecto instanceof Proyecto) {
+            if ($proyecto) {
                 $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
 
                 NotificationService::sendToMany(
@@ -148,6 +145,66 @@ class DocController extends Controller
         }
     }
 
+    /**
+     * Descarga de documentos autenticada y segura
+     */
+    public function download(Documento $documento)
+    {
+        $user = request()->user();
+        $userRole = strtolower($user->rol);
+
+        // 1. Verificar permisos
+        $hasPermission = $userRole === 'admin' ||
+            $user->projects->pluck('id')->contains($documento->proyecto_id);
+
+        if (!$hasPermission) {
+            abort(403, 'No tienes permiso para descargar este documento.');
+        }
+
+        // 2. Si es un enlace externo
+        if ($documento->tipo === 'URL') {
+            return redirect()->away($documento->archivo_url);
+        }
+
+        // 3. Asegurar ruta correcta
+        $path = str_replace('/storage/', '', $documento->archivo_url);
+
+        // 4. Verificar existencia del archivo
+        if (!$documento->archivo_url || !Storage::disk('public')->exists($path)) {
+            Log::warning("Archivo no encontrado para el documento ID {$documento->id}: {$documento->archivo_url}");
+            abort(404, 'El archivo no fue encontrado en el servidor.');
+        }
+
+        // 5. Registrar la descarga (sin romper si falla)
+        try {
+            DescargaHistorial::create([
+                'user_id' => $user->id,
+                'documento_id' => $documento->id,
+            ]);
+
+            $proyecto = Proyecto::find($documento->proyecto_id);
+            if ($proyecto && $proyecto->responsable_id) {
+                NotificationService::send(
+                    $proyecto->responsable_id,
+                    "El usuario {$user->name} ha descargado el documento '{$documento->nombre}' del proyecto '{$proyecto->nombre}'.",
+                    'documento',
+                    url('/proyectos/' . $proyecto->id),
+                    'Documento descargado'
+                );
+            }
+        } catch (\Exception $e) {
+            Log::error("Fallo al registrar descarga o enviar notificación: " . $e->getMessage());
+        }
+
+        // 6. Preparar nombre de descarga
+        $extension = pathinfo($path, PATHINFO_EXTENSION);
+        $nombreArchivo = $documento->nombre . '.' . $extension;
+
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        $disk = Storage::disk('public');
+        return $disk->download($path, $nombreArchivo);
+    }
+
     public function restore($id)
     {
         $documento = Documento::findOrFail($id);
@@ -163,6 +220,7 @@ class DocController extends Controller
 
         return back()->with('success', 'Documento restaurado correctamente.');
     }
+
     public function trash()
     {
         $documents = Documento::where('eliminado', 1)
@@ -192,59 +250,8 @@ class DocController extends Controller
         ]);
     }
 
-
     /**
-     * Descarga de documentos
-     */
-    public function download(Documento $documento)
-    {
-        $user = request()->user();
-        $userRole = strtolower($user->rol);
-
-        $hasPermission = $userRole === 'admin' ||
-            $user->projects->pluck('id')->contains($documento->proyecto_id);
-
-        if (!$hasPermission) {
-            abort(403, 'No tienes permiso para descargar este documento.');
-        }
-
-        // Si es URL, redirige directamente al enlace externo
-        if ($documento->tipo === 'URL') {
-            return redirect()->away($documento->archivo_url);
-        }
-
-        if (!$documento->archivo_url || !Storage::exists($documento->archivo_url)) {
-            abort(404, 'El archivo no fue encontrado en el servidor.');
-        }
-
-        try {
-            DescargaHistorial::create([
-                'user_id' => $user->id,
-                'documento_id' => $documento->id,
-            ]);
-
-            $proyecto = Proyecto::find($documento->proyecto_id);
-
-            if ($proyecto && $proyecto->responsable_id) {
-                NotificationService::send(
-                    $proyecto->responsable_id,
-                    "El usuario {$user->name} ha descargado el documento '{$documento->nombre}' del proyecto '{$proyecto->nombre}'.",
-                    'documento',
-                    url('/proyectos/' . $proyecto->id),
-                    'Documento descargado'
-                );
-            }
-        } catch (\Exception $e) {
-            Log::error("Fallo al registrar descarga: " . $e->getMessage());
-        }
-
-        $extension = pathinfo($documento->archivo_url, PATHINFO_EXTENSION);
-        return Storage::download($documento->archivo_url, $documento->nombre . '.' . $extension);
-    }
-
-
-    /**
-     * Elimina (lógico) un documento
+     * Elimina (lógicamente) un documento
      */
     public function destroy(Documento $documento)
     {
@@ -274,8 +281,6 @@ class DocController extends Controller
             return back()->with('error', 'Error al eliminar el documento: ' . $e->getMessage());
         }
     }
-
-
 
     /**
      * Formulario de edición

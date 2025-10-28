@@ -201,8 +201,10 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
                                 max={maxDateStr}
                                 value={tarea.fecha_limite}
                                 onChange={(e) => setTarea({ ...tarea, fecha_limite: e.target.value })}
-                                className={inputStyle}
+                                className={`${inputStyle} text-white [&::-webkit-calendar-picker-indicator]:invert`}
+                                style={{ colorScheme: "dark" }}
                             />
+
                             <InputError message={errors.fecha_limite} className="mt-2 text-red-400" />
                         </div>
 
@@ -251,11 +253,10 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
                                                 setOpenResponsable(false);
                                                 setBusquedaResponsable("");
                                             }}
-                                            className={`px-3 py-2 text-sm hover:bg-[#2970E8] hover:text-white cursor-pointer ${
-                                                u.id === tarea.asignado_id
+                                            className={`px-3 py-2 text-sm hover:bg-[#2970E8] hover:text-white cursor-pointer ${u.id === tarea.asignado_id
                                                     ? "bg-[#1f5dc0] text-white"
                                                     : "text-gray-200"
-                                            }`}
+                                                }`}
                                         >
                                             {u.name}
                                         </div>
@@ -290,25 +291,22 @@ export default function Form({ proyectos, usuarios, proyectoSeleccionado }: any)
             {modal.visible && (
                 <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
                     <div
-                        className={`p-6 rounded-xl shadow-xl w-96 text-center ${
-                            modal.tipo === "exito"
+                        className={`p-6 rounded-xl shadow-xl w-96 text-center ${modal.tipo === "exito"
                                 ? "bg-gray-900 border border-green-600"
                                 : "bg-gray-900 border border-red-600"
-                        }`}
+                            }`}
                     >
                         <h3
-                            className={`text-lg font-bold mb-3 ${
-                                modal.tipo === "exito" ? "text-green-400" : "text-red-400"
-                            }`}
+                            className={`text-lg font-bold mb-3 ${modal.tipo === "exito" ? "text-green-400" : "text-red-400"
+                                }`}
                         >
                             {modal.tipo === "exito" ? "Éxito" : "Error"}
                         </h3>
                         <p className="text-gray-200 mb-4">{modal.mensaje}</p>
                         <button
                             onClick={() => setModal({ visible: false, tipo: "", mensaje: "" })}
-                            className={`px-4 py-2 rounded-md text-white font-semibold ${
-                                modal.tipo === "exito" ? "bg-green-600 hover:bg-green-500" : "bg-red-600 hover:bg-red-500"
-                            }`}
+                            className={`px-4 py-2 rounded-md text-white font-semibold ${modal.tipo === "exito" ? "bg-green-600 hover:bg-green-500" : "bg-red-600 hover:bg-red-500"
+                                }`}
                         >
                             Aceptar
                         </button>

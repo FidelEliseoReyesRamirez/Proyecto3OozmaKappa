@@ -48,9 +48,32 @@ const DocIndex: React.FC = () => {
         return () => document.removeEventListener('click', close);
     }, []);
 
-    const handleDownload = (doc: Documento) => {
-        if (doc.archivo_url) window.open(doc.archivo_url, '_blank');
-    };
+    /* ✅ Descarga segura */
+    function handleDownload(doc: Documento) {
+        if (!doc.archivo_url) {
+            console.warn('⚠️ No hay archivo para descargar.');
+            return;
+        }
+
+        try {
+            if (doc.tipo === 'URL' && doc.enlace_externo) {
+                window.open(doc.enlace_externo, '_blank', 'noopener,noreferrer');
+            } else {
+                // Redirige directamente a la ruta de Laravel (sin Inertia)
+                window.location.href = route('docs.download', doc.id);
+            }
+        } catch (error) {
+            console.error('❌ Error al descargar el archivo:', error);
+        }
+    }
+
+    /* ✅ Eliminar documento */
+    /* ✅ Eliminar documento (limpio, sin alert ni logs) */
+function confirmDelete(document: Documento) {
+    if (!document) return;
+    router.delete(route('docs.destroy', document.id));
+}
+
 
     const handleCreateClick = () => router.get(route('docs.create'));
 
@@ -64,6 +87,7 @@ const DocIndex: React.FC = () => {
         setDateError('');
     };
 
+    /* ✅ Filtros */
     const filteredDocuments = useMemo(() => {
         const term = search.toLowerCase().trim();
         const startDate = filterStart ? new Date(filterStart + 'T00:00:00') : null;
@@ -108,18 +132,6 @@ const DocIndex: React.FC = () => {
         p.name.toLowerCase().includes(projectSearch.toLowerCase())
     );
 
-    const openModal = (type: string, document: Documento) => setModal({ type, document });
-    const closeModal = () => setModal({ type: '', document: null });
-
-    const confirmDelete = () => {
-        if (!modal.document) return;
-        const id = modal.document.id;
-        router.delete(route('docs.destroy', id), {
-            onSuccess: () => setModal({ type: 'success', document: modal.document }),
-            onError: () => setModal({ type: 'error', document: modal.document }),
-        });
-    };
-
     return (
         <AuthenticatedLayout>
             <Head title="Documentos del Proyecto" />
@@ -152,7 +164,6 @@ const DocIndex: React.FC = () => {
                                 </div>
                             )}
                         </div>
-
 
                         {/* FILTROS */}
                         <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-6 flex flex-wrap gap-3 justify-between items-center">
@@ -345,7 +356,8 @@ const DocIndex: React.FC = () => {
                                                                 </Link>
 
                                                                 <button
-                                                                    onClick={() => openModal('delete', doc)}
+                                                                    onClick={() => setModal({ type: 'delete', document: doc })}
+
                                                                     className="bg-red-700 hover:bg-red-600 px-3 py-1 rounded-md text-xs sm:text-sm font-medium text-white w-full sm:w-auto text-center transition"
                                                                 >
                                                                     Eliminar
@@ -354,7 +366,6 @@ const DocIndex: React.FC = () => {
                                                         )}
                                                     </div>
                                                 </td>
-
                                             </tr>
                                         ))}
                                     </tbody>
@@ -368,8 +379,48 @@ const DocIndex: React.FC = () => {
                     </div>
                 </div>
             </div>
+            {/* ✅ MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
+            {
+                modal.type === 'delete' && modal.document && (
+                    <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">
+                        <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 shadow-2xl w-[90%] sm:w-[400px] text-center animate-fadeIn">
+                            <h2 className="text-xl font-bold text-white mb-3">¿Eliminar documento?</h2>
+                            <p className="text-gray-300 mb-6">
+                                Estás a punto de eliminar{' '}
+                                <span className="text-[#B3E10F] font-semibold">
+                                    {modal.document?.titulo}
+                                </span>.
+                                <br />
+                                Esta acción moverá el archivo a la papelera.
+                            </p>
+                            <div className="flex justify-center gap-4">
+                                <button
+                                    onClick={() => setModal({ type: '', document: null })}
+                                    className="px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white font-medium transition"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (modal.document) {
+                                            confirmDelete(modal.document);
+                                            setModal({ type: '', document: null });
+                                        }
+                                    }}
+                                    className="px-4 py-2 rounded-md bg-red-700 hover:bg-red-600 text-white font-bold shadow-md shadow-red-800/40 transition"
+                                >
+                                    Confirmar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
         </AuthenticatedLayout>
     );
+
+
 };
 
 export default DocIndex;
