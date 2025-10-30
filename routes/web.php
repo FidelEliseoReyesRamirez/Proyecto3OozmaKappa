@@ -93,7 +93,21 @@ Route::middleware(['auth', 'prevent.manual'])->group(function () {
     Route::get('/tareas/proyecto/{id}', [TareaController::class, 'obtenerPorProyecto'])->name('tareas.proyecto');
     Route::patch('/tareas/{id}/estado', [TareaController::class, 'actualizarEstado'])->name('tareas.estado');
     Route::get('/tareas/{id}/historial', [TareaController::class, 'historial'])->name('tareas.historial');
+
+    // Planos BIM
+    Route::get('/planos', [App\Http\Controllers\PlanoController::class, 'index'])->name('planos.index');
+    Route::get('/planos/create', [App\Http\Controllers\PlanoController::class, 'create'])->name('planos.create');
+    Route::post('/planos', [App\Http\Controllers\PlanoController::class, 'store'])->name('planos.store');
     
+    Route::get('/planos/{plano}/download', [App\Http\Controllers\PlanoController::class, 'download'])
+        ->middleware(['auth', 'prevent.manual']) 
+        ->name('planos.download');
+    
+    Route::get('/planos/{plano}/edit', [App\Http\Controllers\PlanoController::class, 'edit'])->name('planos.edit');
+    Route::put('/planos/{plano}', [App\Http\Controllers\PlanoController::class, 'update'])->name('planos.update');
+    Route::delete('/planos/{plano}', [App\Http\Controllers\PlanoController::class, 'destroy'])->name('planos.destroy');
+    Route::get('/planos/trash', [App\Http\Controllers\PlanoController::class, 'trash'])->name('planos.trash');
+    Route::patch('/planos/{id}/restore', [App\Http\Controllers\PlanoController::class, 'restore'])->name('planos.restore');
 });
 
 /*
