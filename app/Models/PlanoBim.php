@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Proyecto;
+use App\Models\User; // Asegúrate de tener esta línea si tu modelo User está aquí
 
 class PlanoBIM extends Model
 {
@@ -25,27 +27,27 @@ class PlanoBIM extends Model
         'eliminado',
     ];
 
-    // 💡 CORRECCIÓN CRÍTICA: Casts para convertir automáticamente a objetos Carbon (fechas)
     protected $casts = [
         'eliminado' => 'boolean',
         'fecha_subida' => 'datetime',
     ];
 
     /**
-     * Define la relación BelongsTo con el modelo Proyecto (un plano pertenece a un proyecto).
-     * Esta es la función que se usa con with('proyecto').
+     * Define la relación BelongsTo con el modelo Proyecto.
+     * Nombre: 'proyecto' (coincidiendo con tu preferencia).
      */
-    public function proyecto(): BelongsTo
+    public function proyecto(): BelongsTo 
     {
-        // Se asume que la clave foránea en planos_bim es 'proyecto_id'
-        return $this->belongsTo(Proyecto::class);
+        return $this->belongsTo(Proyecto::class, 'proyecto_id');
     }
 
     /**
-     * Relación con el usuario que subió el plano (opcional)
+     * Relación con el usuario que subió el plano.
+     * ⭐ CORRECCIÓN: Renombrado a 'uploader' para coincidir con el controlador.
      */
-    public function autor(): BelongsTo
+    public function uploader(): BelongsTo 
     {
+        // Se asume que la clave foránea en planos_bim es 'subido_por'
         return $this->belongsTo(User::class, 'subido_por');
     }
 }

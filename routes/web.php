@@ -12,6 +12,8 @@ use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\DocumentoHistorialController;
 use App\Http\Controllers\AvancesProyectoController;
 use App\Http\Controllers\TareaController;
+use App\Http\Controllers\PlanoController;
+use App\Http\Middleware\PreventManualUrlAccess; // ⭐ IMPORTANTE: Clase para anular el middleware
 
 /*
 |--------------------------------------------------------------------------
@@ -37,7 +39,7 @@ Route::get('/dashboard', function () {
 | Sección autenticada general
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'prevent.manual'])->group(function () {
+Route::middleware(['auth', PreventManualUrlAccess::class])->group(function () {
 
     // Perfil
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -54,9 +56,9 @@ Route::middleware(['auth', 'prevent.manual'])->group(function () {
         Route::get('/create', [DocController::class, 'create'])->name('create');
         Route::post('/', [DocController::class, 'store'])->name('store');
 
-        // ✅ Ruta de descarga — protegida, pero permitida por el middleware
+        // ✅ Ruta de descarga de Documentos (Original: mantiene el middleware)
         Route::get('/download/{documento}', [DocController::class, 'download'])
-            ->middleware(['auth', 'prevent.manual'])
+            ->middleware(['auth', PreventManualUrlAccess::class])
             ->name('download');
 
         Route::delete('/{documento}', [DocController::class, 'destroy'])->name('destroy');
@@ -69,6 +71,35 @@ Route::middleware(['auth', 'prevent.manual'])->group(function () {
 
         // Purga manual (solo admin)
         Route::middleware('role:admin')->delete('/purge', [DocController::class, 'purgeOld'])->name('purge');
+    });
+    
+    // ⭐ PLANOS BIM: CORREGIDO ⭐
+    Route::prefix('planos')->name('planos.')->group(function () {
+    
+        // Vistas principales (CRUD base)
+        Route::get('/', [PlanoController::class, 'index'])->name('index');
+        Route::get('/create', [PlanoController::class, 'create'])->name('create');
+        Route::post('/', [PlanoController::class, 'store'])->name('store');
+
+        // 📥 RUTA DE DESCARGA: Excluye el middleware 'PreventManualUrlAccess' 
+        Route::get('/download/{plano}', [PlanoController::class, 'download'])
+            ->withoutMiddleware(PreventManualUrlAccess::class) 
+            ->name('download');
+        
+        // Edición y Actualización
+        Route::get('/{plano}/edit', [PlanoController::class, 'edit'])->name('edit');
+        Route::put('/{plano}', [PlanoController::class, 'update'])->name('update');
+        
+        // Eliminación (a papelera)
+        Route::delete('/{plano}', [PlanoController::class, 'destroy'])->name('destroy');
+        
+        // ⭐ CORRECCIÓN 1: ELIMINACIÓN PERMANENTE INDIVIDUAL
+        // Ruta: /planos/{plano}/permanentemente
+        Route::delete('/{plano}/permanentemente', [PlanoController::class, 'forceDestroy'])->name('forceDestroy');
+        
+        // Papelera y restauración
+        Route::get('/trash', [PlanoController::class, 'trash'])->name('trash');
+        Route::patch('/{id}/restore', [PlanoController::class, 'restore'])->name('restore');
     });
 
     // Proyectos
@@ -93,29 +124,13 @@ Route::middleware(['auth', 'prevent.manual'])->group(function () {
     Route::get('/tareas/proyecto/{id}', [TareaController::class, 'obtenerPorProyecto'])->name('tareas.proyecto');
     Route::patch('/tareas/{id}/estado', [TareaController::class, 'actualizarEstado'])->name('tareas.estado');
     Route::get('/tareas/{id}/historial', [TareaController::class, 'historial'])->name('tareas.historial');
-
-    // Planos BIM
-    Route::get('/planos', [App\Http\Controllers\PlanoController::class, 'index'])->name('planos.index');
-    Route::get('/planos/create', [App\Http\Controllers\PlanoController::class, 'create'])->name('planos.create');
-    Route::post('/planos', [App\Http\Controllers\PlanoController::class, 'store'])->name('planos.store');
-    
-    Route::get('/planos/{plano}/download', [App\Http\Controllers\PlanoController::class, 'download'])
-        ->middleware(['auth', 'prevent.manual']) 
-        ->name('planos.download');
-    
-    Route::get('/planos/{plano}/edit', [App\Http\Controllers\PlanoController::class, 'edit'])->name('planos.edit');
-    Route::put('/planos/{plano}', [App\Http\Controllers\PlanoController::class, 'update'])->name('planos.update');
-    Route::delete('/planos/{plano}', [App\Http\Controllers\PlanoController::class, 'destroy'])->name('planos.destroy');
-    Route::get('/planos/trash', [App\Http\Controllers\PlanoController::class, 'trash'])->name('planos.trash');
-    Route::patch('/planos/{id}/restore', [App\Http\Controllers\PlanoController::class, 'restore'])->name('planos.restore');
 });
-
 /*
 |--------------------------------------------------------------------------
 | Sección de administración (solo admin)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'role:admin', 'prevent.manual'])->group(function () {
+Route::middleware(['auth', 'role:admin', PreventManualUrlAccess::class])->group(function () {
     Route::get('/usuarios', [UserController::class, 'index'])->name('users.index');
     Route::get('/usuarios/eliminados', [UserController::class, 'eliminados'])->name('users.eliminados');
     Route::get('/usuarios/create', [UserController::class, 'create'])->name('users.create');
@@ -152,7 +167,7 @@ require __DIR__ . '/auth.php';
 | Rutas de notificaciones
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'prevent.manual'])->group(function () {
+Route::middleware(['auth', PreventManualUrlAccess::class])->group(function () {
     Route::get('/notificaciones', [NotificacionController::class, 'index'])->name('notificaciones.index');
     Route::post('/notificaciones/{id}/leida', [NotificacionController::class, 'marcarComoLeida'])->name('notificaciones.marcar');
     Route::post('/notificaciones/leidas/todas', [NotificacionController::class, 'marcarTodasComoLeidas'])->name('notificaciones.marcarTodas');

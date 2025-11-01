@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PlanoBIM;
+use App\Models\PlanoBim;
 use App\Models\Proyecto;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,26 +12,23 @@ use App\Services\NotificationService;
 use App\Models\DescargaHistorial;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Routing\Controller;
-use Illuminate\Support\Str;
 
 class PlanoController extends Controller
 {
-    const MAX_FILE_SIZE_KB = 1048576;
-    const BIM_MIMES = 'ifc,rvt,dwg,dxf,obj,fbx,step,iges,stl,dae,3ds,gltf,glb,pdf,zip';
-    const BIM_TYPES = ['IFC', 'RVT', 'DWG', 'DXF', 'OBJ', 'FBX', 'STEP', 'IGES', 'STL', 'DAE', '3DS', 'GLTF', 'GLB', 'PDF', 'ZIP', 'RAR', '7Z', 'URL', 'OTRO', 'ARCHIVO'];
-
+    /**
+     * Muestra la lista de planos BIM filtrados por rol y proyectos asociados.
+     */
     public function index(Request $request)
     {
         $user = $request->user();
-        $userRole = strtolower($user->rol);
+        $userRole = strtolower(optional($user)->rol ?? 'cliente'); 
 
-        $query = PlanoBIM::query()
+        $query = PlanoBim::query()
             ->where('eliminado', 0)
             ->with(['proyecto:id,nombre']);
 
         if ($userRole !== 'admin') {
-            $projectIds = $user->projects->pluck('id');
+            $projectIds = $user->projects()->pluck('id'); 
 
             if ($projectIds->isNotEmpty()) {
                 $query->whereIn('proyecto_id', $projectIds);
@@ -40,33 +37,33 @@ class PlanoController extends Controller
             }
         }
 
-        $documents = $query->orderBy('created_at', 'desc')->get();
+        $planos = $query->orderBy('created_at', 'desc')->get();
 
         $projectsList = Proyecto::where('eliminado', 0)
             ->get(['id', 'nombre'])
             ->map(fn($p) => ['id' => $p->id, 'name' => $p->nombre]);
 
-        return Inertia::render('Planos/PlanosIndex', [
-            'documents' => $documents->map(function ($doc) {
-                $downloadUrl = ($doc->archivo_url && $doc->tipo !== 'URL') ? route('planos.download', $doc->id) : null;
-
-                if ($doc->tipo === 'URL') {
-                    $extension = 'URL';
-                } else {
-                    $pathInfo = pathinfo(str_replace('storage/', '', $doc->archivo_url ?? ''));
-                    $extension = strtoupper($pathInfo['extension'] ?? 'N/A');
-                }
+        return Inertia::render('Planos/PlanoIndex', [
+            'planos' => $planos->map(function ($plano) {
+                $isExternalLink = $plano->tipo === 'URL' && $plano->enlace_externo;
+                $downloadUrl = !$isExternalLink && $plano->archivo_url ? route('planos.download', $plano->id) : null;
+                $accessUrl = $isExternalLink ? $plano->enlace_externo : $downloadUrl;
+                
+                $extension = $plano->archivo_url 
+                    ? strtoupper(pathinfo($plano->archivo_url, PATHINFO_EXTENSION)) 
+                    : $plano->tipo;
 
                 return [
-                    'id' => $doc->id,
-                    'titulo' => $doc->nombre,
-                    'descripcion' => $doc->descripcion,
-                    'archivo_url' => $downloadUrl,
-                    'tipo' => $doc->tipo,
+                    'id' => $plano->id,
+                    'titulo' => $plano->nombre, 
+                    'descripcion' => $plano->descripcion,
+                    'archivo_url' => $accessUrl, 
+                    'enlace_externo' => $plano->enlace_externo,
+                    'tipo' => $plano->tipo,
                     'extension' => $extension,
-                    'fecha_subida' => $doc->fecha_subida ? $doc->fecha_subida->format('d/m/Y H:i') : null,
-                    'proyecto_id' => $doc->proyecto_id,
-                    'proyecto_nombre' => $doc->proyecto->nombre ?? 'N/A',
+                    'fecha_subida' => $plano->created_at->format('d/m/Y H:i'),
+                    'proyecto_id' => $plano->proyecto_id,
+                    'proyecto_nombre' => $plano->proyecto->nombre ?? 'N/A', 
                 ];
             }),
             'projectsList' => $projectsList,
@@ -74,322 +71,423 @@ class PlanoController extends Controller
         ]);
     }
 
+
+    /**
+     * Formulario de creación
+     */
     public function create(Request $request)
     {
-        // 1. Restricción de Acceso (Adaptado)
-        if (strtolower($request->user()->rol) === 'cliente') {
-            // Redirige a la ruta de Planos si no tiene permiso
+        if (strtolower(optional($request->user())->rol ?? 'cliente') === 'cliente') {
             return redirect()->route('planos.index')->with('error', 'No tienes permiso para acceder al formulario de subida de planos.');
         }
 
-        // 2. Obtener lista de Proyectos
         $projectsList = Proyecto::where('eliminado', 0)
             ->get(['id', 'nombre'])
             ->map(fn($p) => ['id' => $p->id, 'name' => $p->nombre]);
 
-        // 3. Renderizar la vista de Planos (Adaptado)
-        return Inertia::render('Planos/PlanosCreate', [
+        return Inertia::render('Planos/PlanoCreate', [
             'projectsList' => $projectsList,
-            // Importante: Agregar las constantes de límites para que el frontend las use
-            'maxFileSize' => self::MAX_FILE_SIZE_KB, 
-            'acceptedMimes' => self::BIM_MIMES,
         ]);
     }
 
+
+    /**
+     * Almacena un nuevo plano (archivo o enlace) con ruta dinámica.
+     */
     public function store(Request $request)
-{
-    // 1. Validación de la Solicitud (Se elimina 'archivo_tipo')
-    $validated = $request->validate([
-        'titulo' => 'required|string|max:150',
-        'descripcion' => 'nullable|string|max:1000',
-        'proyecto_id' => 'required|exists:proyectos,id',
-        'version' => 'nullable|string|max:50', 
-        'archivo' => [
-            'nullable',
-            'file',
-            'max:' . self::MAX_FILE_SIZE_KB, 
-            'mimes:' . self::BIM_MIMES,
-        ],
-        // Se mantiene la validación de 'enlace_externo' para capturar la URL
-        'enlace_externo' => 'nullable|url|max:500', 
-        // ¡'archivo_tipo' ELIMINADO DE LA VALIDACIÓN!
-    ], [
-        'archivo.max' => 'El tamaño del plano no debe superar 1 GB.',
-        'archivo.mimes' => 'El formato del archivo no es un estándar BIM/CAD aceptado (' . str_replace(',', ', ', self::BIM_MIMES) . ').',
-        'proyecto_id.required' => 'Debe asociar este plano a un proyecto específico.',
-    ]);
+    {
+        if (strtolower(optional($request->user())->rol ?? 'cliente') === 'cliente') {
+            return back()->with('error', 'No tienes permiso para crear planos BIM.');
+        }
 
-    // 2. Inicialización de variables
-    // ¡Se elimina la variable $tipo!
-    $archivo_data = null;    // Contendrá la ruta de Storage O la URL externa
-    $version = $validated['version'] ?? null;
-    $subido_por = Auth::id();
+        $validated = $request->validate([
+            'titulo' => 'required|string|max:150',
+            'descripcion' => 'nullable|string|max:1000',
+            'proyecto_id' => 'required|exists:proyectos,id',
+            'archivo' => 'nullable|file|max:51200', // 50MB
+            'enlace_externo' => 'nullable|url|max:500',
+            'archivo_tipo' => ['required', Rule::in(['DWG', 'DXF', 'IFC', 'PDF', 'URL', 'Otro', 'ZIP'])],
+        ]);
 
-    Log::debug('CHECKPOINT 1: Inicio de store. Datos:', ['titulo' => $validated['titulo'], 'proyecto_id' => $validated['proyecto_id']]);
+        if (empty($validated['archivo']) && empty($validated['enlace_externo'])) {
+            return back()->withErrors([
+                'archivo' => 'Debes subir un archivo o ingresar un enlace externo válido (Drive, OneDrive, etc.).'
+            ])->withInput();
+        }
 
-    // 3. Procesamiento y Almacenamiento del Archivo o URL
-    if ($request->hasFile('archivo')) {
-        try {
+        $tipo = $validated['archivo_tipo'];
+        $archivo_url = null;
+        $enlace_externo = null;
+        
+        $project_folder = 'planos/proyecto_' . $validated['proyecto_id'];
+
+        if ($request->hasFile('archivo')) {
             $file = $request->file('archivo');
-            
-            // Almacenar el archivo
-            $path = $file->store('planos/proyecto_' . $validated['proyecto_id'], 'public');
-            
-            $archivo_data = $path; // Caso 1: Ruta de Storage
-            // Se puede usar 'version' para guardar la extensión si no se usa para otra cosa
-            // $version = strtoupper($file->getClientOriginalExtension()); 
-            Log::debug('CHECKPOINT 2A: Archivo almacenado con éxito.', ['path' => $archivo_data]);
-            
+            $path = $file->store($project_folder, 'public'); 
+            $archivo_url = '/storage/' . $path;
+            $enlace_externo = null; 
+        } elseif (!empty($validated['enlace_externo'])) {
+            $tipo = 'URL';
+            $enlace_externo = $validated['enlace_externo'];
+            $archivo_url = null; 
+        }
+
+        try {
+            $planoBim = PlanoBim::create([
+                'nombre' => $validated['titulo'], 
+                'descripcion' => $validated['descripcion'] ?? null,
+                'proyecto_id' => $validated['proyecto_id'],
+                'archivo_url' => $archivo_url,
+                'enlace_externo' => $enlace_externo, 
+                'tipo' => $tipo,
+                'subido_por' => Auth::id(),
+            ]);
+
+            $proyecto = Proyecto::find($validated['proyecto_id']);
+
+            if ($proyecto) {
+                $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
+
+                NotificationService::sendToMany(
+                    $usuariosProyecto,
+                    "Se ha subido un nuevo plano BIM '{$planoBim->nombre}' al proyecto '{$proyecto->nombre}'.",
+                    'plano_bim', 
+                    url('/proyectos/' . $proyecto->id),
+                    'Nuevo Plano BIM'
+                );
+            }
+
+            return redirect()->route('planos.index')->with('success', 'Plano BIM registrado correctamente.');
         } catch (\Exception $e) {
-            Log::error('Error FATAL al guardar el archivo en disco: ' . $e->getMessage(), ['user_id' => $subido_por]);
-            return back()->with('error', 'Error de almacenamiento. Verifica permisos o espacio en el servidor.')->withInput();
+            Log::error('Error al guardar plano BIM: ' . $e->getMessage());
+            return back()->with('error', 'Ocurrió un error al guardar el plano BIM: ' . $e->getMessage())->withInput();
         }
-    } elseif (!empty($validated['enlace_externo'])) {
-        // Caso 2: Enlace externo
-        $archivo_data = $validated['enlace_externo']; // URL Externa
-        // Opcional: Podrías usar 'version' para marcarlo como 'URL'
-        // $version = 'URL';
-        Log::debug('CHECKPOINT 2B: Procesando URL externa.');
-        
-    } else {
-        return back()->withErrors(['archivo' => 'Debes subir un archivo o ingresar un enlace externo válido.']);
     }
 
-    // 4. Creación del registro en la Base de Datos
-    try {
-        $dataToCreate = [
-            'nombre' => $validated['titulo'],
-            'descripcion' => $validated['descripcion'] ?? null,
-            'proyecto_id' => $validated['proyecto_id'],
-            'archivo_url' => $archivo_data, 
-            // ¡'tipo' ELIMINADO de la asignación de datos!
-            'version' => $version,
-            'subido_por' => $subido_por,
-            'fecha_subida' => now(),
-            'eliminado' => 0, 
+
+    /**
+     * Formulario de edición
+     */
+    public function edit(int $id)
+    {
+        $plano = PlanoBim::findOrFail($id); 
+
+        $userRole = strtolower(optional(request()->user())->rol ?? 'cliente');
+
+        if ($userRole === 'cliente') {
+            return redirect()->route('planos.index')->with('error', 'No tienes permiso para editar planos BIM.');
+        }
+
+        $projectsList = Proyecto::where('eliminado', 0)
+            ->get(['id', 'nombre'])
+            ->map(fn($p) => ['id' => $p->id, 'name' => $p->nombre]);
+        
+        return Inertia::render('Planos/PlanoEdit', [
+            'plano' => [
+                'id' => $plano->id, 
+                'titulo' => $plano->nombre ?? '', 
+                'descripcion' => $plano->descripcion ?? '',
+                'proyecto_id' => $plano->proyecto_id,
+                'tipo' => $plano->tipo ?? 'PDF',
+                'enlace_externo' => $plano->enlace_externo ?? '',
+                'archivo_url' => $plano->archivo_url ?? '', 
+            ],
+            'projectsList' => $projectsList,
+        ]);
+    }
+
+
+    /**
+     * Actualiza un plano BIM.
+     */
+    public function update(Request $request, PlanoBim $plano) 
+    {
+        $userRole = strtolower(optional($request->user())->rol ?? 'cliente');
+
+        if ($userRole === 'cliente') {
+            return back()->with('error', 'No tienes permiso para actualizar planos BIM.');
+        }
+
+        $validated = $request->validate([
+            'titulo' => 'nullable|string|max:150',
+            'descripcion' => 'nullable|string|max:1000',
+            'proyecto_id' => 'nullable|exists:proyectos,id',
+            'archivo' => 'nullable|file|max:51200', 
+            'enlace_externo' => 'nullable|url|max:500',
+            'archivo_tipo' => ['nullable', Rule::in(['DWG', 'DXF', 'IFC', 'PDF', 'URL', 'Otro', 'ZIP'])], 
+        ]);
+
+        $updateData = [
+            'nombre'          => $validated['titulo'] ?? $plano->nombre, 
+            'descripcion'     => $validated['descripcion'] ?? $plano->descripcion,
+            'proyecto_id'     => $validated['proyecto_id'] ?? $plano->proyecto_id,
+            'tipo'            => $validated['archivo_tipo'] ?? $plano->tipo,
         ];
-
-        Log::debug('CHECKPOINT 3: Intentando crear registro en DB con:', $dataToCreate);
         
-        $plano = PlanoBIM::create($dataToCreate); 
-        
-        Log::debug('CHECKPOINT 4: Registro de PlanoBIM creado. ID:' . $plano->id);
+        $old_archivo_url = $plano->archivo_url;
+        $old_is_local_file = !empty($old_archivo_url) && $plano->tipo !== 'URL';
 
-        $proyecto = Proyecto::find($validated['proyecto_id']);
+        try {
+            $new_project_id = $updateData['proyecto_id'];
+            $project_folder = 'planos/proyecto_' . $new_project_id;
+            
+            // A) Hay un nuevo archivo subido
+            if ($request->file('archivo')) {
+                $file = $request->file('archivo');
 
-        // 5. Notificación 
-        if ($proyecto) {
-            $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
+                // Eliminar archivo antiguo local (si existe)
+                if ($old_is_local_file) {
+                    $path_to_delete = str_replace('/storage/', '', $old_archivo_url);
+                    if (Storage::disk('public')->exists($path_to_delete)) {
+                        Storage::disk('public')->delete($path_to_delete);
+                    }
+                }
+                
+                $ruta_archivo_almacenada = $file->store($project_folder, 'public'); 
+                
+                $updateData['archivo_url'] = '/storage/' . $ruta_archivo_almacenada;
+                $updateData['tipo'] = $validated['archivo_tipo'] ?? 'Otro';
+                $updateData['enlace_externo'] = null; 
+                
+            // B) Se proporcionó o se modificó el enlace externo
+            } elseif (array_key_exists('enlace_externo', $validated)) {
+                
+                $new_enlace_externo = $validated['enlace_externo'];
 
-            NotificationService::sendToMany(
-                $usuariosProyecto,
-                "Se ha subido un nuevo plano BIM '{$plano->nombre}' al proyecto '{$proyecto->nombre}'.",
-                'plano_bim', 
-                route('planos.show', $plano->id),
-                'Nuevo Plano BIM'
-            );
+                if ($old_is_local_file && !empty($new_enlace_externo)) {
+                    $path_to_delete = str_replace('/storage/', '', $old_archivo_url);
+                    if (Storage::disk('public')->exists($path_to_delete)) {
+                        Storage::disk('public')->delete($path_to_delete);
+                    }
+                    $updateData['archivo_url'] = null; 
+                }
+                
+                $updateData['enlace_externo'] = $new_enlace_externo;
+                
+                if (!empty($new_enlace_externo)) {
+                    $updateData['tipo'] = 'URL'; 
+                    $updateData['archivo_url'] = null; 
+                }
+                
+            } elseif (isset($validated['archivo_tipo'])) {
+                 $updateData['tipo'] = $validated['archivo_tipo'];
+            }
+            
+            $plano->update($updateData);
+
+            $plano->refresh(); 
+            $proyecto = Proyecto::find($plano->proyecto_id);
+            
+            if ($proyecto) {
+                $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
+
+                NotificationService::sendToMany(
+                    $usuariosProyecto,
+                    "El plano BIM '{$plano->nombre}' ha sido actualizado en el proyecto '{$proyecto->nombre}'.", 
+                    'plano_bim',
+                    url('/proyectos/' . $proyecto->id),
+                    'Plano BIM actualizado'
+                );
+            }
+
+            return redirect()->route('planos.index')->with('success', 'Plano BIM actualizado exitosamente.');
+        } catch (\Exception $e) {
+            Log::error("Error al actualizar plano BIM ID {$plano->id}: " . $e->getMessage());
+            
+            if (str_contains($e->getMessage(), 'Data truncated for column')) {
+                return back()->withInput()->with('error', 'Error de la Base de Datos: Uno de los campos de texto es demasiado largo o el tipo de dato es incorrecto. Por favor, contacta al administrador.');
+            }
+            
+            return back()->withInput()->with('error', 'Error al actualizar el plano BIM: ' . $e->getMessage());
         }
-
-        // 6. Redirección Exitosa
-        Log::debug('CHECKPOINT 5: Finalización exitosa. Redirigiendo.');
-        return redirect()->route('planos.index')->with('success', 'Plano BIM registrado y asociado correctamente.'); 
-
-    } catch (\Exception $e) {
-        // Manejo de error de base de datos
-        Log::error('CHECKPOINT FINAL: Error FATAL al crear el registro del plano BIM en DB: ' . $e->getMessage() . ' Línea: ' . $e->getLine());
-        
-        // Rollback: Si la DB falló y se subió un archivo, lo eliminamos
-        if ($archivo_data && $request->hasFile('archivo')) {
-            Storage::disk('public')->delete($archivo_data);
-        }
-
-        return back()->with('error', 'Ocurrió un error al guardar el registro en la base de datos. Mensaje: ' . $e->getMessage())->withInput();
     }
-}
 
-    public function download(PlanoBIM $plano)
+
+    /**
+     * Descarga de planos autenticada y segura
+     */
+    public function download(PlanoBim $plano) 
     {
         $user = request()->user();
-        $userRole = strtolower($user->rol);
+        $userRole = strtolower(optional($user)->rol ?? 'cliente'); 
 
         $hasPermission = $userRole === 'admin' ||
-            $user->projects->pluck('id')->contains($plano->proyecto_id);
+             ($plano->proyecto && optional($user)->projects()->pluck('id')->contains($plano->proyecto_id));
 
         if (!$hasPermission) {
-            abort(403, 'No tienes permiso para descargar este plano.');
+            abort(403, 'No tienes permiso para descargar este plano BIM.');
         }
 
-        if ($plano->tipo === 'URL') {
-            if ($plano->archivo_url) {
-                return redirect()->away($plano->archivo_url);
-            }
-            abort(404, 'Enlace externo no disponible.');
+        if ($plano->tipo === 'URL' && $plano->enlace_externo) {
+            return redirect()->away($plano->enlace_externo); 
         }
+        
+        $path = $plano->archivo_url ? str_replace('/storage/', '', $plano->archivo_url) : null;
 
-        $path = $plano->archivo_url;
-        if (Str::startsWith($path, 'storage/')) {
-            $path = str_replace('storage/', '', $path);
-        }
-
-        if (!$plano->archivo_url || !Storage::disk('public')->exists($path)) {
-            Log::warning("Archivo de plano BIM no encontrado para el ID {$plano->id}: {$plano->archivo_url}");
-            abort(404, 'El archivo de plano no fue encontrado en el servidor.');
+        if (!$path || !Storage::disk('public')->exists($path)) {
+            Log::warning("Archivo no encontrado para el plano BIM ID {$plano->id}: {$plano->archivo_url}"); 
+            abort(404, 'El archivo del plano BIM no fue encontrado en el servidor.');
         }
 
         try {
             DescargaHistorial::create([
                 'user_id' => $user->id,
-                'documento_id' => $plano->id,
+                'plano_bim_id' => $plano->id, 
             ]);
+
             $proyecto = Proyecto::find($plano->proyecto_id);
-            if ($proyecto && $proyecto->responsable_id) {
-                // ... lógica de notificación
+            if ($proyecto && $proyecto->responsable_id && $user) { 
+                NotificationService::send(
+                    $proyecto->responsable_id,
+                    "El usuario {$user->name} ha descargado el plano BIM '{$plano->nombre}' del proyecto '{$proyecto->nombre}'.",
+                    'plano_bim',
+                    url('/proyectos/' . $proyecto->id),
+                    'Plano BIM descargado'
+                );
             }
         } catch (\Exception $e) {
-            Log::error("Fallo al registrar descarga o enviar notificación: " . $e->getMessage());
+            Log::error("Fallo al registrar descarga de plano BIM o enviar notificación: " . $e->getMessage());
         }
 
         $extension = pathinfo($path, PATHINFO_EXTENSION);
-        $nombreBase = Str::slug($plano->nombre);
-        $nombreArchivo = "{$nombreBase}.{$extension}";
-        $absolutePath = Storage::disk('public')->path($path); 
-        return response()->download($absolutePath, $nombreArchivo);
+        $nombreArchivo = $plano->nombre . '.' . $extension;
+
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        $disk = Storage::disk('public');
+        return $disk->download($path, $nombreArchivo);
     }
 
-    public function destroy(PlanoBIM $plano)
-    {
-        try {
-            $plano->update(['eliminado' => 1]);
-            return back()->with('success', 'Plano movido a la papelera.');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Error al eliminar el plano: ' . $e->getMessage());
-        }
-    }
 
+    /**
+     * Restaura un plano lógicamente eliminado.
+     */
     public function restore($id)
     {
-        $plano = PlanoBIM::where('eliminado', 1)->findOrFail($id);
-        $plano->update(['eliminado' => 0]);
-        return back()->with('success', 'Plano restaurado correctamente.');
+        $plano = PlanoBim::where('id', $id)->where('eliminado', 1)->firstOrFail(); 
+
+        if (strtolower(optional(request()->user())->rol ?? 'cliente') === 'cliente') {
+            return back()->with('error', 'No tienes permiso para restaurar planos BIM.');
+        }
+
+        $plano->update([
+            'eliminado' => 0,
+        ]);
+
+        return back()->with('success', 'Plano BIM restaurado correctamente.');
     }
 
+
+    /**
+     * Muestra los planos BIM marcados como eliminados (papelera).
+     */
     public function trash()
     {
-        $documents = PlanoBIM::where('eliminado', 1)
-            ->orderByDesc('fecha_subida')
+        $planos = PlanoBim::where('eliminado', 1)
+            ->orderByDesc('created_at') 
             ->with('proyecto')
             ->get()
-            ->map(function ($doc) {
+            ->map(function ($plano) {
+                // Se intenta acceder a 'fecha_eliminacion' de forma segura para evitar errores si no existe
+                $fechaEliminacion = $plano->fecha_eliminacion ?? null;
+                $diasRestantes = null;
+
+                if ($fechaEliminacion) {
+                    try {
+                        // Asumimos que si existe, es una fecha válida para el cálculo
+                        $diasRestantes = max(0, 30 - now()->diffInDays($fechaEliminacion));
+                        $fechaEliminacion = $fechaEliminacion->format('d/m/Y H:i');
+                    } catch (\Exception $e) {
+                        $diasRestantes = null;
+                        $fechaEliminacion = null;
+                    }
+                }
+
                 return [
-                    'id' => $doc->id,
-                    'titulo' => $doc->nombre,
-                    'descripcion' => $doc->descripcion,
-                    'tipo' => $doc->tipo,
-                    'fecha_subida' => $doc->fecha_subida ? $doc->fecha_subida->format('d/m/Y H:i') : null,
+                    'id' => $plano->id,
+                    'titulo' => $plano->nombre, 
+                    'descripcion' => $plano->descripcion,
+                    'tipo' => $plano->tipo,
+                    'fecha_subida' => $plano->created_at->format('d/m/Y H:i'),
+                    'fecha_eliminacion' => $fechaEliminacion,
+                    'proyecto_nombre' => $plano->proyecto->nombre ?? 'N/A', 
+                    'dias_restantes' => $diasRestantes,
                 ];
             });
 
-        return Inertia::render('Planos/PlanosTrash', [
-            'documents' => $documents,
-            'userRole' => strtolower(optional(request()->user())->rol ?? ''),
+        return Inertia::render('Planos/PlanoTrash', [
+            'planos' => $planos,
+            'userRole' => strtolower(optional(request()->user())->rol ?? 'cliente'),
         ]);
     }
 
-    public function edit(PlanoBIM $plano)
-    {
-        $userRole = strtolower(request()->user()->rol);
 
-        if ($userRole === 'cliente') {
-            return redirect()->route('planos.index')->with('error', 'No tienes permiso para editar planos.');
+    /**
+     * Elimina (lógicamente) un plano BIM, enviándolo a la papelera.
+     */
+    public function destroy(PlanoBim $plano) 
+    {
+        if (strtolower(optional(request()->user())->rol ?? 'cliente') === 'cliente') {
+            return back()->with('error', 'No tienes permiso para eliminar planos BIM.');
         }
 
-        $projectsList = Proyecto::where('eliminado', 0)
-            ->get(['id', 'nombre'])
-            ->map(fn($p) => ['id' => $p->id, 'name' => $p->nombre]);
-
-        return Inertia::render('Planos/PlanosEdit', [
-            'document' => [
-                'id' => $plano->id,
-                'titulo' => $plano->nombre,
-                'descripcion' => $plano->descripcion,
-                'proyecto_id' => $plano->proyecto_id,
-                'tipo' => $plano->tipo,
-                'version' => $plano->version,
-                'archivo_url' => $plano->archivo_url,
-            ],
-            'projectsList' => $projectsList,
-            'maxFileSize' => self::MAX_FILE_SIZE_KB,
-            'acceptedMimes' => self::BIM_MIMES,
-        ]);
-    }
-
-    public function update(Request $request, PlanoBIM $plano)
-    {
-        $validated = $request->validate([
-            'titulo' => 'nullable|string|max:150',
-            'descripcion' => 'nullable|string|max:1000',
-            'proyecto_id' => 'nullable|exists:proyectos,id',
-            'version' => 'nullable|string|max:50',
-            'archivo' => [
-                'nullable',
-                'file',
-                'max:' . self::MAX_FILE_SIZE_KB,
-                'mimes:' . self::BIM_MIMES,
-            ],
-            'enlace_externo' => 'nullable|url|max:500',
-            'archivo_tipo' => ['nullable', Rule::in(self::BIM_TYPES)],
-        ]);
-
-        $updateData = [
-            'nombre' => $validated['titulo'] ?? $plano->nombre,
-            'descripcion' => $validated['descripcion'] ?? $plano->descripcion,
-            'proyecto_id' => $validated['proyecto_id'] ?? $plano->proyecto_id,
-            'version' => $validated['version'] ?? $plano->version,
-        ];
-
         try {
-            if ($request->file('archivo')) {
-                if ($plano->archivo_url && $plano->tipo !== 'URL') {
-                    // Revisa la ruta antes de borrar para evitar errores de almacenamiento
-                    $pathToDelete = Str::startsWith($plano->archivo_url, 'storage/') 
-                        ? str_replace('storage/', '', $plano->archivo_url) 
-                        : $plano->archivo_url;
-                    
-                    if (Storage::disk('public')->exists($pathToDelete)) {
-                        Storage::disk('public')->delete($pathToDelete);
-                    }
-                }
-                
-                $file = $request->file('archivo');
-                $path = $file->store('planos/proyecto_' . $updateData['proyecto_id'], 'public');
+            $plano->update([
+                'eliminado' => 1,
+            ]);
 
-                $updateData['archivo_url'] = $path;
-                $updateData['tipo'] = $validated['archivo_tipo'] ?? strtoupper($file->getClientOriginalExtension());
-            } elseif (isset($validated['enlace_externo'])) {
-                // Si se proporciona un enlace externo, borra el archivo anterior si existía.
-                if ($plano->archivo_url && $plano->tipo !== 'URL') {
-                    $pathToDelete = Str::startsWith($plano->archivo_url, 'storage/') 
-                        ? str_replace('storage/', '', $plano->archivo_url) 
-                        : $plano->archivo_url;
-                    
-                    if (Storage::disk('public')->exists($pathToDelete)) {
-                        Storage::disk('public')->delete($pathToDelete);
-                    }
-                }
+            $proyecto = Proyecto::find($plano->proyecto_id);
 
-                $updateData['archivo_url'] = $validated['enlace_externo'];
-                $updateData['tipo'] = 'URL';
-            } elseif (isset($validated['archivo_tipo']) && $validated['archivo_tipo'] !== $plano->tipo) {
-                 $updateData['tipo'] = $validated['archivo_tipo'];
+            if ($proyecto) {
+                $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
+
+                NotificationService::sendToMany(
+                    $usuariosProyecto,
+                    "El plano BIM '{$plano->nombre}' ha sido enviado a la papelera del proyecto '{$proyecto->nombre}'.",
+                    'plano_bim',
+                    url('/proyectos/' . $proyecto->id),
+                    'Plano BIM eliminado'
+                );
             }
 
-            $plano->update($updateData);
-
-
-            return redirect()->route('planos.index')->with('success', 'Plano actualizado exitosamente.');
+            return back()->with('success', 'Plano BIM movido a la papelera.');
         } catch (\Exception $e) {
-            Log::error("Error al actualizar plano ID {$plano->id}: " . $e->getMessage());
-            return back()->withInput()->with('error', 'Error al actualizar el plano: ' . $e->getMessage());
+            Log::error("Error al eliminar plano BIM: " . $e->getMessage());
+            return back()->with('error', 'Error al eliminar el plano BIM: ' . $e->getMessage());
+        }
+    }
+
+
+    /**
+     * Elimina permanentemente un plano BIM individual de la base de datos (Desde papelera).
+     */
+    public function forceDestroy($id)
+    {
+        $plano = PlanoBim::where('id', $id)->where('eliminado', 1)->first(); 
+
+        if (!$plano) {
+            return back()->with('error', 'El plano BIM no existe o no está marcado para eliminación.');
+        }
+        
+        if (strtolower(optional(request()->user())->rol ?? 'cliente') === 'cliente') {
+            return back()->with('error', 'No tienes permiso para eliminar planos BIM permanentemente.');
+        }
+
+        try {
+            // Eliminar archivo físico
+            if ($plano->archivo_url && $plano->tipo !== 'URL') {
+                $path_to_delete = str_replace('/storage/', '', $plano->archivo_url);
+                if (Storage::disk('public')->exists($path_to_delete)) {
+                    Storage::disk('public')->delete($path_to_delete);
+                }
+            }
+            
+            // Eliminar el registro de la base de datos
+            $plano->delete(); 
+
+            return back()->with('success', 'Plano BIM eliminado permanentemente.');
+        } catch (\Exception $e) {
+            Log::error("Error al eliminar permanentemente plano BIM ID {$id}: " . $e->getMessage());
+            return back()->with('error', 'Error al intentar eliminar permanentemente el plano BIM: ' . $e->getMessage());
         }
     }
 }
