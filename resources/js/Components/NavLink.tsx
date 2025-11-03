@@ -1,23 +1,26 @@
-import { InertiaLinkProps, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 
 export default function NavLink({
+    href,
     active = false,
-    className = '',
     children,
-    ...props
-}: InertiaLinkProps & { active: boolean }) {
+}: {
+    href: string;
+    active?: boolean;
+    children: React.ReactNode;
+}) {
     return (
         <Link
-            {...props}
+            href={href}
             className={
-                'inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium leading-5 transition duration-150 ease-in-out focus:outline-none ' +
-                (active
-                    ? 'border-[#B3E10F] text-white focus:border-indigo-700'
-                    : 'border-transparent text-white hover:border-gray-300 hover:text-white-500 focus:border-gray-00 focus:text-gray-700') +
-                className
+                `inline-flex items-center justify-center px-4 py-2 rounded-md text-sm font-semibold transition-all duration-150 ease-in-out
+                 ${active
+                    ? 'bg-[#B3E10F] text-black shadow-md shadow-[#B3E10F]/40'
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                 }`
             }
         >
-            {children}
+            <span className="text-center leading-tight">{children}</span>
         </Link>
     );
 }

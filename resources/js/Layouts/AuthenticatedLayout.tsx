@@ -15,6 +15,7 @@ export default function Authenticated({
     const user = usePage().props.auth.user;
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
 
+    // Bloquear botón atrás
     useEffect(() => {
         window.history.pushState(null, '', window.location.href);
         window.onpopstate = function () {
@@ -22,6 +23,7 @@ export default function Authenticated({
         };
     }, []);
 
+    // Recargar al volver desde caché
     useEffect(() => {
         const handlePageShow = (event: PageTransitionEvent) => {
             if (event.persisted) {
@@ -32,11 +34,28 @@ export default function Authenticated({
         return () => window.removeEventListener('pageshow', handlePageShow);
     }, []);
 
+    // ✅ Scroll horizontal con la rueda del mouse (tipado correcto)
+    useEffect(() => {
+        const navScroll = document.querySelector('.scrollable-nav') as HTMLElement | null;
+        if (!navScroll) return;
+
+        const handleWheel = (event: WheelEvent) => {
+            if (event.deltaY === 0) return;
+            event.preventDefault();
+            navScroll.scrollLeft += event.deltaY;
+        };
+
+        // 👇 el casteo garantiza que TypeScript reconozca el tipo
+        navScroll.addEventListener('wheel', handleWheel as EventListener, { passive: false });
+        return () => navScroll.removeEventListener('wheel', handleWheel as EventListener);
+    }, []);
+
     return (
         <div className="min-h-screen flex flex-col bg-[#121212] text-white">
             <nav className="bg-[#121212] border-b border-gray-800">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16 items-center">
+                        {/* Logo */}
                         <div className="flex items-center flex-shrink-0">
                             <Link href="/">
                                 <ApplicationLogo className="block h-9 w-auto fill-current text-white" />
@@ -44,7 +63,15 @@ export default function Authenticated({
                         </div>
 
                         {/* ===== MENÚ PRINCIPAL (ESCRITORIO) ===== */}
-                        <div className="hidden lg:flex items-center space-x-6 text-sm font-medium">
+                        <div
+                            className="scrollable-nav hidden lg:flex items-center space-x-4 text-sm font-medium overflow-x-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent max-w-[80vw] px-2"
+                            style={{
+                                scrollbarWidth: 'thin',
+                                scrollbarColor: '#444 transparent',
+                                whiteSpace: 'nowrap',
+                                scrollBehavior: 'smooth',
+                            }}
+                        >
                             <NavLink href={route('dashboard')} active={route().current('dashboard')}>
                                 Dashboard
                             </NavLink>
@@ -87,7 +114,6 @@ export default function Authenticated({
                                 </NavLink>
                             )}
 
-                            {/* ✅ NUEVO: ENLACE AUDITORÍA SOLO ADMIN */}
                             {user.rol === 'admin' && (
                                 <NavLink href={route('auditoria.index')} active={route().current('auditoria.index')}>
                                     Auditoría
@@ -114,7 +140,6 @@ export default function Authenticated({
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                                         </svg>
                                     </button>
-
                                 </Dropdown.Trigger>
                                 <Dropdown.Content>
                                     <Dropdown.Link href={route('profile.edit')}>Perfil</Dropdown.Link>
@@ -189,7 +214,6 @@ export default function Authenticated({
                                     Historial Descargas
                                 </ResponsiveNavLink>
 
-                                {/* ✅ Enlace auditoría móvil */}
                                 <ResponsiveNavLink href={route('auditoria.index')} active={route().current('auditoria.index')}>
                                     Auditoría
                                 </ResponsiveNavLink>

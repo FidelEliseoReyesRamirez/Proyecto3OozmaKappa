@@ -13,6 +13,8 @@ use App\Http\Controllers\DocumentoHistorialController;
 use App\Http\Controllers\AvancesProyectoController;
 use App\Http\Controllers\TareaController;
 use App\Http\Controllers\AuditoriaController;
+use App\Http\Middleware\PreventManualUrlAccess;
+use App\Http\Controllers\PlanoController;
 /*
 |--------------------------------------------------------------------------
 | Rutas Web

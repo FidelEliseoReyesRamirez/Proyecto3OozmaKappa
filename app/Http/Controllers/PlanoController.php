@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PlanoBim;
 use App\Models\Proyecto;
+use App\Models\AuditoriaLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
@@ -143,6 +144,16 @@ class PlanoController extends Controller
                 'subido_por' => Auth::id(),
             ]);
 
+            //  Auditoría
+            AuditoriaLog::create([
+                'user_id' => Auth::id(),
+                'accion' => "Creó un nuevo plano BIM: {$planoBim->nombre}",
+                'tabla_afectada' => 'planos_bim',
+                'id_registro_afectado' => $planoBim->id,
+                'fecha_accion' => now(),
+                'eliminado' => 0,
+            ]);
+
             $proyecto = Proyecto::find($validated['proyecto_id']);
 
             if ($proyecto) {
@@ -275,6 +286,16 @@ class PlanoController extends Controller
             
             $plano->update($updateData);
 
+            //  Auditoría
+            AuditoriaLog::create([
+                'user_id' => Auth::id(),
+                'accion' => "Actualizó el plano BIM: {$plano->nombre}",
+                'tabla_afectada' => 'planos_bim',
+                'id_registro_afectado' => $plano->id,
+                'fecha_accion' => now(),
+                'eliminado' => 0,
+            ]);
+
             $plano->refresh(); 
             $proyecto = Proyecto::find($plano->proyecto_id);
             
@@ -319,6 +340,16 @@ class PlanoController extends Controller
         }
 
         if ($plano->tipo === 'URL' && $plano->enlace_externo) {
+            //  Auditoría
+            AuditoriaLog::create([
+                'user_id' => $user->id,
+                'accion' => "Accedió al enlace externo del plano BIM: {$plano->nombre}",
+                'tabla_afectada' => 'planos_bim',
+                'id_registro_afectado' => $plano->id,
+                'fecha_accion' => now(),
+                'eliminado' => 0,
+            ]);
+
             return redirect()->away($plano->enlace_externo); 
         }
         
@@ -333,6 +364,16 @@ class PlanoController extends Controller
             DescargaHistorial::create([
                 'user_id' => $user->id,
                 'plano_bim_id' => $plano->id, 
+            ]);
+
+            //  Auditoría
+            AuditoriaLog::create([
+                'user_id' => $user->id,
+                'accion' => "Descargó el plano BIM: {$plano->nombre}",
+                'tabla_afectada' => 'planos_bim',
+                'id_registro_afectado' => $plano->id,
+                'fecha_accion' => now(),
+                'eliminado' => 0,
             ]);
 
             $proyecto = Proyecto::find($plano->proyecto_id);
@@ -373,6 +414,16 @@ class PlanoController extends Controller
             'eliminado' => 0,
         ]);
 
+        //  Auditoría
+        AuditoriaLog::create([
+            'user_id' => Auth::id(),
+            'accion' => "Restauró el plano BIM: {$plano->nombre}",
+            'tabla_afectada' => 'planos_bim',
+            'id_registro_afectado' => $plano->id,
+            'fecha_accion' => now(),
+            'eliminado' => 0,
+        ]);
+
         return back()->with('success', 'Plano BIM restaurado correctamente.');
     }
 
@@ -387,13 +438,11 @@ class PlanoController extends Controller
             ->with('proyecto')
             ->get()
             ->map(function ($plano) {
-                // Se intenta acceder a 'fecha_eliminacion' de forma segura para evitar errores si no existe
                 $fechaEliminacion = $plano->fecha_eliminacion ?? null;
                 $diasRestantes = null;
 
                 if ($fechaEliminacion) {
                     try {
-                        // Asumimos que si existe, es una fecha válida para el cálculo
                         $diasRestantes = max(0, 30 - now()->diffInDays($fechaEliminacion));
                         $fechaEliminacion = $fechaEliminacion->format('d/m/Y H:i');
                     } catch (\Exception $e) {
@@ -435,6 +484,16 @@ class PlanoController extends Controller
                 'eliminado' => 1,
             ]);
 
+            //  Auditoría
+            AuditoriaLog::create([
+                'user_id' => Auth::id(),
+                'accion' => "Eliminó (movió a papelera) el plano BIM: {$plano->nombre}",
+                'tabla_afectada' => 'planos_bim',
+                'id_registro_afectado' => $plano->id,
+                'fecha_accion' => now(),
+                'eliminado' => 0,
+            ]);
+
             $proyecto = Proyecto::find($plano->proyecto_id);
 
             if ($proyecto) {
@@ -473,16 +532,24 @@ class PlanoController extends Controller
         }
 
         try {
-            // Eliminar archivo físico
             if ($plano->archivo_url && $plano->tipo !== 'URL') {
                 $path_to_delete = str_replace('/storage/', '', $plano->archivo_url);
                 if (Storage::disk('public')->exists($path_to_delete)) {
                     Storage::disk('public')->delete($path_to_delete);
                 }
             }
-            
-            // Eliminar el registro de la base de datos
+
             $plano->delete(); 
+
+            // Auditoría
+            AuditoriaLog::create([
+                'user_id' => Auth::id(),
+                'accion' => "Eliminó permanentemente el plano BIM: {$plano->nombre}",
+                'tabla_afectada' => 'planos_bim',
+                'id_registro_afectado' => $plano->id,
+                'fecha_accion' => now(),
+                'eliminado' => 0,
+            ]);
 
             return back()->with('success', 'Plano BIM eliminado permanentemente.');
         } catch (\Exception $e) {
