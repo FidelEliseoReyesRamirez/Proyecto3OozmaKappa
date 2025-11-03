@@ -88,7 +88,7 @@ export default function Login({
                             type="email"
                             name="email"
                             value={data.email}
-                            className="block w-full bg-black border-white text-white placeholder-gray-500 focus:border-[#2970E8] focus:ring-[#2970E8] rounded-md"
+                            className="block w-full bg-black border-white text-black placeholder-gray-500 focus:border-[#2970E8] focus:ring-[#2970E8] rounded-md"
                             autoComplete="username"
                             isFocused={true}
                             onChange={(e) => setData('email', e.target.value)}
