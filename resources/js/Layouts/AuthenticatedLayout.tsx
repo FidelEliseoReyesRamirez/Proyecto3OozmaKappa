@@ -43,7 +43,7 @@ export default function Authenticated({
                             </Link>
                         </div>
 
-                        {/* Menú principal en escritorio */}
+                        {/* ===== MENÚ PRINCIPAL (ESCRITORIO) ===== */}
                         <div className="hidden lg:flex items-center space-x-6 text-sm font-medium">
                             <NavLink href={route('dashboard')} active={route().current('dashboard')}>
                                 Dashboard
@@ -82,9 +82,16 @@ export default function Authenticated({
                                     Historial Descargas
                                 </NavLink>
                             )}
+
+                            {/* ✅ NUEVO: ENLACE AUDITORÍA SOLO ADMIN */}
+                            {user.rol === 'admin' && (
+                                <NavLink href={route('auditoria.index')} active={route().current('auditoria.index')}>
+                                    Auditoría
+                                </NavLink>
+                            )}
                         </div>
 
-                        {/* Lado derecho (Notificaciones + Usuario en escritorio) */}
+                        {/* ===== LADO DERECHO (NOTIFICACIONES + USUARIO) ===== */}
                         <div className="hidden lg:flex items-center space-x-4">
                             <NotificationsBell />
                             <Dropdown>
@@ -105,7 +112,7 @@ export default function Authenticated({
                             </Dropdown>
                         </div>
 
-                        {/* Menú móvil: campana + hamburguesa */}
+                        {/* ===== MENÚ MÓVIL (CAMPANA + HAMBURGUESA) ===== */}
                         <div className="flex items-center lg:hidden space-x-2">
                             <NotificationsBell />
                             <button
@@ -124,7 +131,7 @@ export default function Authenticated({
                     </div>
                 </div>
 
-                {/* Menú responsive */}
+                {/* ===== MENÚ RESPONSIVE (MÓVIL) ===== */}
                 <div className={`${showingNavigationDropdown ? 'block' : 'hidden'} lg:hidden border-t border-gray-700`}>
                     <div className="px-4 py-3 space-y-2 bg-[#1A1A1A]">
                         <ResponsiveNavLink href={route('dashboard')} active={route().current('dashboard')}>
@@ -160,9 +167,16 @@ export default function Authenticated({
                         )}
 
                         {user.rol === 'admin' && (
-                            <ResponsiveNavLink href={route('documents.history')} active={route().current('documents.history')}>
-                                Historial Descargas
-                            </ResponsiveNavLink>
+                            <>
+                                <ResponsiveNavLink href={route('documents.history')} active={route().current('documents.history')}>
+                                    Historial Descargas
+                                </ResponsiveNavLink>
+
+                                {/* ✅ Enlace auditoría móvil */}
+                                <ResponsiveNavLink href={route('auditoria.index')} active={route().current('auditoria.index')}>
+                                    Auditoría
+                                </ResponsiveNavLink>
+                            </>
                         )}
                     </div>
 

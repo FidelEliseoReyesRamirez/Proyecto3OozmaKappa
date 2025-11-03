@@ -48,10 +48,10 @@ const DocIndex: React.FC = () => {
         return () => document.removeEventListener('click', close);
     }, []);
 
-    /* ✅ Descarga segura */
+    /*  Descarga segura */
     function handleDownload(doc: Documento) {
         if (!doc.archivo_url) {
-            console.warn('⚠️ No hay archivo para descargar.');
+            console.warn(' No hay archivo para descargar.');
             return;
         }
 
@@ -63,12 +63,10 @@ const DocIndex: React.FC = () => {
                 window.location.href = route('docs.download', doc.id);
             }
         } catch (error) {
-            console.error('❌ Error al descargar el archivo:', error);
+            console.error(' Error al descargar el archivo:', error);
         }
     }
 
-    /* ✅ Eliminar documento */
-    /* ✅ Eliminar documento (limpio, sin alert ni logs) */
 function confirmDelete(document: Documento) {
     if (!document) return;
     router.delete(route('docs.destroy', document.id));
@@ -87,7 +85,7 @@ function confirmDelete(document: Documento) {
         setDateError('');
     };
 
-    /* ✅ Filtros */
+    /*  Filtros */
     const filteredDocuments = useMemo(() => {
         const term = search.toLowerCase().trim();
         const startDate = filterStart ? new Date(filterStart + 'T00:00:00') : null;
@@ -379,7 +377,7 @@ function confirmDelete(document: Documento) {
                     </div>
                 </div>
             </div>
-            {/* ✅ MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
+            {/*  MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
             {
                 modal.type === 'delete' && modal.document && (
                     <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">

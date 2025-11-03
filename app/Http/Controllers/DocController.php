@@ -12,9 +12,12 @@ use App\Services\NotificationService;
 use App\Models\DescargaHistorial;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use App\Traits\RegistraAuditoria;
 
 class DocController extends Controller
 {
+    use RegistraAuditoria;
+
     /**
      * Muestra la lista de documentos filtrados por rol y proyectos asociados.
      */
@@ -66,9 +69,6 @@ class DocController extends Controller
         ]);
     }
 
-    /**
-     * Formulario de creación
-     */
     public function create(Request $request)
     {
         if (strtolower($request->user()->rol) === 'cliente') {
@@ -85,7 +85,7 @@ class DocController extends Controller
     }
 
     /**
-     * Almacena un nuevo documento (archivo o enlace).
+     * Guarda un nuevo documento (archivo o enlace)
      */
     public function store(Request $request)
     {
@@ -126,6 +126,12 @@ class DocController extends Controller
 
             $proyecto = Proyecto::find($validated['proyecto_id']);
 
+            self::registrarAccionManual(
+                "Subió el documento '{$documento->nombre}' al proyecto '{$proyecto->nombre}'",
+                'documentos',
+                $documento->id
+            );
+
             if ($proyecto) {
                 $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
 
@@ -146,14 +152,13 @@ class DocController extends Controller
     }
 
     /**
-     * Descarga de documentos autenticada y segura
+     * Descarga autenticada
      */
     public function download(Documento $documento)
     {
         $user = request()->user();
         $userRole = strtolower($user->rol);
 
-        // 1. Verificar permisos
         $hasPermission = $userRole === 'admin' ||
             $user->projects->pluck('id')->contains($documento->proyecto_id);
 
@@ -161,21 +166,17 @@ class DocController extends Controller
             abort(403, 'No tienes permiso para descargar este documento.');
         }
 
-        // 2. Si es un enlace externo
         if ($documento->tipo === 'URL') {
             return redirect()->away($documento->archivo_url);
         }
 
-        // 3. Asegurar ruta correcta
         $path = str_replace('/storage/', '', $documento->archivo_url);
 
-        // 4. Verificar existencia del archivo
         if (!$documento->archivo_url || !Storage::disk('public')->exists($path)) {
             Log::warning("Archivo no encontrado para el documento ID {$documento->id}: {$documento->archivo_url}");
             abort(404, 'El archivo no fue encontrado en el servidor.');
         }
 
-        // 5. Registrar la descarga (sin romper si falla)
         try {
             DescargaHistorial::create([
                 'user_id' => $user->id,
@@ -192,19 +193,26 @@ class DocController extends Controller
                     'Documento descargado'
                 );
             }
+
+            self::registrarAccionManual(
+                "Descargó el documento '{$documento->nombre}' del proyecto '{$documento->project->nombre}'",
+                'documentos',
+                $documento->id
+            );
         } catch (\Exception $e) {
             Log::error("Fallo al registrar descarga o enviar notificación: " . $e->getMessage());
         }
 
-        // 6. Preparar nombre de descarga
         $extension = pathinfo($path, PATHINFO_EXTENSION);
         $nombreArchivo = $documento->nombre . '.' . $extension;
+        $absolutePath = Storage::disk('public')->path($path);
 
-        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
-        $disk = Storage::disk('public');
-        return $disk->download($path, $nombreArchivo);
+        return response()->download($absolutePath, $nombreArchivo);
     }
 
+    /**
+     * Restaurar documento eliminado
+     */
     public function restore($id)
     {
         $documento = Documento::findOrFail($id);
@@ -215,8 +223,14 @@ class DocController extends Controller
 
         $documento->update([
             'eliminado' => 0,
-            'fecha_eliminacion' => null
+            'fecha_eliminacion' => null,
         ]);
+
+        self::registrarAccionManual(
+            "Restauró el documento '{$documento->nombre}' del proyecto '{$documento->project->nombre}'",
+            'documentos',
+            $documento->id
+        );
 
         return back()->with('success', 'Documento restaurado correctamente.');
     }
@@ -251,7 +265,7 @@ class DocController extends Controller
     }
 
     /**
-     * Elimina (lógicamente) un documento
+     * Elimina (mueve a papelera)
      */
     public function destroy(Documento $documento)
     {
@@ -266,8 +280,15 @@ class DocController extends Controller
             ]);
 
             $proyecto = Proyecto::find($documento->proyecto_id);
-            $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
 
+            self::registrarAccionManual(
+                "Eliminó (movió a papelera) el documento '{$documento->nombre}' del proyecto '{$proyecto->nombre}'",
+                'documentos',
+                $documento->id,
+                true
+            );
+
+            $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
             NotificationService::sendToMany(
                 $usuariosProyecto,
                 "El documento '{$documento->nombre}' ha sido enviado a la papelera del proyecto '{$proyecto->nombre}'.",
@@ -340,24 +361,24 @@ class DocController extends Controller
         try {
             if ($request->file('archivo')) {
                 $file = $request->file('archivo');
-
-                if (!empty($documento->archivo_url) && Storage::exists($documento->archivo_url)) {
-                    Storage::delete($documento->archivo_url);
-                }
-
                 $ruta_archivo_almacenada = $file->store('documents');
-                $updateData['archivo_url'] = $ruta_archivo_almacenada;
+                $updateData['archivo_url'] = '/storage/' . $ruta_archivo_almacenada;
                 $updateData['tipo'] = $validated['archivo_tipo'] ?? $documento->tipo;
             }
 
             $documento->update($updateData);
-
             $proyecto = Proyecto::find($updateData['proyecto_id']);
-            $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
 
+            self::registrarAccionManual(
+                "Actualizó el documento '{$documento->nombre}' en el proyecto '{$proyecto->nombre}'",
+                'documentos',
+                $documento->id
+            );
+
+            $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
             NotificationService::sendToMany(
                 $usuariosProyecto,
-                "El documento '{$updateData['nombre']}' ha sido actualizado en el proyecto '{$proyecto->nombre}'.",
+                "El documento '{$documento->nombre}' ha sido actualizado en el proyecto '{$proyecto->nombre}'.",
                 'documento',
                 url('/proyectos/' . $proyecto->id),
                 'Documento actualizado'

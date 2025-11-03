@@ -14,7 +14,6 @@ return new class extends Migration {
             $table->string('tabla_afectada', 100)->nullable();
             $table->unsignedBigInteger('id_registro_afectado')->nullable();
             $table->timestamp('fecha_accion')->useCurrent();
-            $table->string('ip_usuario', 45)->nullable();
             $table->boolean('eliminado')->default(0);
             $table->timestamps();
         });

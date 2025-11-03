@@ -24,6 +24,9 @@ const DocCreate: React.FC = () => {
     const [showSizeModal, setShowSizeModal] = useState(false);
     const [showTypeModal, setShowTypeModal] = useState(false);
     const [frontendError, setFrontendError] = useState('');
+    const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadTime, setUploadTime] = useState<number | null>(null);
 
     const allowedTypes = useMemo(() => [
         { label: 'Documento PDF', value: 'PDF' as FileType, extensions: ['.pdf'] },
@@ -65,8 +68,31 @@ const DocCreate: React.FC = () => {
             return;
         }
 
+        setUploading(true);
+        setUploadProgress(0);
+        const start = Date.now();
+
         post(route('docs.store'), {
-            onSuccess: () => router.visit(route('docs.index')),
+            forceFormData: true,
+            onProgress: (progress: any) => {
+                if (progress.total && progress.loaded) {
+                    const percent = Math.round((progress.loaded / progress.total) * 100);
+                    const elapsed = (Date.now() - start) / 1000;
+                    const rate = progress.loaded / elapsed;
+                    const remaining = (progress.total - progress.loaded) / rate;
+                    setUploadProgress(percent);
+                    setUploadTime(remaining);
+                }
+            },
+            onSuccess: () => {
+                setUploading(false);
+                router.visit(route('docs.index'));
+            },
+            onError: () => {
+                setUploading(false);
+                setFrontendError('Error al subir el documento. Verifica los datos.');
+            },
+            onFinish: () => setUploading(false),
         });
     };
 
@@ -85,17 +111,14 @@ const DocCreate: React.FC = () => {
                     <div className="bg-[#0B1120] overflow-hidden shadow-2xl sm:rounded-xl p-8 border border-gray-800/80">
                         <form onSubmit={submit} className="space-y-6">
 
-                            {/* PROYECTO BUSCABLE */}
+                            {/* PROYECTO */}
                             <div>
                                 <label htmlFor="proyecto_id" className={labelStyle}>Proyecto Asociado</label>
                                 <input
                                     type="text"
                                     placeholder="Buscar proyecto..."
                                     value={projectSearch}
-                                    onChange={(e) => {
-                                        const value = e.target.value.slice(0, 100); // Máximo 100 caracteres
-                                        setProjectSearch(value);
-                                    }}
+                                    onChange={(e) => setProjectSearch(e.target.value.slice(0, 100))}
                                     className="mt-1 mb-2 w-full border border-gray-700 bg-[#080D15] text-white rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-[#B3E10F]/70 focus:border-[#B3E10F]/70"
                                 />
                                 <select
@@ -202,23 +225,44 @@ const DocCreate: React.FC = () => {
                                 />
                             </div>
 
+                            {/* ERROR FRONT */}
                             {frontendError && (
                                 <p className="text-red-400 font-semibold text-sm mt-2 text-center">{frontendError}</p>
+                            )}
+
+                            {/* BARRA DE CARGA */}
+                            {uploading && (
+                                <div className="mt-6">
+                                    <div className="w-full bg-gray-800 rounded-full h-4 overflow-hidden">
+                                        <div
+                                            className="bg-[#B3E10F] h-4 rounded-full transition-all duration-300"
+                                            style={{ width: `${uploadProgress}%` }}
+                                        ></div>
+                                    </div>
+                                    <p className="text-gray-300 mt-2 text-sm">
+                                        Progreso: {uploadProgress}%{' '}
+                                        {uploadTime ? `(Tiempo restante: ${Math.ceil(uploadTime)} s)` : ''}
+                                    </p>
+                                </div>
                             )}
 
                             {/* BOTONES */}
                             <div className="flex items-center justify-end pt-4 border-t border-gray-700">
                                 <button
-                                    disabled={processing}
+                                    disabled={processing || uploading}
                                     type="submit"
-                                    className="bg-[#B3E10F] text-gray-900 px-3 py-2 rounded-md hover:bg-lime-300 transition duration-150 text-xs sm:text-sm font-bold shadow-md shadow-[#B3E10F]/30 disabled:opacity-50"
+                                    className={`px-3 py-2 rounded-md text-xs sm:text-sm font-bold shadow-md transition duration-150 ${
+                                        uploading
+                                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                            : 'bg-[#B3E10F] text-gray-900 hover:bg-lime-300 shadow-[#B3E10F]/30'
+                                    }`}
                                 >
-                                    {processing ? 'Subiendo...' : 'Subir Documento'}
+                                    {uploading ? 'Subiendo...' : 'Subir Documento'}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => router.visit(route('docs.index'))}
-                                    className="ml-4 bg-red-700 hover:bg-red-600 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition duration-150 text-white"
+                                    className="ml-4 bg-red-700 hover:bg-red-600 px-3 py-2 rounded-md text-xs sm:text-sm font-medium text-white"
                                 >
                                     Cancelar
                                 </button>
@@ -228,7 +272,7 @@ const DocCreate: React.FC = () => {
                 </div>
             </div>
 
-            {/* MODAL: Tamaño excedido */}
+            {/* MODALES */}
             {showSizeModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
                     <div className="bg-[#0F172A] text-center p-6 rounded-xl shadow-2xl border border-lime-400/50 w-11/12 max-w-md animate-fadeIn">
@@ -247,7 +291,6 @@ const DocCreate: React.FC = () => {
                 </div>
             )}
 
-            {/* MODAL: Tipo inválido */}
             {showTypeModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
                     <div className="bg-[#0F172A] text-center p-6 rounded-xl shadow-2xl border border-red-500/50 w-11/12 max-w-md animate-fadeIn">

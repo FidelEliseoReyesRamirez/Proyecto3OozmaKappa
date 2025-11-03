@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\User;
 use App\Models\Proyecto;
+use App\Traits\RegistraAuditoria;
 
 class Documento extends Model
 {
-    use HasFactory;
+    use HasFactory, RegistraAuditoria;
 
     protected $table = 'documentos';
 
@@ -31,25 +32,19 @@ class Documento extends Model
         'fecha_subida' => 'datetime',
         'fecha_eliminacion' => 'datetime',
     ];
-    /**
-     * Relación principal (Español): Usada por DocumentoHistorialController.
-     */
+
+    protected $with = ['proyecto', 'uploader'];
+
     public function proyecto(): BelongsTo
     {
         return $this->belongsTo(Proyecto::class, 'proyecto_id');
     }
 
-    /**
-     * Relación alternativa (Inglés): Resuelve el error 'Call to undefined relationship [project]'.
-     */
     public function project(): BelongsTo
     {
         return $this->belongsTo(Proyecto::class, 'proyecto_id');
     }
 
-    /**
-     * Relación: Un documento fue subido por un usuario.
-     */
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'subido_por');
@@ -58,5 +53,21 @@ class Documento extends Model
     public function scopeActivos($query)
     {
         return $query->where('eliminado', 0);
+    }
+
+    public function scopeEliminados($query)
+    {
+        return $query->where('eliminado', 1);
+    }
+
+    public function getTipoArchivoAttribute(): string
+    {
+        return match (strtolower($this->tipo)) {
+            'pdf' => 'Documento PDF',
+            'excel' => 'Hoja de cálculo Excel',
+            'word' => 'Documento Word',
+            'url' => 'Enlace externo',
+            default => ucfirst($this->tipo ?? 'Otro'),
+        };
     }
 }

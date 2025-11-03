@@ -12,7 +12,7 @@ use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\DocumentoHistorialController;
 use App\Http\Controllers\AvancesProyectoController;
 use App\Http\Controllers\TareaController;
-
+use App\Http\Controllers\AuditoriaController;
 /*
 |--------------------------------------------------------------------------
 | Rutas Web
@@ -93,7 +93,6 @@ Route::middleware(['auth', 'prevent.manual'])->group(function () {
     Route::get('/tareas/proyecto/{id}', [TareaController::class, 'obtenerPorProyecto'])->name('tareas.proyecto');
     Route::patch('/tareas/{id}/estado', [TareaController::class, 'actualizarEstado'])->name('tareas.estado');
     Route::get('/tareas/{id}/historial', [TareaController::class, 'historial'])->name('tareas.historial');
-    
 });
 
 /*
@@ -114,6 +113,7 @@ Route::middleware(['auth', 'role:admin', 'prevent.manual'])->group(function () {
 
     Route::get('/admin/documents/history', [DocumentoHistorialController::class, 'showDownloadHistory'])
         ->name('documents.history');
+    Route::get('/admin/auditorias', [AuditoriaController::class, 'index'])->name('auditoria.index');
 });
 
 /*
