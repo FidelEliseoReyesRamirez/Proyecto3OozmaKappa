@@ -12,17 +12,18 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\NotificationService;
+use App\Traits\RegistraAuditoria; // ← agregado
 
 class TareaController extends Controller
 {
+    use RegistraAuditoria; // ← agregado
+
     /**
      * Muestra el tablero Kanban.
      */
     public function index()
     {
         $proyectos = Proyecto::select('id', 'nombre')->get();
-
-        // No cargamos usuarios todavía, ya que dependen del proyecto seleccionado
         $usuarios = [];
 
         return Inertia::render('Tareas/Tablero', [
@@ -36,14 +37,14 @@ class TareaController extends Controller
      */
     public function obtenerPorProyecto($id)
     {
-        $tareas = Tarea::with(['asignado'])
+        $tareas = Tarea::with(['asignado:id,name,email'])
             ->where('proyecto_id', $id)
-            // 🚨 CORRECCIÓN 1: Excluir tareas marcadas como eliminadas (si usas 'eliminado' como soft delete)
-            ->where('eliminado', 0) 
+            ->where(function ($q) {
+                $q->whereNull('eliminado')->orWhere('eliminado', 0);
+            })
             ->orderBy('prioridad', 'desc')
-            ->get();
+            ->get(['id', 'titulo', 'descripcion', 'estado', 'fecha_limite', 'prioridad', 'asignado_id', 'proyecto_id']);
 
-        // 🧠 Solo usuarios con permiso "editar" y activos
         $usuarios = DB::table('proyectos_usuarios')
             ->join('users', 'users.id', '=', 'proyectos_usuarios.user_id')
             ->where('proyectos_usuarios.proyecto_id', $id)
@@ -53,10 +54,12 @@ class TareaController extends Controller
             ->get();
 
         return response()->json([
+            'success' => true,
             'tareas' => $tareas,
             'usuarios' => $usuarios,
         ]);
     }
+
 
     /**
      * Muestra el formulario de creación de tarea.
@@ -70,11 +73,9 @@ class TareaController extends Controller
         }
 
         $proyectos = Proyecto::select('id', 'nombre')->get();
-
         $usuarios = collect();
 
         if ($proyecto_id) {
-            // Solo usuarios con permiso editar
             $usuarios = DB::table('proyectos_usuarios')
                 ->join('users', 'users.id', '=', 'proyectos_usuarios.user_id')
                 ->where('proyectos_usuarios.proyecto_id', $proyecto_id)
@@ -107,7 +108,6 @@ class TareaController extends Controller
                 'asignado_id' => 'required|exists:users,id',
             ]);
 
-            // Verificar permisos del usuario asignado
             $asignadoValido = DB::table('proyectos_usuarios')
                 ->join('users', 'users.id', '=', 'proyectos_usuarios.user_id')
                 ->where('proyectos_usuarios.proyecto_id', $validated['proyecto_id'])
@@ -132,9 +132,11 @@ class TareaController extends Controller
                 'asignado_id' => $validated['asignado_id'],
                 'estado' => 'pendiente',
                 'creado_por' => Auth::id(),
-                // Asegurar que se guarda como NO eliminado
-                'eliminado' => 0, 
+                'eliminado' => 0,
             ]);
+
+            // AUDITORÍA: creación de tarea
+            self::registrarAccionManual("Creó la tarea '{$tarea->titulo}' en el proyecto #{$tarea->proyecto_id} asignada al usuario #{$tarea->asignado_id}.", 'tareas', $tarea->id);
 
             TareaHistorial::create([
                 'proyecto_id' => $tarea->proyecto_id,
@@ -146,9 +148,7 @@ class TareaController extends Controller
                 'fecha_cambio' => now(),
             ]);
 
-            // -----------------------------------------------------------
             // 🔔 NOTIFICACIONES AL CREAR TAREA
-            // -----------------------------------------------------------
             $proyecto = Proyecto::find($tarea->proyecto_id);
             $responsable = $proyecto->responsable_id ?? null;
             $cliente = $proyecto->cliente_id ?? null;
@@ -173,13 +173,10 @@ class TareaController extends Controller
                 'Nueva tarea creada'
             );
 
-            // 🚨 CORRECCIÓN 2: Redirección robusta con el ID del proyecto
             return redirect()->route('tareas.index', [
-                'proyecto_id' => $validated['proyecto_id'] 
+                'proyecto_id' => $validated['proyecto_id']
             ])->with('success', 'Tarea creada correctamente ✅');
-
         } catch (\Throwable $e) {
-            // Aseguramos que solo haya un catch Throwable (eliminando la redundancia)
             return response()->json([
                 'status' => 'error',
                 'message' => 'Ocurrió un error al crear la tarea.',
@@ -214,9 +211,10 @@ class TareaController extends Controller
                 'fecha_cambio' => now(),
             ]);
 
-            // -----------------------------------------------------------
+            // AUDITORÍA: cambio de estado
+            self::registrarAccionManual("Actualizó el estado de la tarea '{$tarea->titulo}' de '{$estadoAnterior}' a '{$nuevoEstado}'.", 'tareas', $tarea->id);
+
             // 🔔 NOTIFICACIONES AL CAMBIAR ESTADO
-            // -----------------------------------------------------------
             $proyecto = Proyecto::find($tarea->proyecto_id);
             $responsable = $proyecto->responsable_id ?? null;
             $cliente = $proyecto->cliente_id ?? null;

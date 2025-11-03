@@ -10,11 +10,11 @@ class PreventManualUrlAccess
 {
     /**
      * Middleware para evitar acceso manual directo por URL.
-     * Permite rutas Inertia, públicas y descargas directas.
+     * Permite rutas Inertia, AJAX internas y descargas directas.
      */
     public function handle(Request $request, Closure $next)
     {
-        // Registrar cada solicitud entrante
+        // Registrar toda solicitud
         Log::info('🛰️ [PreventManualUrlAccess] Solicitud detectada', [
             'path' => $request->getPathInfo(),
             'method' => $request->method(),
@@ -22,10 +22,22 @@ class PreventManualUrlAccess
             'user_id' => optional($request->user())->id,
         ]);
 
-        // Excepción: permitir descargas de documentos
+        // Excepción: permitir descargas directas
         if (preg_match('#^/docs/download/#', $request->getPathInfo())) {
             Log::info('✅ [PreventManualUrlAccess] Descarga permitida', [
                 'ruta' => $request->getPathInfo(),
+            ]);
+            return $next($request);
+        }
+
+        // Excepciones para endpoints que deben funcionar con fetch() o AJAX
+        if (
+            preg_match('#^/tareas/proyecto/#', $request->getPathInfo()) ||
+            preg_match('#^/tareas/[0-9]+/historial$#', $request->getPathInfo())
+        ) {
+            Log::info('✅ [PreventManualUrlAccess] Ruta AJAX interna permitida', [
+                'ruta' => $request->getPathInfo(),
+                'user_id' => optional($request->user())->id,
             ]);
             return $next($request);
         }
@@ -45,24 +57,26 @@ class PreventManualUrlAccess
             '/acercadenosotros',
             '/users/verificar-duplicado',
             '/users/check-email',
-
         ];
 
-        // Si la petición no es Inertia y no está en la lista blanca → redirigir
+        // Si la solicitud no tiene cabecera Inertia y no está en la lista blanca → bloqueo
         if (
             !$request->headers->has('X-Inertia') &&
-            !in_array($request->getPathInfo(), $allowed)
-            && strpos($request->getPathInfo(), '/verify-email/') !== 0
+            !$request->ajax() &&
+            !$request->expectsJson() &&
+            !in_array($request->getPathInfo(), $allowed) &&
+            strpos($request->getPathInfo(), '/verify-email/') !== 0
         ) {
             Log::warning('🚫 [PreventManualUrlAccess] Acceso manual bloqueado', [
                 'path' => $request->getPathInfo(),
                 'user_id' => optional($request->user())->id,
             ]);
-            // Redirige al dashboard en lugar de error 403
+
+            // Redirigir a login si no autenticado
             return redirect()->route('login');
         }
 
-        // Permitir continuar normalmente
+        // ✅ Permitir continuar normalmente
         return $next($request);
     }
 }

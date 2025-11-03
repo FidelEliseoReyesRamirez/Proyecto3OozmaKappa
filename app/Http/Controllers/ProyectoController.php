@@ -14,9 +14,12 @@ use Illuminate\Support\Facades\Validator;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\DB;
 use App\Models\HistorialPermiso;
+use App\Traits\RegistraAuditoria; 
 
 class ProyectoController extends Controller
 {
+    use RegistraAuditoria; 
+
     /**
      * Muestra la lista de proyectos, filtrada por cliente si aplica.
      */
@@ -64,6 +67,7 @@ class ProyectoController extends Controller
             ->where('estado', 'activo')
             ->where('eliminado', 0)
             ->get();
+
 
         return Inertia::render('GestionProyecto/Form', [
             'clientes' => $clientes,
@@ -123,6 +127,9 @@ class ProyectoController extends Controller
             'estado' => 'activo',
         ]);
 
+        // Auditoría creación
+        self::registrarAccionManual("Creó el proyecto '{$proyecto->nombre}' con cliente #{$request->cliente_id} y responsable #{$request->responsable_id}.", 'proyectos', $proyecto->id);
+
         $proyecto->users()->syncWithoutDetaching([
             $request->cliente_id => [
                 'rol_en_proyecto' => 'cliente',
@@ -136,6 +143,8 @@ class ProyectoController extends Controller
                 'eliminado' => 0
             ]
         ]);
+
+        self::registrarAccionManual("Asignó cliente y responsable al proyecto '{$proyecto->nombre}'.", 'proyectos_usuarios', $proyecto->id);
 
         // -----------------------------------------------------------
         // NOTIFICACIONES AL CREAR PROYECTO
@@ -170,6 +179,8 @@ class ProyectoController extends Controller
                 'subido_por' => Auth::id(),
             ]);
 
+            self::registrarAccionManual("Subió archivo BIM inicial del proyecto '{$proyecto->nombre}'.", 'planos_bim', $proyecto->id);
+
             // Notificar subida de archivo BIM
             NotificationService::sendToMany(
                 [$request->responsable_id, $request->cliente_id],
@@ -182,6 +193,7 @@ class ProyectoController extends Controller
 
         return redirect()->route('proyectos.index')->with('success', 'Proyecto creado correctamente.');
     }
+
     public function show($id)
     {
         // Buscar el proyecto, o devolver 404 si no existe
@@ -190,6 +202,7 @@ class ProyectoController extends Controller
         if (!$proyecto) {
             abort(404, 'Proyecto no encontrado');
         }
+
 
         // Verificación de permisos
         if (strtolower(Auth::user()->rol) === 'cliente' && $proyecto->cliente_id !== Auth::id()) {
@@ -220,6 +233,8 @@ class ProyectoController extends Controller
             ->where('estado', 'activo')
             ->where('eliminado', 0)
             ->get();
+
+        self::registrarAccionManual("Ingresó al formulario de edición del proyecto '{$proyecto->nombre}'.", 'proyectos', $proyecto->id);
 
         return Inertia::render('GestionProyecto/Edit', [
             'proyecto' => $proyecto,
@@ -297,6 +312,8 @@ class ProyectoController extends Controller
             ]);
 
             $versionInfoCreada = true;
+
+            self::registrarAccionManual("Actualizó información del proyecto '{$proyecto->nombre}' (versión {$versionActual}).", 'proyectos_versiones', $proyecto->id);
         }
 
         if ($hayArchivoNuevo) {
@@ -311,6 +328,8 @@ class ProyectoController extends Controller
                 'version' => $versionBim,
                 'subido_por' => Auth::id(),
             ]);
+
+            self::registrarAccionManual("Subió nueva versión BIM ({$versionBim}) para el proyecto '{$proyecto->nombre}'.", 'planos_bim', $proyecto->id);
         }
 
         if ($descripcionCambia || $responsableCambia) {
@@ -318,6 +337,8 @@ class ProyectoController extends Controller
                 'descripcion' => $validated['descripcion'],
                 'responsable_id' => $validated['responsable_id'],
             ]);
+
+            self::registrarAccionManual("Guardó cambios generales en el proyecto '{$proyecto->nombre}'.", 'proyectos', $proyecto->id);
         }
 
         // -----------------------------------------------------------
@@ -340,6 +361,8 @@ class ProyectoController extends Controller
             url('/proyectos/' . $proyecto->id),
             'Proyecto actualizado'
         );
+
+        self::registrarAccionManual("Envió notificaciones por actualización del proyecto '{$proyecto->nombre}'.", 'notificaciones', $proyecto->id);
 
         return redirect()->route('proyectos.index')
             ->with('success', $versionInfoCreada && $hayArchivoNuevo
@@ -365,6 +388,8 @@ class ProyectoController extends Controller
             ->with('subidoPor')
             ->orderByDesc('created_at')
             ->get();
+
+        self::registrarAccionManual("Consultó historial de versiones del proyecto '{$proyecto->nombre}'.", 'proyectos_versiones', $proyecto->id);
 
         return inertia('GestionProyecto/Versiones', [
             'proyecto' => $proyecto,
@@ -394,6 +419,8 @@ class ProyectoController extends Controller
 
         $proyecto->update($datos);
 
+        self::registrarAccionManual("Cambió el estado del proyecto '{$proyecto->nombre}' a '{$nuevoEstado}'.", 'proyectos', $proyecto->id);
+
         // Notificar cambio de estado a cliente, responsable y colaboradores
         $colaboradores = DB::table('proyectos_usuarios')
             ->where('proyecto_id', $proyecto->id)
@@ -410,6 +437,8 @@ class ProyectoController extends Controller
             url('/proyectos/' . $proyecto->id),
             'Estado del proyecto actualizado'
         );
+
+        self::registrarAccionManual("Notificó el cambio de estado del proyecto '{$proyecto->nombre}' a los involucrados.", 'notificaciones', $proyecto->id);
 
         return redirect()->back()->with('success', 'Estado actualizado correctamente.');
     }
@@ -431,6 +460,8 @@ class ProyectoController extends Controller
         $asignaciones = DB::table('proyectos_usuarios')
             ->where('proyecto_id', $id)
             ->get();
+
+        self::registrarAccionManual("Ingresó a gestión de permisos del proyecto '{$proyecto->nombre}'.", 'proyectos_usuarios', $proyecto->id);
 
         return Inertia::render('GestionProyecto/Permisos', [
             'proyecto' => $proyecto,
@@ -481,6 +512,9 @@ class ProyectoController extends Controller
                     'fecha_cambio' => now(),
                 ]);
 
+                // Auditoría
+                self::registrarAccionManual("Actualizó el permiso de usuario #{$permiso['user_id']} a '{$permiso['permiso']}' en el proyecto '{$proyecto->nombre}'.", 'proyectos_usuarios', $proyecto->id);
+
                 // Notificar al usuario afectado
                 NotificationService::send(
                     $permiso['user_id'],
@@ -491,6 +525,8 @@ class ProyectoController extends Controller
                 );
             }
         }
+
+        self::registrarAccionManual("Finalizó actualización de permisos del proyecto '{$proyecto->nombre}'.", 'proyectos_usuarios', $proyecto->id);
 
         return redirect()->route('proyectos.index')
             ->with('success', 'Permisos actualizados correctamente.');
