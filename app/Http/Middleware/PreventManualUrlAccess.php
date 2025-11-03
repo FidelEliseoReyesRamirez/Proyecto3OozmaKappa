@@ -43,12 +43,15 @@ class PreventManualUrlAccess
             '/carreras',
             '/servicios',
             '/acercadenosotros',
+            '/users/verificar-duplicado',
+            '/users/check-email',
+
         ];
 
         // Si la petición no es Inertia y no está en la lista blanca → redirigir
         if (
             !$request->headers->has('X-Inertia') &&
-            !in_array($request->getPathInfo(), $allowed) 
+            !in_array($request->getPathInfo(), $allowed)
             && strpos($request->getPathInfo(), '/verify-email/') !== 0
         ) {
             Log::warning('🚫 [PreventManualUrlAccess] Acceso manual bloqueado', [

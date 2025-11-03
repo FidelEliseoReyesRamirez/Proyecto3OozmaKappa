@@ -156,3 +156,7 @@ Route::fallback(function () {
         'message' => 'La página que buscas no existe.',
     ])->toResponse(request())->setStatusCode(404);
 });
+
+Route::post('/users/verificar-duplicado', [UserController::class, 'verificarDuplicado'])
+    ->name('users.verificarDuplicado');
+

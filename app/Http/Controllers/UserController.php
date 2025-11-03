@@ -6,13 +6,15 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Mail\CuentaCreadaMail;
 use Illuminate\Support\Facades\Auth;
+use App\Traits\RegistraAuditoria;
 
 class UserController extends Controller
 {
+    use RegistraAuditoria;
+
     public function index()
     {
         $usuarios = User::where('eliminado', 0)->get();
@@ -61,16 +63,15 @@ class UserController extends Controller
             'password' => Hash::make($password),
         ]);
 
+        // Enviar correo de bienvenida
         Mail::to($user->email)->send(new CuentaCreadaMail($user, $password));
 
-        DB::table('auditoria_logs')->insert([
-            'user_id' => Auth::id(),
-            'accion' => "Creó al usuario {$user->email} con rol {$user->rol}",
-            'tabla_afectada' => 'users',
-            'id_registro_afectado' => $user->id,
-            'ip_usuario' => $request->ip(),
-            'created_at' => now(),
-        ]);
+        // Registrar auditoría
+        self::registrarAccionManual(
+            "Creó al usuario '{$user->name} {$user->apellido}' con rol '{$user->rol}'",
+            'users',
+            $user->id
+        );
 
         return redirect()->route('users.index')->with('success', 'Usuario creado correctamente.');
     }
@@ -85,68 +86,72 @@ class UserController extends Controller
             'rol' => 'required|in:admin,arquitecto,ingeniero,cliente',
         ]);
 
-        $user->update($request->only(['name','apellido','email','telefono','rol']));
+        $user->update($request->only(['name', 'apellido', 'email', 'telefono', 'rol']));
 
-        DB::table('auditoria_logs')->insert([
-            'user_id' => Auth::id(),
-            'accion' => "Editó al usuario {$user->email}",
-            'tabla_afectada' => 'users',
-            'id_registro_afectado' => $user->id,
-            'ip_usuario' => $request->ip(),
-            'created_at' => now(),
-        ]);
+        self::registrarAccionManual(
+            "Actualizó los datos del usuario '{$user->name} {$user->apellido}'",
+            'users',
+            $user->id
+        );
 
         return redirect()->route('users.index')->with('success', 'Usuario actualizado correctamente.');
     }
 
-    public function updateEstado(Request $request, User $user)
+    public function updateEstado(User $user)
     {
         $user->estado = $user->estado === 'activo' ? 'inactivo' : 'activo';
         $user->save();
 
-        DB::table('auditoria_logs')->insert([
-            'user_id' => Auth::id(),
-            'accion' => "Cambio de estado del usuario {$user->email} a {$user->estado}",
-            'tabla_afectada' => 'users',
-            'id_registro_afectado' => $user->id,
-            'ip_usuario' => $request->ip(),
-            'created_at' => now(),
-        ]);
+        self::registrarAccionManual(
+            "Cambió el estado del usuario '{$user->name} {$user->apellido}' a '{$user->estado}'",
+            'users',
+            $user->id
+        );
 
-        return redirect()->back()->with('success', 'Estado actualizado.');
+        return redirect()->back()->with('success', 'Estado actualizado correctamente.');
     }
 
-    public function eliminar(Request $request, User $user)
+    public function eliminar(User $user)
     {
         $user->eliminado = 1;
         $user->save();
 
-        DB::table('auditoria_logs')->insert([
-            'user_id' => Auth::id(),
-            'accion' => "Eliminó al usuario {$user->email}",
-            'tabla_afectada' => 'users',
-            'id_registro_afectado' => $user->id,
-            'ip_usuario' => $request->ip(),
-            'created_at' => now(),
-        ]);
+        self::registrarAccionManual(
+            "Eliminó (movió a papelera) al usuario '{$user->name} {$user->apellido}'",
+            'users',
+            $user->id,
+            true
+        );
 
-        return redirect()->back()->with('success', 'Usuario eliminado.');
+        return redirect()->back()->with('success', 'Usuario eliminado correctamente.');
     }
 
-    public function restaurar(Request $request, User $user)
+    public function restaurar(User $user)
     {
         $user->eliminado = 0;
         $user->save();
 
-        DB::table('auditoria_logs')->insert([
-            'user_id' => Auth::id(),
-            'accion' => "Restauró al usuario {$user->email}",
-            'tabla_afectada' => 'users',
-            'id_registro_afectado' => $user->id,
-            'ip_usuario' => $request->ip(),
-            'created_at' => now(),
-        ]);
+        self::registrarAccionManual(
+            "Restauró al usuario '{$user->name} {$user->apellido}'",
+            'users',
+            $user->id
+        );
 
-        return redirect()->back()->with('success', 'Usuario restaurado.');
+        return redirect()->back()->with('success', 'Usuario restaurado correctamente.');
+    }
+    public function verificarDuplicado(Request $request)
+    {
+        $email = $request->input('email');
+        $telefono = $request->input('telefono');
+
+        $emailExiste = User::where('email', $email)->exists();
+        $telefonoExiste = User::where('telefono', $telefono)
+            ->whereNotNull('telefono')
+            ->exists();
+
+        return response()->json([
+            'emailExiste' => $emailExiste,
+            'telefonoExiste' => $telefonoExiste,
+        ]);
     }
 }

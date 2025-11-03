@@ -42,26 +42,36 @@ const AuditIndex: React.FC = () => {
     const [search, setSearch] = useState(filtros?.search || '');
     const [filterTabla, setFilterTabla] = useState(filtros?.tabla || '');
     const [filterAccion, setFilterAccion] = useState('');
+    const [filterUser, setFilterUser] = useState(''); // Nuevo filtro de usuario
     const [filterStart, setFilterStart] = useState('');
     const [filterEnd, setFilterEnd] = useState('');
     const [order, setOrder] = useState<'asc' | 'desc'>('desc');
     const [dateError, setDateError] = useState('');
 
     // ============================
-    // 🔹 Generar lista dinámica de acciones únicas
+    // 🔹 Lista dinámica de acciones únicas
     // ============================
     const accionesUnicas = useMemo(() => {
         const allAcciones = auditorias.data.map((a) => a.accion);
         const setAcciones = new Set<string>();
         allAcciones.forEach((accion) => {
-            // Agrupamos por primeras palabras (para reducir redundancia)
-            const base = accion
-                .replace(/['"]/g, '') // quitamos comillas
-                .split(' ')[0] // primera palabra clave (Subió, Eliminó, etc.)
-                .trim();
+            const base = accion.replace(/['"]/g, '').split(' ')[0].trim();
             if (base.length > 0) setAcciones.add(base);
         });
         return Array.from(setAcciones);
+    }, [auditorias]);
+
+    // ============================
+    // 🔹 Lista de usuarios únicos (para el ComboBox)
+    // ============================
+    const usuariosUnicos = useMemo(() => {
+        const setUsers = new Map<number, string>();
+        auditorias.data.forEach((a) => {
+            if (a.user && a.user.name) {
+                setUsers.set(a.user.id, a.user.name);
+            }
+        });
+        return Array.from(setUsers.entries()).map(([id, name]) => ({ id, name }));
     }, [auditorias]);
 
     // ============================
@@ -82,11 +92,15 @@ const AuditIndex: React.FC = () => {
                 const fecha = new Date(a.fecha_accion);
 
                 const matchesSearch =
-                    a.user?.name?.toLowerCase().includes(term) ||
-                    a.accion?.toLowerCase().includes(term) ||
-                    a.tabla_afectada?.toLowerCase().includes(term);
+                    a.accion.toLowerCase().includes(term) ||
+                    a.tabla_afectada?.toLowerCase().includes(term) ||
+                    a.user?.name?.toLowerCase().includes(term);
 
-                const matchesTabla = !filterTabla || a.tabla_afectada === filterTabla;
+                const matchesUser =
+                    !filterUser || a.user?.name?.toLowerCase() === filterUser.toLowerCase();
+
+                const matchesTabla =
+                    !filterTabla || a.tabla_afectada === filterTabla;
 
                 const matchesAccion =
                     !filterAccion ||
@@ -96,14 +110,29 @@ const AuditIndex: React.FC = () => {
                 const matchesFecha =
                     (!startDate || fecha >= startDate) && (!endDate || fecha <= endDate);
 
-                return matchesSearch && matchesTabla && matchesAccion && matchesFecha;
+                return (
+                    matchesSearch &&
+                    matchesTabla &&
+                    matchesAccion &&
+                    matchesFecha &&
+                    matchesUser
+                );
             })
             .sort((a, b) => {
                 const fa = new Date(a.fecha_accion).getTime();
                 const fb = new Date(b.fecha_accion).getTime();
                 return order === 'desc' ? fb - fa : fa - fb;
             });
-    }, [auditorias, search, filterTabla, filterAccion, filterStart, filterEnd, order]);
+    }, [
+        auditorias,
+        search,
+        filterTabla,
+        filterAccion,
+        filterUser,
+        filterStart,
+        filterEnd,
+        order,
+    ]);
 
     // ============================
     // 🔹 Limpiar filtros
@@ -112,6 +141,7 @@ const AuditIndex: React.FC = () => {
         setSearch('');
         setFilterTabla('');
         setFilterAccion('');
+        setFilterUser('');
         setFilterStart('');
         setFilterEnd('');
         setOrder('desc');
@@ -135,13 +165,32 @@ const AuditIndex: React.FC = () => {
 
                         {/* FILTROS */}
                         <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-6 flex flex-wrap gap-3 justify-between items-center">
+
+                            {/* Buscador general */}
                             <input
                                 type="text"
-                                placeholder="Buscar usuario o acción..."
+                                placeholder="Buscar texto en auditorías..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="flex-grow min-w-[180px] px-3 py-2 rounded-md bg-[#080D15] text-white border border-gray-700 text-sm focus:ring-2 focus:ring-[#B3E10F]"
                             />
+
+                            {/* Filtro por usuario (buscable) */}
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    list="usuarios-list"
+                                    placeholder="Filtrar por usuario..."
+                                    value={filterUser}
+                                    onChange={(e) => setFilterUser(e.target.value)}
+                                    className="px-3 py-2 rounded-md bg-[#080D15] text-white border border-gray-700 text-sm focus:ring-2 focus:ring-[#B3E10F] w-48"
+                                />
+                                <datalist id="usuarios-list">
+                                    {usuariosUnicos.map((u) => (
+                                        <option key={u.id} value={u.name} />
+                                    ))}
+                                </datalist>
+                            </div>
 
                             {/* Filtro por tabla */}
                             <select
@@ -155,7 +204,7 @@ const AuditIndex: React.FC = () => {
                                 ))}
                             </select>
 
-                            {/* Filtro dinámico por tipo de acción */}
+                            {/* Filtro por acción */}
                             <select
                                 value={filterAccion}
                                 onChange={(e) => setFilterAccion(e.target.value)}
@@ -201,6 +250,7 @@ const AuditIndex: React.FC = () => {
                                 <option value="asc">Más antiguos primero</option>
                             </select>
 
+                            {/* Limpiar */}
                             <button
                                 onClick={handleClearFilters}
                                 className="px-3 py-2 bg-red-700 hover:bg-red-600 text-white text-sm rounded-md transition duration-150 font-semibold"
