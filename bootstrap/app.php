@@ -14,23 +14,25 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Middlewares web
+        //  Middlewares web base (Inertia, etc.)
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        // Alias personalizados
+        //  Alias personalizados
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'prevent.manual' => PreventManualUrlAccess::class,
         ]);
 
-        // Forzar protección manual en todas las rutas
-        $middleware->web(prepend: [
+        // Agregar el middleware de protección manual DESPUÉS del de autenticación
+        //    (esto permite que Auth::user() ya esté disponible)
+        $middleware->web(append: [
             PreventManualUrlAccess::class,
         ]);
     })
+
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })

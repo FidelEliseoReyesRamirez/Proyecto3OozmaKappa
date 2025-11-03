@@ -96,12 +96,21 @@ export default function Authenticated({
                             <NotificationsBell />
                             <Dropdown>
                                 <Dropdown.Trigger>
-                                    <button className="inline-flex items-center rounded-md bg-[#B3E10F] px-3 py-2 text-sm font-semibold text-black hover:bg-lime-400 transition">
-                                        {user.name}
-                                        <svg className="ml-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <button className="inline-flex items-center max-w-[150px] rounded-md bg-[#B3E10F] px-3 py-2 text-sm font-semibold text-black hover:bg-lime-400 transition">
+                                        <span className="truncate block max-w-[100px]" title={user.name}>
+                                            {user.name}
+                                        </span>
+                                        <svg
+                                            className="ml-2 h-4 w-4 flex-shrink-0"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                                         </svg>
                                     </button>
+
                                 </Dropdown.Trigger>
                                 <Dropdown.Content>
                                     <Dropdown.Link href={route('profile.edit')}>Perfil</Dropdown.Link>

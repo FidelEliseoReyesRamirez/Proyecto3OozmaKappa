@@ -4,17 +4,39 @@ namespace App\Services;
 
 use App\Models\Notificacion;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\NotificacionGeneral;
 
 class NotificationService
 {
     /**
-     * Enviar notificación a un usuario
+     * Enviar notificación a un solo usuario (con validaciones seguras)
      */
     public static function send($userId, $mensaje, $tipo = 'tarea', $url = null, $asunto = null)
     {
-        // Crear notificación en la BD
+        // 🚫 Evitar crear notificaciones con user_id nulo o no numérico
+        if (empty($userId) || !is_numeric($userId)) {
+            Log::warning('⚠️ [NotificationService] Intento de enviar notificación con user_id inválido', [
+                'user_id' => $userId,
+                'mensaje' => $mensaje,
+                'tipo' => $tipo,
+            ]);
+            return;
+        }
+
+        $user = User::find($userId);
+
+        // 🚫 Si el usuario no existe o está eliminado, no enviar
+        if (!$user) {
+            Log::warning('⚠️ [NotificationService] Usuario no encontrado para notificación', [
+                'user_id' => $userId,
+                'mensaje' => $mensaje,
+            ]);
+            return;
+        }
+
+        // ✅ Crear la notificación
         $notificacion = Notificacion::create([
             'user_id' => $userId,
             'mensaje' => $mensaje,
@@ -23,18 +45,28 @@ class NotificationService
             'asunto' => $asunto ?? ucfirst($tipo) . ' nueva',
         ]);
 
-        // Enviar correo si el usuario tiene email válido
-        $user = User::find($userId);
-        if ($user && $user->email) {
-            Mail::to($user->email)->send(new NotificacionGeneral($notificacion));
+        // 📧 Enviar correo si el usuario tiene email
+        if ($user->email) {
+            try {
+                Mail::to($user->email)->send(new NotificacionGeneral($notificacion));
+            } catch (\Throwable $e) {
+                Log::error('❌ [NotificationService] Error al enviar correo', [
+                    'user_id' => $userId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 
     /**
-     * Enviar notificación a varios usuarios
+     * Enviar notificación a varios usuarios (filtra nulos automáticamente)
      */
     public static function sendToMany($userIds, $mensaje, $tipo = 'tarea', $url = null, $asunto = null)
     {
+        $userIds = array_filter((array) $userIds, function ($id) {
+            return !empty($id) && is_numeric($id);
+        });
+
         foreach ($userIds as $id) {
             self::send($id, $mensaje, $tipo, $url, $asunto);
         }

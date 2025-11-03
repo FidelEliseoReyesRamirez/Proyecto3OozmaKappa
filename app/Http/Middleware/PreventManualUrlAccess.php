@@ -57,6 +57,8 @@ class PreventManualUrlAccess
             '/acercadenosotros',
             '/users/verificar-duplicado',
             '/users/check-email',
+            '/profile',
+            '/profile/update',
         ];
 
         // Si la solicitud no tiene cabecera Inertia y no está en la lista blanca → bloqueo

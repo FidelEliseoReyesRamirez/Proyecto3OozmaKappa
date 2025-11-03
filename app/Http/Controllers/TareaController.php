@@ -159,11 +159,11 @@ class TareaController extends Controller
                 ->pluck('user_id')
                 ->toArray();
 
-            $destinatarios = array_unique(array_merge(
-                [$tarea->asignado_id, Auth::id()],
+            $destinatarios = array_unique(array_filter(array_merge(
+                [$tarea->asignado_id, $tarea->creado_por],
                 [$responsable, $cliente],
                 $colaboradores
-            ));
+            )));
 
             NotificationService::sendToMany(
                 $destinatarios,
@@ -242,7 +242,7 @@ class TareaController extends Controller
             );
         }
 
-        return response()->json(['success' => true]);
+        return back()->with('success', 'Estado de la tarea actualizado correctamente.');
     }
 
     /**

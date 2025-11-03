@@ -10,9 +10,12 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
 use App\Services\NotificationService;
+use App\Traits\RegistraAuditoria; // ← añadido
 
 class MeetingController extends Controller
 {
+    use RegistraAuditoria; // ← añadido
+
     /**
      * Muestra el calendario con las reuniones.
      */
@@ -135,9 +138,7 @@ class MeetingController extends Controller
 
             $meeting->users()->attach($pivotData);
 
-            // -----------------------------------------------------------
-            // 🔔 NOTIFICACIÓN AL CREAR REUNIÓN
-            // -----------------------------------------------------------
+            // 🔔 NOTIFICACIÓN
             $proyecto = Proyecto::find($meeting->proyecto_id);
             $responsable = $proyecto->responsable_id ?? null;
             $cliente = $proyecto->cliente_id ?? null;
@@ -148,11 +149,11 @@ class MeetingController extends Controller
                 ->pluck('user_id')
                 ->toArray();
 
-            $destinatarios = array_unique(array_merge(
+            $destinatarios = array_unique(array_filter(array_merge(
                 $participantIds,
                 [$request->user()->id, $responsable, $cliente],
                 $colaboradores
-            ));
+            )));
 
             NotificationService::sendToMany(
                 $destinatarios,
@@ -160,6 +161,13 @@ class MeetingController extends Controller
                 'reunion',
                 url('/proyectos/' . $proyecto->id),
                 'Nueva reunión programada'
+            );
+
+            // 🧾 AUDITORÍA
+            self::registrarAccionManual(
+                "Creó la reunión '{$meeting->titulo}' del proyecto '{$proyecto->nombre}'",
+                'reuniones',
+                $meeting->id
             );
 
             DB::commit();
@@ -199,9 +207,7 @@ class MeetingController extends Controller
 
         $meeting->users()->sync($validated['participants']);
 
-        // -----------------------------------------------------------
-        // 🔔 NOTIFICACIÓN AL ACTUALIZAR REUNIÓN
-        // -----------------------------------------------------------
+        // 🔔 NOTIFICACIÓN
         $proyecto = Proyecto::find($meeting->proyecto_id);
         $responsable = $proyecto->responsable_id ?? null;
         $cliente = $proyecto->cliente_id ?? null;
@@ -212,11 +218,11 @@ class MeetingController extends Controller
             ->pluck('user_id')
             ->toArray();
 
-        $destinatarios = array_unique(array_merge(
+        $destinatarios = array_unique(array_filter(array_merge(
             $validated['participants'],
             [$request->user()->id, $responsable, $cliente],
             $colaboradores
-        ));
+        )));
 
         NotificationService::sendToMany(
             $destinatarios,
@@ -224,6 +230,13 @@ class MeetingController extends Controller
             'reunion',
             url('/proyectos/' . $proyecto->id),
             'Reunión actualizada'
+        );
+
+        // 🧾 AUDITORÍA
+        self::registrarAccionManual(
+            "Actualizó la reunión '{$meeting->titulo}' del proyecto '{$proyecto->nombre}'",
+            'reuniones',
+            $meeting->id
         );
 
         return Redirect::route('calendar')->with('success', 'Reunión actualizada exitosamente.');
@@ -245,9 +258,6 @@ class MeetingController extends Controller
         try {
             $meeting->update(['eliminado' => 1]);
 
-            // -----------------------------------------------------------
-            // 🔔 NOTIFICACIÓN AL ELIMINAR REUNIÓN
-            // -----------------------------------------------------------
             $proyecto = Proyecto::find($meeting->proyecto_id);
             $responsable = $proyecto->responsable_id ?? null;
             $cliente = $proyecto->cliente_id ?? null;
@@ -260,11 +270,11 @@ class MeetingController extends Controller
 
             $participantIds = $meeting->users()->pluck('users.id')->toArray();
 
-            $destinatarios = array_unique(array_merge(
+            $destinatarios = array_unique(array_filter(array_merge(
                 $participantIds,
                 [$responsable, $cliente],
                 $colaboradores
-            ));
+            )));
 
             NotificationService::sendToMany(
                 $destinatarios,
@@ -272,6 +282,14 @@ class MeetingController extends Controller
                 'reunion',
                 url('/proyectos/' . $proyecto->id),
                 'Reunión cancelada'
+            );
+
+            // 🧾 AUDITORÍA
+            self::registrarAccionManual(
+                "Eliminó la reunión '{$meeting->titulo}' del proyecto '{$proyecto->nombre}'",
+                'reuniones',
+                $meeting->id,
+                true
             );
 
             return Redirect::route('calendar')->with('success', 'La reunión se eliminó con éxito.');

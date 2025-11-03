@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { PageProps } from '@/types';
 
@@ -14,7 +14,7 @@ interface Auditoria {
     user_id: number | null;
     user?: Usuario | null;
     accion: string;
-    tabla_afectada: string | null;
+    tabla_afectada: string | null; // sigue existiendo en el tipo, pero NO se muestra
     id_registro_afectado: number | null;
     fecha_accion: string;
     eliminado: boolean;
@@ -29,28 +29,27 @@ interface AuditoriaPagination {
 
 interface AuditPageProps extends PageProps {
     auditorias: AuditoriaPagination;
-    filtros: {
+    // filtros y tablas ya no se usan para UI; los dejamos opcionales por compatibilidad
+    filtros?: {
         search?: string;
         tabla?: string;
     };
-    tablas: string[];
+    tablas?: string[];
 }
 
 const AuditIndex: React.FC = () => {
-    const { auditorias, filtros, tablas } = usePage<AuditPageProps>().props;
+    const { auditorias, filtros } = usePage<AuditPageProps>().props;
 
+    // Filtros solo del lado del cliente (no exponemos tablas)
     const [search, setSearch] = useState(filtros?.search || '');
-    const [filterTabla, setFilterTabla] = useState(filtros?.tabla || '');
     const [filterAccion, setFilterAccion] = useState('');
-    const [filterUser, setFilterUser] = useState(''); // Nuevo filtro de usuario
+    const [filterUser, setFilterUser] = useState('');
     const [filterStart, setFilterStart] = useState('');
     const [filterEnd, setFilterEnd] = useState('');
     const [order, setOrder] = useState<'asc' | 'desc'>('desc');
     const [dateError, setDateError] = useState('');
 
-    // ============================
-    // 🔹 Lista dinámica de acciones únicas
-    // ============================
+    // Acciones únicas (para combo)
     const accionesUnicas = useMemo(() => {
         const allAcciones = auditorias.data.map((a) => a.accion);
         const setAcciones = new Set<string>();
@@ -61,9 +60,7 @@ const AuditIndex: React.FC = () => {
         return Array.from(setAcciones);
     }, [auditorias]);
 
-    // ============================
-    // 🔹 Lista de usuarios únicos (para el ComboBox)
-    // ============================
+    // Usuarios únicos (para combo)
     const usuariosUnicos = useMemo(() => {
         const setUsers = new Map<number, string>();
         auditorias.data.forEach((a) => {
@@ -74,9 +71,7 @@ const AuditIndex: React.FC = () => {
         return Array.from(setUsers.entries()).map(([id, name]) => ({ id, name }));
     }, [auditorias]);
 
-    // ============================
-    // 🔹 Filtrado inteligente
-    // ============================
+    // Filtrado local (sobre la página actual)
     const filteredAudits = useMemo(() => {
         const term = search.toLowerCase().trim();
         const startDate = filterStart ? new Date(filterStart + 'T00:00:00') : null;
@@ -93,14 +88,11 @@ const AuditIndex: React.FC = () => {
 
                 const matchesSearch =
                     a.accion.toLowerCase().includes(term) ||
-                    a.tabla_afectada?.toLowerCase().includes(term) ||
-                    a.user?.name?.toLowerCase().includes(term);
+                    a.user?.name?.toLowerCase().includes(term) ||
+                    String(a.id_registro_afectado ?? '').toLowerCase().includes(term);
 
                 const matchesUser =
                     !filterUser || a.user?.name?.toLowerCase() === filterUser.toLowerCase();
-
-                const matchesTabla =
-                    !filterTabla || a.tabla_afectada === filterTabla;
 
                 const matchesAccion =
                     !filterAccion ||
@@ -112,7 +104,6 @@ const AuditIndex: React.FC = () => {
 
                 return (
                     matchesSearch &&
-                    matchesTabla &&
                     matchesAccion &&
                     matchesFecha &&
                     matchesUser
@@ -123,29 +114,30 @@ const AuditIndex: React.FC = () => {
                 const fb = new Date(b.fecha_accion).getTime();
                 return order === 'desc' ? fb - fa : fa - fb;
             });
-    }, [
-        auditorias,
-        search,
-        filterTabla,
-        filterAccion,
-        filterUser,
-        filterStart,
-        filterEnd,
-        order,
-    ]);
+    }, [auditorias, search, filterAccion, filterUser, filterStart, filterEnd, order]);
 
-    // ============================
-    // 🔹 Limpiar filtros
-    // ============================
     const handleClearFilters = () => {
         setSearch('');
-        setFilterTabla('');
         setFilterAccion('');
         setFilterUser('');
         setFilterStart('');
         setFilterEnd('');
         setOrder('desc');
         setDateError('');
+    };
+
+    // Paginación con Inertia (envía X-Inertia y pasa tu middleware)
+    const goToPage = (page: number) => {
+        if (page < 1 || page > auditorias.last_page) return;
+        router.get(
+            route('auditoria.index'),           // asegúrate de que tu ruta se llame así
+            { page },                           // solo page; los filtros son client-side
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            }
+        );
     };
 
     return (
@@ -156,26 +148,25 @@ const AuditIndex: React.FC = () => {
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     <div className="bg-[#0B1120] shadow-2xl sm:rounded-xl p-8 border border-gray-800/80">
 
-                        {/* ENCABEZADO */}
+                        {/* Encabezado */}
                         <div className="flex flex-col sm:flex-row justify-between items-center mb-8 border-b border-gray-700 pb-4">
                             <h1 className="text-3xl font-extrabold text-white tracking-wider text-center sm:text-left">
                                 REGISTROS DE AUDITORÍA
                             </h1>
                         </div>
 
-                        {/* FILTROS */}
+                        {/* Filtros (sin “Tabla”) */}
                         <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-6 flex flex-wrap gap-3 justify-between items-center">
-
                             {/* Buscador general */}
                             <input
                                 type="text"
-                                placeholder="Buscar texto en auditorías..."
+                                placeholder="Buscar (acción, usuario, ID registro)..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="flex-grow min-w-[180px] px-3 py-2 rounded-md bg-[#080D15] text-white border border-gray-700 text-sm focus:ring-2 focus:ring-[#B3E10F]"
                             />
 
-                            {/* Filtro por usuario (buscable) */}
+                            {/* Usuario (buscable) */}
                             <div className="relative">
                                 <input
                                     type="text"
@@ -192,19 +183,7 @@ const AuditIndex: React.FC = () => {
                                 </datalist>
                             </div>
 
-                            {/* Filtro por tabla */}
-                            <select
-                                value={filterTabla}
-                                onChange={(e) => setFilterTabla(e.target.value)}
-                                className="px-3 py-2 rounded-md bg-[#080D15] text-white border border-gray-700 text-sm focus:ring-2 focus:ring-[#B3E10F] pr-8"
-                            >
-                                <option value="">Todas las tablas</option>
-                                {tablas.map((t, i) => (
-                                    <option key={i} value={t}>{t}</option>
-                                ))}
-                            </select>
-
-                            {/* Filtro por acción */}
+                            {/* Acción */}
                             <select
                                 value={filterAccion}
                                 onChange={(e) => setFilterAccion(e.target.value)}
@@ -263,7 +242,7 @@ const AuditIndex: React.FC = () => {
                             <p className="text-red-400 text-sm text-center mb-4">{dateError}</p>
                         )}
 
-                        {/* TABLA */}
+                        {/* Tabla (sin columna “Tabla”) */}
                         {filteredAudits.length > 0 ? (
                             <div className="overflow-x-auto border border-gray-800 rounded-lg">
                                 <table className="min-w-full divide-y divide-gray-800 table-auto">
@@ -271,7 +250,6 @@ const AuditIndex: React.FC = () => {
                                         <tr>
                                             <th className="px-6 py-3 text-left uppercase tracking-wider">Usuario</th>
                                             <th className="px-6 py-3 text-left uppercase tracking-wider">Acción</th>
-                                            <th className="px-6 py-3 text-left uppercase tracking-wider">Tabla</th>
                                             <th className="px-6 py-3 text-left uppercase tracking-wider">Registro</th>
                                             <th className="px-6 py-3 text-left uppercase tracking-wider">Fecha</th>
                                         </tr>
@@ -284,9 +262,6 @@ const AuditIndex: React.FC = () => {
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-gray-200">
                                                     {a.accion}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-gray-400">
-                                                    {a.tabla_afectada || '—'}
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-gray-400">
                                                     {a.id_registro_afectado || '—'}
@@ -305,10 +280,38 @@ const AuditIndex: React.FC = () => {
                             </p>
                         )}
 
-                        {/* PIE */}
-                        <div className="mt-4 text-sm text-gray-400 flex justify-between">
-                            <span>Página {auditorias.current_page} de {auditorias.last_page}</span>
-                            <span>Total: {auditorias.total}</span>
+                        {/* Pie + Paginación con Inertia */}
+                        <div className="mt-4 text-sm text-gray-400 flex flex-col sm:flex-row justify-between items-center gap-2">
+                            <div className="flex items-center gap-2">
+                                <button
+                                    disabled={auditorias.current_page <= 1}
+                                    onClick={() => goToPage(auditorias.current_page - 1)}
+                                    className={`px-3 py-1 rounded-md text-sm font-semibold ${
+                                        auditorias.current_page <= 1
+                                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                                            : 'bg-[#B3E10F] text-black hover:bg-lime-400 transition'
+                                    }`}
+                                >
+                                    ← Anterior
+                                </button>
+
+                                <button
+                                    disabled={auditorias.current_page >= auditorias.last_page}
+                                    onClick={() => goToPage(auditorias.current_page + 1)}
+                                    className={`px-3 py-1 rounded-md text-sm font-semibold ${
+                                        auditorias.current_page >= auditorias.last_page
+                                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                                            : 'bg-[#B3E10F] text-black hover:bg-lime-400 transition'
+                                    }`}
+                                >
+                                    Siguiente →
+                                </button>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-2 items-center">
+                                <span>Página {auditorias.current_page} de {auditorias.last_page}</span>
+                                <span>Total: {auditorias.total}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
