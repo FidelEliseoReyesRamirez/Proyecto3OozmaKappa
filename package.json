@@ -16,6 +16,7 @@
         "@types/react": "^18.0.28",
         "@types/react-big-calendar": "^1.16.3",
         "@types/react-dom": "^18.0.10",
+        "@types/three": "^0.135.0",
         "@vitejs/plugin-react": "^4.2.0",
         "autoprefixer": "^10.4.12",
         "axios": "^1.11.0",
@@ -32,6 +33,10 @@
         "@inertiajs/inertia": "^0.11.1",
         "@inertiajs/inertia-react": "^0.8.1",
         "moment": "^2.30.1",
-        "react-big-calendar": "^1.19.4"
+        "react-big-calendar": "^1.19.4",
+        "three": "^0.135.0",
+        "web-ifc": "^0.0.72",
+        "web-ifc-three": "^0.0.126",
+        "web-ifc-viewer": "^1.0.218"
     }
 }
