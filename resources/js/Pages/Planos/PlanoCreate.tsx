@@ -47,7 +47,7 @@ const PlanoCreate: React.FC = () => {
         { label: 'Información Excel', value: 'Excel' as FileType, extensions: ['.xls', '.xlsx', '.xlsm'] },
         { label: 'Imagen de Plano (JPG/PNG)', value: 'Imagen' as FileType, extensions: ['.jpg', '.jpeg', '.png'] },
         // Soporte BIM/3D para IFC y FBX
-        { label: 'Modelo BIM/3D (IFC/FBX)', value: 'BIM-IFC' as FileType, extensions: ['.ifc', '.fbx'] },
+        { label: 'Modelo BIM/3D (IFC)', value: 'BIM-IFC' as FileType, extensions: ['.ifc'] },
     ], []);
     
     const allValidExtensions = allowedTypes.flatMap(t => t.extensions);
