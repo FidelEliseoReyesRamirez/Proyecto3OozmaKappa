@@ -20,36 +20,25 @@ const IFCViewer: React.FC<IFCViewerProps> = ({ file }) => {
         if (!viewerRef.current) {
             const viewer = new IfcViewerAPI({
                 container: containerRef.current,
-                backgroundColor: new THREE.Color(0x202020), // Fondo oscuro
+                backgroundColor: new THREE.Color(0x202020),
             });
             
-            // CONFIGURACIÓN WASM CRÍTICA
+            // 🚨 CORRECCIÓN CRÍTICA FINAL: Forzar modo Single-Thread.
+            // Deshabilita explícitamente el uso de IFC Workers (hilos), 
+            // eliminando el 'LinkError' relacionado con la compilación del WASM multihilo.
+            (viewer.IFC.loader.ifcManager as any).useIfcWorkers = false;
+
+            // 1. Configuración de la carpeta WASM
             viewer.IFC.setWasmPath('/wasm/'); 
             
-            // 🚨 CARGA FORZADA DEL WORKER (Intento final para evitar LinkError por caché)
-            try {
-                // Genera la URL absoluta para el Worker
-                const workerUrl = `${window.location.origin}/wasm/web-ifc-mt.worker.js`;
-                const worker = new Worker(workerUrl);
-                
-                // Forzar la asignación del worker
-                (viewer.IFC.loader.ifcManager as any).worker = worker;
-                console.log('Worker IFC cargado y asignado forzosamente.');
-            } catch (e) {
-                console.error('No se pudo cargar o asignar el Worker IFC. Revise la ruta de los archivos en public/wasm.', e);
-            }
-            // -------------------------------------------------------------
-            
-            // Entorno
+            // 2. Configuración del Entorno
             viewer.axes.setAxes();
             viewer.grid.setGrid();
             
-            // Habilitar post-producción
             (viewer.context.renderer.postProduction as any).enabled = true;
 
-            // ILUMINACIÓN
+            // 3. Iluminación
             const scene = viewer.context.scene;
-
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); 
             scene.add(ambientLight);
 
@@ -83,25 +72,20 @@ const IFCViewer: React.FC<IFCViewerProps> = ({ file }) => {
         setIsLoading(true);
         let fileUrl: string | null = null;
         
-        // --- LIMPIEZA DE ESCENA ---
-        
-        // CORRECCIÓN TS2352: Convertir a 'unknown' primero.
+        // Limpieza de escena
         const scene = viewer.context.scene as unknown as THREE.Scene; 
-        
-        // Limpiar modelos IFC previos
         viewer.context.items.ifcModels.forEach(model => scene.remove(model));
         viewer.context.items.ifcModels.length = 0;
-        // --- FIN LIMPIEZA ---
         
         fileUrl = URL.createObjectURL(file);
 
         const loadIFC = async () => {
             try {
-                // Usamos la API de IfcViewerAPI que gestiona el WASM y ajusta la cámara automáticamente
+                // Usamos la API de IfcViewerAPI que gestiona el WASM
                 await viewer.IFC.loadIfcUrl(fileUrl!, true); 
             } catch (error) {
-                // Captura el error para ver la razón exacta (MIME type, CompileError, etc.)
-                console.error('Error cargando IFC:', error);
+                // La causa del error ahora es *muy* probable que no sea la carga WASM.
+                console.error('Error cargando IFC.', error);
             }
             setIsLoading(false);
         };

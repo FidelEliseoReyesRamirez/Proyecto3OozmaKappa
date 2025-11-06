@@ -8,13 +8,8 @@ use Illuminate\Support\Facades\Log;
 
 class PreventManualUrlAccess
 {
-    /**
-     * Middleware para evitar acceso manual directo por URL.
-     * Permite rutas Inertia, AJAX internas y descargas directas.
-     */
     public function handle(Request $request, Closure $next)
     {
-        // Registrar toda solicitud
         Log::info('🛰️ [PreventManualUrlAccess] Solicitud detectada', [
             'path' => $request->getPathInfo(),
             'method' => $request->method(),
@@ -22,7 +17,14 @@ class PreventManualUrlAccess
             'user_id' => optional($request->user())->id,
         ]);
 
-        // Excepción: permitir descargas directas
+        // Excepción: permitir acceso a la carpeta WASM para web-ifc-viewer
+        if (preg_match('#^/wasm/#', $request->getPathInfo())) {
+            Log::info('✅ [PreventManualUrlAccess] Archivo WASM/Worker permitido', [
+                'ruta' => $request->getPathInfo(),
+            ]);
+            return $next($request);
+        }
+
         if (preg_match('#^/docs/download/#', $request->getPathInfo())) {
             Log::info('✅ [PreventManualUrlAccess] Descarga permitida', [
                 'ruta' => $request->getPathInfo(),
@@ -30,7 +32,6 @@ class PreventManualUrlAccess
             return $next($request);
         }
 
-        // Excepciones para endpoints que deben funcionar con fetch() o AJAX
         if (
             preg_match('#^/tareas/proyecto/#', $request->getPathInfo()) ||
             preg_match('#^/tareas/[0-9]+/historial$#', $request->getPathInfo())
@@ -42,7 +43,6 @@ class PreventManualUrlAccess
             return $next($request);
         }
 
-        // Rutas públicas permitidas sin autenticación
         $allowed = [
             '/',
             '/login',
@@ -61,7 +61,6 @@ class PreventManualUrlAccess
             '/profile/update',
         ];
 
-        // Si la solicitud no tiene cabecera Inertia y no está en la lista blanca → bloqueo
         if (
             !$request->headers->has('X-Inertia') &&
             !$request->ajax() &&
@@ -74,11 +73,9 @@ class PreventManualUrlAccess
                 'user_id' => optional($request->user())->id,
             ]);
 
-            // Redirigir a login si no autenticado
             return redirect()->route('login');
         }
 
-        // ✅ Permitir continuar normalmente
         return $next($request);
     }
 }

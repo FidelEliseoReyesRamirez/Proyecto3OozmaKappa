@@ -4,10 +4,10 @@ import React, { FormEventHandler, useMemo, useState, useRef } from 'react';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { PageProps } from '@/types';
-import IFCViewer from './IFCViewer'; // Importación del componente BIM/3D
+import FBXViewer from './FBXViewer';
 
 // Definición de tipos
-type FileType = 'PDF' | 'Excel' | 'Word' | 'Imagen' | 'BIM-IFC'; 
+type FileType = 'PDF' | 'Excel' | 'Word' | 'Imagen' | 'BIM-FBX'; 
 
 interface Project {
     id: number;
@@ -34,8 +34,11 @@ const PlanoCreate: React.FC = () => {
     });
 
     const [projectSearch, setProjectSearch] = useState('');
+    
+    // ✅ CORRECCIÓN: Los dos estados de modal ahora tienen nombres únicos
     const [showSizeModal, setShowSizeModal] = useState(false);
-    const [showTypeModal, setShowTypeModal] = useState(false);
+    const [showTypeModal, setShowTypeModal] = useState(false); 
+    
     const [frontendError, setFrontendError] = useState('');
     
     // Referencia para limpiar el input de tipo file
@@ -46,8 +49,8 @@ const PlanoCreate: React.FC = () => {
         { label: 'Plano en PDF', value: 'PDF' as FileType, extensions: ['.pdf'] },
         { label: 'Información Excel', value: 'Excel' as FileType, extensions: ['.xls', '.xlsx', '.xlsm'] },
         { label: 'Imagen de Plano (JPG/PNG)', value: 'Imagen' as FileType, extensions: ['.jpg', '.jpeg', '.png'] },
-        // Soporte BIM/3D para IFC y FBX
-        { label: 'Modelo BIM/3D (IFC)', value: 'BIM-IFC' as FileType, extensions: ['.ifc'] },
+        // Soporte BIM/3D para FBX
+        { label: 'Modelo BIM/3D (FBX)', value: 'BIM-FBX' as FileType, extensions: ['.fbx'] },
     ], []);
     
     const allValidExtensions = allowedTypes.flatMap(t => t.extensions);
@@ -143,6 +146,7 @@ const PlanoCreate: React.FC = () => {
                         <form onSubmit={submit} className="space-y-6">
 
                             {/* PROYECTO BUSCABLE */}
+                            {/* ... (código del proyecto) ... */}
                             <div>
                                 <label htmlFor="proyecto_id" className={labelStyle}>Proyecto Asociado</label>
                                 <input
@@ -235,7 +239,8 @@ const PlanoCreate: React.FC = () => {
 
                                         // Validaciones de tipo y tamaño
                                         if (!isValidFileType(file.name)) {
-                                            setShowTypeModal(true);
+                                            // Usamos la función de actualización corregida
+                                            setShowTypeModal(true); 
                                             e.target.value = ''; 
                                             return;
                                         }
@@ -255,11 +260,11 @@ const PlanoCreate: React.FC = () => {
                                 {errors.archivo && <p className="text-red-400 text-xs mt-1">{errors.archivo}</p>}
                             </div>
 
-                            {/* PREVISUALIZADOR BIM/3D */}
-                            {data.archivo_tipo === 'BIM-IFC' && data.archivo && (
+                            {/* PREVISUALIZADOR 3D (FBX) */}
+                            {data.archivo_tipo === 'BIM-FBX' && data.archivo && (
                                 <div className="p-4 bg-[#080D15] rounded-lg border border-gray-700/80">
-                                    <h3 className="text-lg font-bold text-[#B3E10F] mb-3">Previsualización del Modelo 3D/BIM</h3>
-                                    <IFCViewer file={data.archivo} />
+                                    <h3 className="text-lg font-bold text-[#B3E10F] mb-3">Previsualización del Modelo 3D (FBX)</h3>
+                                    <FBXViewer file={data.archivo} />
                                 </div>
                             )}
 

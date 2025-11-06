@@ -7,8 +7,7 @@ export default function Dashboard() {
 
     return (
         <AuthenticatedLayout
-            header={<h2 className="text-xl font-semibold leading-tight text-white">Dashboard</h2>}
-        >
+            header={<h2 className="text-xl font-semibold leading-tight text-white">Dashboard</h2>}>
             <Head title="Dashboard" />
             <div className="py-12 bg-[#121212]"> 
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">

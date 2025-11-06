@@ -1,9 +1,15 @@
-import React, { FormEventHandler, useMemo, useState } from 'react';
+// resources/js/Pages/Planos/PlanoEdit.tsx
+
+import React, { FormEventHandler, useMemo, useState, useEffect } from 'react';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { PageProps } from '@/types';
 
-type FileType = 'DWG' | 'IFC' | 'PDF' | 'Otro' | 'ZIP' | 'URL'; // Añadido ZIP y URL para consistencia
+// Importación requerida del componente FBXViewer
+import FBXViewer from './FBXViewer'; 
+
+// --- 🛠️ TIPOS ---
+type FileType = 'PDF' | 'Otro' | 'ZIP' | 'URL' | 'BIM-FBX';
 
 interface ProjectOption {
     id: number;
@@ -15,7 +21,7 @@ interface PlanoBimData {
     titulo: string; 
     descripcion: string;
     proyecto_id: number | null;
-    tipo: FileType; // Usar FileType
+    tipo: FileType;
     enlace_externo: string | null; 
     archivo_url: string | null; 
 }
@@ -26,35 +32,35 @@ interface PlanoEditProps extends PageProps {
 }
 
 const PlanoEdit: React.FC = () => {
+    
     const { plano, projectsList } = usePage<PlanoEditProps>().props;
 
-    // ⭐ CLAVE: LOG PARA DEPURAR. Mira la consola del navegador al cargar la página.
-    console.log("Plano recibido en PlanoEdit.tsx:", plano);
-
-    // Inicializaciones más seguras usando encadenamiento opcional
-    const initialTitle = plano?.titulo ?? ''; 
-    const initialDescription = plano?.descripcion ?? '';
-    const initialProjectId = plano?.proyecto_id?.toString() ?? '';
-    const initialExternalLink = plano?.enlace_externo ?? '';
-    const initialType = plano?.tipo ?? 'PDF'; // Usar el tipo directamente, con fallback
+    // --- Lógica de Inicialización ---
     
-    // Determinar el modo de subida inicial
-    const initialUploadMode = (plano?.enlace_externo && plano.tipo === 'URL') ? 'enlace' : 'archivo';
+    const validFileTypes: FileType[] = ['PDF', 'Otro', 'ZIP', 'URL', 'BIM-FBX'];
+    
+    const initialType: FileType = 
+        (plano?.tipo && validFileTypes.includes(plano.tipo))
+            ? plano.tipo
+            : 'PDF';
 
+    const initialUploadMode: 'archivo' | 'enlace' = 
+        (plano?.enlace_externo && plano.tipo === 'URL') ? 'enlace' : 'archivo';
 
     const { data, setData, put, processing, errors, clearErrors } = useForm({
-        titulo: initialTitle, 
-        descripcion: initialDescription,
-        proyecto_id: initialProjectId, 
+        titulo: plano?.titulo ?? '', 
+        descripcion: plano?.descripcion ?? '',
+        proyecto_id: plano?.proyecto_id?.toString() ?? '', 
         
         archivo: null as File | null,
-        enlace_externo: initialExternalLink, 
+        enlace_externo: plano?.enlace_externo ?? '', 
         archivo_tipo: initialType, 
         
-        // Esto podría ser 'archivo_url' o 'enlace_externo' dependiendo del tipo de plano
         archivo_actual: plano?.archivo_url ?? plano?.enlace_externo ?? 'Ninguno', 
     });
 
+    // Estado para manejar la URL de objeto local del archivo subido (ya no se usa para FBXViewer directamente)
+    const [localFileUrl, setLocalFileUrl] = useState<string | null>(null);
     const [showSizeModal, setShowSizeModal] = useState(false);
     const [showTypeModal, setShowTypeModal] = useState(false);
     const [frontendError, setFrontendError] = useState('');
@@ -63,20 +69,51 @@ const PlanoEdit: React.FC = () => {
     
     const [projectSearch, setProjectSearch] = useState('');
 
+    useEffect(() => {
+        let url: string | null = null;
+        
+        if (data.archivo && data.archivo_tipo !== 'BIM-FBX') { // Solo si no es FBX, ya que FBXViewer lo manejará internamente
+            url = URL.createObjectURL(data.archivo);
+            setLocalFileUrl(url);
+        } else {
+            setLocalFileUrl(null);
+        }
+        
+        return () => {
+            if (url) {
+                URL.revokeObjectURL(url);
+            }
+        };
+    }, [data.archivo, data.archivo_tipo]);
+    
+    const fbxPreviewData = useMemo((): File | null => {
+        // Solo consideraremos previsualización de FBX si el tipo seleccionado ES FBX
+        if (data.archivo_tipo !== 'BIM-FBX') {
+            return null;
+        }
+
+        // Si hay un archivo recién seleccionado, ese es el que se previsualiza.
+        if (data.archivo) {
+            return data.archivo; 
+        }
+        
+        return null; // No hay un File para previsualizar.
+    }, [data.archivo, data.archivo_tipo]);
+
+
+    // 🛠️ TIPOS PERMITIDOS
     const allowedTypes = useMemo(
         () => [
             { label: 'Plano (DWG/DXF)', value: 'DWG' as FileType, extensions: ['.dwg', '.dxf', '.dwf'] },
-            { label: 'Modelo BIM (IFC)', value: 'IFC' as FileType, extensions: ['.ifc'] },
+            { label: 'Modelo BIM (FBX)', value: 'BIM-FBX' as FileType, extensions: ['.fbx'] },
             { label: 'Documento PDF', value: 'PDF' as FileType, extensions: ['.pdf'] },
-            { label: 'Otro/Zip', value: 'Otro' as FileType, extensions: ['.zip', '.rar'] }, // Asumimos 'Otro' para ZIP/RAR
-            // El tipo 'URL' no tiene extensiones de archivo físico
+            { label: 'Otro/Zip', value: 'Otro' as FileType, extensions: ['.zip', '.rar', '.7z', '.tar'] }, 
         ],
         []
     );
 
     const allAllowedExtensions = allowedTypes.flatMap(t => t.extensions);
 
-    // ⭐ Corrección: Asegurarse de que `data.archivo_tipo` es uno de los `value` de `allowedTypes`
     const acceptFileTypes = allowedTypes
         .find((t) => t.value === data.archivo_tipo)
         ?.extensions.join(',') || allAllowedExtensions.join(',');
@@ -99,40 +136,49 @@ const PlanoEdit: React.FC = () => {
     };
     
     const currentFileName = useMemo(() => {
-        if (plano?.enlace_externo && plano?.tipo === 'URL') { // Verificar tipo 'URL'
+        if (plano?.enlace_externo && plano?.tipo === 'URL') {
             return `Enlace externo: ${plano.enlace_externo}`;
         }
         if (plano?.archivo_url) {
             return getFileNameFromUrl(plano.archivo_url);
         }
         return 'Ningún archivo asociado';
-    }, [plano]); // Dependencia solo de 'plano'
+    }, [plano]);
 
 
+    // --- Función de Envío ---
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
         setFrontendError('');
         clearErrors();
         
-        // ⭐ Mejorado: Verifica si `plano` y `plano.id` existen antes de continuar
         if (!plano || !plano.id) {
             setFrontendError('Error crítico: La información del plano no está disponible. No se puede actualizar.');
-            console.error("DEBUG: Plano o Plano.id es nulo/indefinido al enviar:", plano);
             return;
         }
 
         const hasNewFile = !!data.archivo;
-        // ⭐ Uso consistente de encadenamiento opcional
         const hasAnyCurrentResource = !!plano?.archivo_url || !!plano?.enlace_externo;
 
         if (uploadMode === 'archivo') {
-            // Si no hay archivo nuevo y tampoco hay recurso actual, hay un problema
+            // Limpiar enlace si cambiamos a modo archivo
+            if (data.enlace_externo) {
+                setData('enlace_externo', '');
+            }
             if (!hasNewFile && !hasAnyCurrentResource) {
                 setFrontendError('Este plano no tiene un archivo o enlace asociado. Debes subir un archivo para que sea válido.');
                 return;
             }
-            // Si hay un archivo nuevo, y no es válido por tipo, se maneja en el onChange
-            // Si no hay archivo nuevo, pero ya tiene un archivo o enlace, está bien.
+            // Si hay un archivo nuevo, verificar que coincida con el tipo seleccionado
+            if (data.archivo) {
+                const selectedTypeExtensions = allowedTypes.find(t => t.value === data.archivo_tipo)?.extensions || [];
+                const fileExt = data.archivo.name.toLowerCase().substring(data.archivo.name.lastIndexOf('.'));
+                
+                if (!selectedTypeExtensions.includes(fileExt)) {
+                   setFrontendError(`El archivo seleccionado no coincide con el Tipo de Plano BIM: "${data.archivo_tipo}".`);
+                   return;
+                }
+            }
         }
 
         if (uploadMode === 'enlace') {
@@ -144,19 +190,30 @@ const PlanoEdit: React.FC = () => {
                 setFrontendError('El enlace externo no es válido. Debe comenzar con http:// o https://');
                 return;
             }
+            // Limpiar archivo si cambiamos a modo enlace
+            if (data.archivo) {
+                setData('archivo', null);
+            }
+            // Forzar el tipo a 'URL' si está en modo enlace
+            if (data.archivo_tipo !== 'URL') {
+                setData('archivo_tipo', 'URL');
+            }
         }
 
+        // LLAMADA PUT:
         put(route('planos.update', plano.id), { 
             onSuccess: () => router.visit(route('planos.index')),
+            onError: (errors) => console.error("Error de servidor:", errors), 
         });
     };
 
+    // --- Estilos y Renderizado (Se mantiene el JSX) ---
     const inputStyle =
         'mt-1 block w-full border border-gray-700 bg-[#080D15] text-white rounded-md shadow-inner py-2 px-3 focus:outline-none focus:ring-[#2970E8] focus:border-[#2970E8] sm:text-sm transition duration-150';
     const labelStyle = 'block text-sm font-bold text-gray-300';
 
-    // ⭐ Renderizado condicional para evitar errores si plano no existe
     if (!plano) {
+        // ... (Manejo de error de plano nulo)
         return (
             <AuthenticatedLayout
                 header={<h2 className="font-extrabold text-xl text-[#B3E10F] leading-tight tracking-wider">ERROR AL CARGAR PLANO</h2>}
@@ -190,6 +247,23 @@ const PlanoEdit: React.FC = () => {
                     <div className="bg-[#0B1120] overflow-hidden shadow-2xl sm:rounded-xl p-8 border border-gray-800/80">
                         <form onSubmit={submit} className="space-y-6">
                             
+                            {/* SECCIÓN DE PREVISUALIZACIÓN 3D (SOLO FBX) */}
+                            {/* Se muestra si el tipo es BIM-FBX y hay un archivo nuevo (fbxPreviewData) O un archivo existente (plano.archivo_url) */}
+                            {(data.archivo_tipo === 'BIM-FBX' && (fbxPreviewData || (plano?.archivo_url && plano.tipo === 'BIM-FBX'))) && (
+                                <div className="mb-6 p-4 bg-[#080D15] rounded-lg border border-[#2970E8]">
+                                    <h3 className="text-lg font-bold text-[#B3E10F] mb-3">
+                                        Vista Previa del Modelo (FBX)
+                                    </h3>
+                                    <div className="h-[500px] w-full"> 
+                                        <FBXViewer file={fbxPreviewData} /> 
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        * Se muestra el archivo recién seleccionado. Si no hay un archivo nuevo, se usa el archivo guardado (si aplica).
+                                    </p>
+                                </div>
+                            )}
+                            
+                            {/* Título */}
                             <div>
                                 <label htmlFor="titulo" className={labelStyle}>
                                     Título del Plano BIM
@@ -205,6 +279,7 @@ const PlanoEdit: React.FC = () => {
                                 {errors.titulo && <p className="text-red-400 text-sm mt-1">{errors.titulo}</p>}
                             </div>
 
+                            {/* Descripción */}
                             <div>
                                 <label htmlFor="descripcion" className={labelStyle}>
                                     Descripción (Opcional)
@@ -218,6 +293,7 @@ const PlanoEdit: React.FC = () => {
                                 />
                             </div>
 
+                            {/* Proyecto Asociado */}
                             <div>
                                 <label htmlFor="proyecto_id" className={labelStyle}>
                                     Proyecto Asociado
@@ -236,6 +312,7 @@ const PlanoEdit: React.FC = () => {
                                     onChange={(e) => setData('proyecto_id', e.target.value)}
                                     className={inputStyle}
                                 >
+                                    <option value="">(Sin proyecto asociado)</option> 
                                     {filteredProjects.length > 0 ? (
                                         filteredProjects.map((p) => (
                                             <option key={p.id} value={p.id}>
@@ -243,31 +320,42 @@ const PlanoEdit: React.FC = () => {
                                             </option>
                                         ))
                                     ) : (
-                                        <option value="">Sin resultados</option>
+                                        <option value="" disabled>Sin resultados</option>
                                     )}
                                 </select>
+                                {errors.proyecto_id && <p className="text-red-400 text-sm mt-1">{errors.proyecto_id}</p>}
                             </div>
 
+                            {/* Tipo de Plano BIM */}
                             <div>
                                 <label htmlFor="archivo_tipo" className={labelStyle}>
                                     Tipo de Plano BIM
                                 </label>
                                 <select
                                     id="archivo_tipo"
-                                    value={data.archivo_tipo}
+                                    value={uploadMode === 'enlace' ? 'URL' : data.archivo_tipo}
                                     onChange={(e) => setData('archivo_tipo', e.target.value as FileType)}
                                     className={inputStyle}
+                                    disabled={uploadMode === 'enlace'} 
                                 >
                                     {allowedTypes.map((t) => (
                                         <option key={t.value} value={t.value}>
                                             {t.label}
                                         </option>
                                     ))}
-                                    {/* Opción 'URL' no listada si no tiene extensiones de archivo */}
-                                    <option value="URL">Enlace Externo (URL)</option> 
+                                    {(uploadMode === 'enlace') && (
+                                        <option value="URL">Enlace Externo (URL)</option> 
+                                    )}
                                 </select>
+                                {uploadMode === 'enlace' && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        El tipo es forzado a **"Enlace Externo (URL)"** cuando se selecciona el modo "Enlace externo".
+                                    </p>
+                                )}
+                                {errors.archivo_tipo && <p className="text-red-400 text-sm mt-1">{errors.archivo_tipo}</p>}
                             </div>
 
+                            {/* Modo de actualización */}
                             <div>
                                 <label className={labelStyle}>Modo de actualización</label>
                                 <div className="flex items-center gap-6 mt-2">
@@ -279,7 +367,6 @@ const PlanoEdit: React.FC = () => {
                                             onChange={() => {
                                                 setUploadMode('archivo');
                                                 setData('enlace_externo', '');
-                                                // Ajustar tipo si se cambia de modo URL a archivo
                                                 if (data.archivo_tipo === 'URL') setData('archivo_tipo', 'PDF');
                                             }}
                                             className="accent-[#B3E10F]"
@@ -294,7 +381,6 @@ const PlanoEdit: React.FC = () => {
                                             onChange={() => {
                                                 setUploadMode('enlace');
                                                 setData('archivo', null);
-                                                // Establecer tipo a 'URL' si se selecciona modo enlace
                                                 setData('archivo_tipo', 'URL'); 
                                             }}
                                             className="accent-[#2970E8]"
@@ -304,6 +390,7 @@ const PlanoEdit: React.FC = () => {
                                 </div>
                             </div>
                             
+                            {/* Información del Archivo Actual */}
                             <div className="p-3 bg-[#080D15] border border-gray-700 rounded-md">
                                 <p className="text-sm font-semibold text-gray-400 mb-1">Archivo / Enlace Actual:</p>
                                 <p className="text-sm text-lime-300 truncate">
@@ -315,33 +402,50 @@ const PlanoEdit: React.FC = () => {
                                 </p>
                             </div>
 
+                            {/* Campos de Entrada Condicionales */}
                             {uploadMode === 'archivo' ? (
                                 <div>
                                     <label htmlFor="archivo" className={labelStyle}>
                                         **Subir NUEVO Archivo** (Opcional, reemplaza el actual)
                                     </label>
+                                    
+                                    {/* Mostrar el nombre del archivo si ya está cargado en el estado */}
+                                    {data.archivo && (
+                                        <p className="mt-1 mb-2 text-sm text-[#B3E10F] font-semibold flex items-center gap-2">
+                                            📂 Archivo seleccionado: <span className="text-white truncate">{data.archivo.name}</span>
+                                        </p>
+                                    )}
+
                                     <input
                                         id="archivo"
                                         type="file"
                                         accept={acceptFileTypes}
                                         onChange={(e) => {
                                             const file = e.target.files ? e.target.files[0] : null;
-                                            if (!file) return;
                                             
-                                            if (!isValidFileType(file.name)) {
-                                                setShowTypeModal(true);
-                                                e.target.value = '';
+                                            if (!file) {
+                                                setData('archivo', null); 
                                                 return;
                                             }
-                                            if (file.size > 50 * 1024 * 1024) {
+                                            
+                                            // Validaciones de frontend (tamaño y tipo general)
+                                            if (!isValidFileType(file.name)) {
+                                                setShowTypeModal(true);
+                                                e.target.value = ''; 
+                                                return;
+                                            }
+                                            if (file.size > 50 * 1024 * 1024) { // 50 MB
                                                 setShowSizeModal(true);
                                                 e.target.value = '';
                                                 return;
                                             }
+                                            
                                             setData('archivo', file);
                                         }}
                                         className="mt-1 block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#2970E8] file:text-white hover:file:bg-blue-600 transition duration-150"
                                     />
+                                    <p className="text-xs text-gray-500 mt-1">Tipos aceptados para **{data.archivo_tipo}**: {acceptFileTypes}</p>
+                                    {errors.archivo && <p className="text-red-400 text-sm mt-1">{errors.archivo}</p>}
                                 </div>
                             ) : (
                                 <div>
@@ -356,16 +460,15 @@ const PlanoEdit: React.FC = () => {
                                         placeholder="https://drive.google.com/..."
                                         className={inputStyle}
                                     />
+                                    {errors.enlace_externo && <p className="text-red-400 text-sm mt-1">{errors.enlace_externo}</p>}
                                 </div>
                             )}
 
                             {frontendError && (
                                 <p className="text-red-400 font-semibold text-sm mt-2 text-center">{frontendError}</p>
                             )}
-                            {errors.proyecto_id && <p className="text-red-400 text-sm mt-1">{errors.proyecto_id}</p>}
-                            {errors.archivo && <p className="text-red-400 text-sm mt-1">{errors.archivo}</p>}
-                            {errors.enlace_externo && <p className="text-red-400 text-sm mt-1">{errors.enlace_externo}</p>}
 
+                            {/* Botones */}
                             <div className="flex items-center justify-end pt-4 border-t border-gray-700">
                                 <button
                                     type="button"
@@ -387,6 +490,7 @@ const PlanoEdit: React.FC = () => {
                 </div>
             </div>
 
+            {/* Modales (se mantienen igual) */}
             {showSizeModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
                     <div className="bg-[#0F172A] text-center p-6 rounded-xl shadow-2xl border border-lime-400/50 w-11/12 max-w-md">
@@ -410,7 +514,7 @@ const PlanoEdit: React.FC = () => {
                     <div className="bg-[#0F172A] text-center p-6 rounded-xl shadow-2xl border border-red-500/50 w-11/12 max-w-md">
                         <h2 className="text-xl font-bold text-red-400 mb-2">Tipo de archivo no permitido</h2>
                         <p className="text-gray-300 text-sm mb-4">
-                            Solo se permiten formatos BIM o documentos reales: <span className="text-white font-semibold">DWG, IFC, PDF o archivos comprimidos</span>.<br />
+                            Solo se permiten formatos BIM o documentos reales: <span className="text-white font-semibold">FBX, DWG, DXF, PDF o archivos comprimidos</span>.<br />
                             Asegúrate de haber seleccionado el **Tipo de Plano BIM** correcto.
                         </p>
                         <button
