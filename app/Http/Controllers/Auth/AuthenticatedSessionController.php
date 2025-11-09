@@ -82,7 +82,6 @@ class AuthenticatedSessionController extends Controller
                 'accion' => 'Inicio de sesión',
                 'tabla_afectada' => 'users',
                 'id_registro_afectado' => $user->id,
-                'ip_usuario' => $request->ip(),
                 'created_at' => now(),
             ]);
         }
@@ -101,7 +100,6 @@ class AuthenticatedSessionController extends Controller
                 'accion' => 'Cierre de sesión',
                 'tabla_afectada' => 'users',
                 'id_registro_afectado' => $user->id,
-                'ip_usuario' => $request->ip(),
                 'created_at' => now(),
             ]);
         }
