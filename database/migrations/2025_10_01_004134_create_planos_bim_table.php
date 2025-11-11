@@ -12,11 +12,11 @@ return new class extends Migration {
             $table->foreignId('proyecto_id')->constrained('proyectos');
             $table->string('nombre', 150);
             $table->text('descripcion')->nullable();
-            $table->string('archivo_url', 255);
+            $table->string('archivo_path', 255); // ruta privada internal
             $table->string('version', 50)->nullable();
             $table->timestamp('fecha_subida')->useCurrent();
             $table->foreignId('subido_por')->nullable()->constrained('users');
-            $table->boolean('eliminado')->default(0);
+            $table->boolean('eliminado')->default(false);
             $table->timestamps();
         });
     }
@@ -26,4 +26,3 @@ return new class extends Migration {
         Schema::dropIfExists('planos_bim');
     }
 };
-
