@@ -8,18 +8,22 @@ interface Props extends PageProps {
 }
 
 const Plano3D: React.FC = () => {
+
+  // 🔇 Desactivar todo tipo de logs SOLO en este componente
+  console.log = () => {};
+  console.warn = () => {};
+  console.error = () => {};
+  console.info = () => {};
+  
   const { planoId } = usePage<Props>().props;
 
   useEffect(() => {
-    console.log("📤 Enviando mensaje a Unity...");
 
-    // Esperar 1.5s para asegurar que Unity ya está cargado
     const timer = setTimeout(() => {
       const iframe = document.querySelector("iframe");
 
       if (!iframe) {
-        console.error("❌ No se encontró el iframe de Unity");
-        return;
+        return; // no logs
       }
 
       iframe.contentWindow?.postMessage(
@@ -30,7 +34,6 @@ const Plano3D: React.FC = () => {
         "*"
       );
 
-      console.log("✅ Mensaje enviado a Unity:", { type: "LOAD_MODEL", id: planoId });
     }, 1500);
 
     return () => clearTimeout(timer);

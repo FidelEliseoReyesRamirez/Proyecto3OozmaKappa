@@ -1,123 +1,158 @@
 <!DOCTYPE html>
 <html lang="en-us">
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Unity WebGL Player | DevelArq_UnityViewer</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico" />
-    <link rel="stylesheet" href="TemplateData/style.css" />
-  </head>
 
-  <body>
-    <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width="960" height="600" tabindex="-1"></canvas>
-      <div id="unity-loading-bar">
-        <div id="unity-logo"></div>
-        <div id="unity-progress-bar-empty">
-          <div id="unity-progress-bar-full"></div>
-        </div>
-      </div>
-      <div id="unity-warning"></div>
-      <div id="unity-footer">
-        <div id="unity-webgl-logo"></div>
-        <div id="unity-fullscreen-button"></div>
-        <div id="unity-build-title">DevelArq_UnityViewer</div>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Unity WebGL Player | DevelArq_UnityViewer</title>
+  <link rel="shortcut icon" href="TemplateData/favicon.ico" />
+  <link rel="stylesheet" href="TemplateData/style.css" />
+</head>
+
+<body>
+  <div id="unity-container" class="unity-desktop">
+    <canvas id="unity-canvas" width="960" height="600" tabindex="-1"></canvas>
+    <div id="unity-loading-bar">
+      <div id="unity-logo"></div>
+      <div id="unity-progress-bar-empty">
+        <div id="unity-progress-bar-full"></div>
       </div>
     </div>
+    <div id="unity-warning"></div>
+    <div id="unity-footer">
+      <div id="unity-webgl-logo"></div>
+      <div id="unity-fullscreen-button"></div>
+      <div id="unity-build-title">DevelArq_UnityViewer</div>
+    </div>
+  </div>
 
-    <script>
-      var container = document.querySelector("#unity-container");
-      var canvas = document.querySelector("#unity-canvas");
-      var loadingBar = document.querySelector("#unity-loading-bar");
-      var progressBarFull = document.querySelector("#unity-progress-bar-full");
-      var fullscreenButton = document.querySelector("#unity-fullscreen-button");
-      var warningBanner = document.querySelector("#unity-warning");
+  <script>
+    var container = document.querySelector("#unity-container");
+    var canvas = document.querySelector("#unity-canvas");
+    var loadingBar = document.querySelector("#unity-loading-bar");
+    var progressBarFull = document.querySelector("#unity-progress-bar-full");
+    var fullscreenButton = document.querySelector("#unity-fullscreen-button");
+    var warningBanner = document.querySelector("#unity-warning");
 
-      function unityShowBanner(msg, type) {
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? "block" : "none";
-        }
-        var div = document.createElement("div");
-        div.innerHTML = msg;
-        warningBanner.appendChild(div);
-        if (type == "error") div.style = "background: red; padding: 10px;";
-        else {
-          if (type == "warning") div.style = "background: yellow; padding: 10px;";
-          setTimeout(() => {
-            warningBanner.removeChild(div);
-            updateBannerVisibility();
-          }, 5000);
-        }
-        updateBannerVisibility();
+    function unityShowBanner(msg, type) {
+      function updateBannerVisibility() {
+        warningBanner.style.display = warningBanner.children.length ? "block" : "none";
       }
-
-      var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/unity-viewer.loader.js";
-      var config = {
-        dataUrl: buildUrl + "/unity-viewer.data",
-        frameworkUrl: buildUrl + "/unity-viewer.framework.js",
-        codeUrl: buildUrl + "/unity-viewer.wasm",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "DevelArq_UnityViewer",
-        productVersion: "0.1",
-        showBanner: unityShowBanner,
-      };
-
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        var meta = document.createElement("meta");
-        meta.name = "viewport";
-        meta.content =
-          "width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes";
-        document.head.appendChild(meta);
-        container.className = "unity-mobile";
-        canvas.className = "unity-mobile";
-      } else {
-        canvas.style.width = "960px";
-        canvas.style.height = "600px";
+      var div = document.createElement("div");
+      div.innerHTML = msg;
+      warningBanner.appendChild(div);
+      if (type == "error") div.style = "background: red; padding: 10px;";
+      else {
+        if (type == "warning") div.style = "background: yellow; padding: 10px;";
+        setTimeout(() => {
+          warningBanner.removeChild(div);
+          updateBannerVisibility();
+        }, 5000);
       }
+      updateBannerVisibility();
+    }
 
-      loadingBar.style.display = "block";
+    var buildUrl = "Build";
+    var loaderUrl = buildUrl + "/unity-viewer.loader.js";
+    var config = {
+      dataUrl: buildUrl + "/unity-viewer.data",
+      frameworkUrl: buildUrl + "/unity-viewer.framework.js",
+      codeUrl: buildUrl + "/unity-viewer.wasm",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "DefaultCompany",
+      productName: "DevelArq_UnityViewer",
+      productVersion: "0.1",
+      showBanner: unityShowBanner,
+    };
 
-      var script = document.createElement("script");
-      script.src = loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          progressBarFull.style.width = 100 * progress + "%";
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      var meta = document.createElement("meta");
+      meta.name = "viewport";
+      meta.content =
+        "width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes";
+      document.head.appendChild(meta);
+      container.className = "unity-mobile";
+      canvas.className = "unity-mobile";
+    } else {
+      canvas.style.width = "960px";
+      canvas.style.height = "600px";
+    }
+
+    loadingBar.style.display = "block";
+
+    var script = document.createElement("script");
+    script.src = loaderUrl;
+    script.onload = () => {
+      createUnityInstance(canvas, config, (progress) => {
+        progressBarFull.style.width = 100 * progress + "%";
+      })
+        .then((unityInstance) => {
+          window.unityInstance = unityInstance;
+          console.log("✅ UnityInstance registrado en window.unityInstance");
+
+          loadingBar.style.display = "none";
+          fullscreenButton.onclick = () => unityInstance.SetFullscreen(1);
+
+          // Activamos el listener después de cargar Unity
+          setupReactMessageListener(unityInstance);
         })
-          .then((unityInstance) => {
-            window.unityInstance = unityInstance;
-            console.log("✅ UnityInstance registrado en window.unityInstance");
-
-            loadingBar.style.display = "none";
-            fullscreenButton.onclick = () => unityInstance.SetFullscreen(1);
-
-            // Activamos el listener después de cargar Unity
-            setupReactMessageListener(unityInstance);
-          })
-          .catch((message) => {
-            alert(message);
-          });
-      };
-      document.body.appendChild(script);
-
-      // 🚀 Listener entre React → Unity
-      function setupReactMessageListener(unityInstance) {
-        console.log("🎯 JS listener activo: esperando mensajes desde React");
-
-        window.addEventListener("message", function (event) {
-          if (!event.data) return;
-          console.log("📨 Recibido en JS:", event.data);
-
-          try {
-            const cleanMessage = JSON.stringify(event.data);
-            console.log("✅ Enviando a Unity:", cleanMessage);
-            unityInstance.SendMessage("WebBridge", "OnMessageReceived", cleanMessage);
-          } catch (err) {
-            console.error("❌ Error al serializar mensaje:", err);
-          }
+        .catch((message) => {
+          alert(message);
         });
-      }
-    </script>
-  </body>
+    };
+    document.body.appendChild(script);
+
+    // 🚀 Listener entre React → Unity
+    function setupReactMessageListener(unityInstance) {
+      console.log("🎯 JS listener activo: esperando mensajes desde React");
+
+      window.addEventListener("message", function (event) {
+        if (!event.data) return;
+        console.log("📨 Recibido en JS:", event.data);
+
+        try {
+          const cleanMessage = JSON.stringify(event.data);
+          console.log("✅ Enviando a Unity:", cleanMessage);
+          unityInstance.SendMessage("WebBridge", "OnMessageReceived", cleanMessage);
+        } catch (err) {
+          console.error("❌ Error al serializar mensaje:", err);
+        }
+      });
+    }
+  </script>
+  <script>
+
+    const blockedKeywords = [
+      "Module.print",
+      "Module.printErr",
+      "memory growth",
+      "Debugger",
+      "wasm streaming"
+    ];
+
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalErr = console.error;
+
+    console.log = (...args) => {
+      if (typeof args[0] === "string" && blockedKeywords.some(k => args[0].includes(k))) return;
+      originalLog(...args);
+    };
+
+    console.warn = (...args) => {
+      if (typeof args[0] === "string" && blockedKeywords.some(k => args[0].includes(k))) return;
+      originalWarn(...args);
+    };
+
+    console.error = (...args) => {
+      if (typeof args[0] === "string" && blockedKeywords.some(k => args[0].includes(k))) return;
+      originalErr(...args);
+    };
+
+  </script>
+
+  <script src="Build/unity-viewer.loader.js"></script>
+
+</body>
+
 </html>

@@ -100,13 +100,16 @@ Route::middleware(['auth', PreventManualUrlAccess::class])->group(function () {
             return Inertia::render('Planos/Plano3D', [
                 'planoId' => (int) $id,
             ]);
-        })->name('3d');
-    });
+        })
+            ->name('3d')
+            ->defaults('_debug_hide', true); 
 
-    // API para Unity (mantenida pero protegida)
-    Route::get('/3d/{id}/modelo', [PlanoController::class, 'obtenerModelo3D'])
-        ->withoutMiddleware(PreventManualUrlAccess::class)
-        ->name('modelo3d');
+        // API para Unity
+        Route::get('/3d/{id}/modelo', [PlanoController::class, 'obtenerModelo3D'])
+            ->withoutMiddleware(PreventManualUrlAccess::class)
+            ->name('modelo3d')
+            ->defaults('_debug_hide', true);  
+    });
 
     // Proyectos
     Route::resource('proyectos', ProyectoController::class);
