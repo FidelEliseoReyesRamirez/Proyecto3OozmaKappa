@@ -72,10 +72,10 @@ Route::middleware(['auth', PreventManualUrlAccess::class])->group(function () {
         // Purga manual (solo admin)
         Route::middleware('role:admin')->delete('/purge', [DocController::class, 'purgeOld'])->name('purge');
     });
-    
+
     // ⭐ PLANOS BIM: CORREGIDO ⭐
     Route::prefix('planos')->name('planos.')->group(function () {
-    
+
         // Vistas principales (CRUD base)
         Route::get('/', [PlanoController::class, 'index'])->name('index');
         Route::get('/create', [PlanoController::class, 'create'])->name('create');
@@ -83,23 +83,42 @@ Route::middleware(['auth', PreventManualUrlAccess::class])->group(function () {
 
         // 📥 RUTA DE DESCARGA: Excluye el middleware 'PreventManualUrlAccess' 
         Route::get('/download/{plano}', [PlanoController::class, 'download'])
-            ->withoutMiddleware(PreventManualUrlAccess::class) 
+            ->withoutMiddleware(PreventManualUrlAccess::class)
             ->name('download');
-        
+
         // Edición y Actualización
         Route::get('/{plano}/edit', [PlanoController::class, 'edit'])->name('edit');
         Route::put('/{plano}', [PlanoController::class, 'update'])->name('update');
-        
+
         // Eliminación (a papelera)
         Route::delete('/{plano}', [PlanoController::class, 'destroy'])->name('destroy');
-        
+
         // ⭐ CORRECCIÓN 1: ELIMINACIÓN PERMANENTE INDIVIDUAL
         // Ruta: /planos/{plano}/permanentemente
         Route::delete('/{plano}/permanentemente', [PlanoController::class, 'forceDestroy'])->name('forceDestroy');
-        
+
         // Papelera y restauración
         Route::get('/trash', [PlanoController::class, 'trash'])->name('trash');
         Route::patch('/{id}/restore', [PlanoController::class, 'restore'])->name('restore');
+
+        /*
+    |--------------------------------------------------------------------------
+    |  NUEVAS RUTAS PARA VISUALIZADOR UNITY WEBGL
+    |--------------------------------------------------------------------------
+    */
+
+        //  Página principal del visor (muestra el Unity embebido)
+        Route::get('/3d/{id}', function ($id) {
+            return Inertia::render('Planos/Plano3D', [
+                'planoId' => (int) $id,
+            ]);
+        })->name('3d');
+
+        //  Endpoint opcional para obtener la URL del modelo .fbx o .ifc
+        // (útil si Unity va a pedir el modelo directamente desde backend)
+        Route::get('/3d/{id}/modelo', [PlanoController::class, 'obtenerModelo3D'])
+            ->name('modelo3d');
+            
     });
 
     // Proyectos
@@ -189,4 +208,3 @@ Route::fallback(function () {
 
 Route::post('/users/verificar-duplicado', [UserController::class, 'verificarDuplicado'])
     ->name('users.verificarDuplicado');
-

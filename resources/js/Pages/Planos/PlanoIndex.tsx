@@ -2,18 +2,18 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Head, usePage, router, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { PageProps } from '@/types';
-import FBXViewer from '@/Pages/Planos/FBXViewer'; 
+import FBXViewer from '@/Pages/Planos/FBXViewer';
 
 // INTERFAZ
 interface PlanoBim {
     id: number;
     titulo: string;
     descripcion: string | null;
-    archivo_url: string | null; 
+    archivo_url: string | null;
     enlace_externo?: string | null;
     // He ampliado los tipos para incluir la nueva constante BIM-IFC
-    tipo: 'DWG' | 'DXF' | 'IFC' | 'PDF' | 'URL' | 'Otro' | 'BIM-FBX' | 'BIM-IFC' | 'Excel' | 'Word' | 'Imagen' | 'ZIP'; 
-    extension: string; 
+    tipo: 'DWG' | 'DXF' | 'IFC' | 'PDF' | 'URL' | 'Otro' | 'BIM-FBX' | 'BIM-IFC' | 'Excel' | 'Word' | 'Imagen' | 'ZIP';
+    extension: string;
     fecha_subida: string;
     proyecto_id: number;
     proyecto_nombre: string;
@@ -21,7 +21,7 @@ interface PlanoBim {
 
 // PROPIEDADES DE LA PÁGINA
 interface PlanoIndexProps extends PageProps {
-    planos: PlanoBim[]; 
+    planos: PlanoBim[];
     projectsList: { id: number; name: string }[];
     userRole: 'admin' | 'arquitecto' | 'ingeniero' | 'cliente';
 }
@@ -40,7 +40,7 @@ const PlanoIndex: React.FC = () => {
     const [projectOpen, setProjectOpen] = useState(false);
     const [projectSearch, setSearchProject] = useState('');
     // El modal ahora solo necesita el plano completo para pasar la URL
-    const [modal, setModal] = useState<{ type: string; plano: PlanoBim | null }>({ type: '', plano: null }); 
+    const [modal, setModal] = useState<{ type: string; plano: PlanoBim | null }>({ type: '', plano: null });
 
     const isInternalUser = ['admin', 'arquitecto', 'ingeniero'].includes(userRole);
 
@@ -66,7 +66,7 @@ const PlanoIndex: React.FC = () => {
                 window.open(plano.archivo_url, '_blank', 'noopener,noreferrer');
             } else if (plano.archivo_url) {
                 // Asume que esta ruta maneja la descarga de archivos locales (que no son 'URL')
-                window.location.href = route('planos.download', plano.id); 
+                window.location.href = route('planos.download', plano.id);
             }
         } catch (error) {
             console.error('❌ Error al descargar el plano BIM:', error);
@@ -77,10 +77,10 @@ const PlanoIndex: React.FC = () => {
     function confirmDelete(plano: PlanoBim) {
         if (!plano) return;
         // Asume que la ruta de eliminación es correcta
-        router.delete(route('planos.destroy', plano.id)); 
+        router.delete(route('planos.destroy', plano.id));
     }
 
-    const handleCreateClick = () => router.get(route('planos.create')); 
+    const handleCreateClick = () => router.get(route('planos.create'));
 
     const handleClearFilters = () => {
         setSearch('');
@@ -93,7 +93,7 @@ const PlanoIndex: React.FC = () => {
     };
 
     /* Filtros */
-    const filteredPlanos = useMemo(() => { 
+    const filteredPlanos = useMemo(() => {
         const term = search.toLowerCase().trim();
         const startDate = filterStart ? new Date(filterStart + 'T00:00:00') : null;
         const endDate = filterEnd ? new Date(filterEnd + 'T23:59:59') : null;
@@ -104,7 +104,7 @@ const PlanoIndex: React.FC = () => {
         } else setDateError('');
 
         return planos
-            .filter((plano) => { 
+            .filter((plano) => {
                 const matchesSearch =
                     plano.titulo.toLowerCase().includes(term) ||
                     plano.descripcion?.toLowerCase().includes(term) ||
@@ -116,7 +116,7 @@ const PlanoIndex: React.FC = () => {
                 // Se asume que el formato de fecha_subida es **d/m/y H:i:s**
                 const [d, m, yH] = plano.fecha_subida.split('/');
                 const [y, h] = yH.split(' ');
-                const fechaPlano = new Date(`${y}-${m}-${d}T${h}`); 
+                const fechaPlano = new Date(`${y}-${m}-${d}T${h}`);
 
                 const matchesFecha =
                     (!startDate || fechaPlano >= startDate) && (!endDate || fechaPlano <= endDate);
@@ -138,7 +138,7 @@ const PlanoIndex: React.FC = () => {
     const proyectosFiltrados = projectsList.filter((p) =>
         p.name.toLowerCase().includes(projectSearch.toLowerCase())
     );
-    
+
     // Función para verificar si es un tipo 3D
     const is3DFile = (plano: PlanoBim) => {
         // Asumimos que quieres mostrar el botón 3D solo para archivos FBX e IFC,
@@ -147,9 +147,9 @@ const PlanoIndex: React.FC = () => {
 
         // Si realmente solo quieres FBX e IFC, usa la condición:
         // return plano.archivo_url && (plano.tipo === 'BIM-FBX' || plano.tipo === 'BIM-IFC');
-        
+
         // CORRECCIÓN: Para que el botón 3D se muestre SIEMPRE que haya URL de archivo
-        return !!plano.archivo_url; 
+        return !!plano.archivo_url;
     };
 
     return (
@@ -176,7 +176,7 @@ const PlanoIndex: React.FC = () => {
                                     </button>
 
                                     <button
-                                        onClick={() => router.get(route('planos.trash'))} 
+                                        onClick={() => router.get(route('planos.trash'))}
                                         className="bg-red-700 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-150 shadow-md shadow-red-800/30"
                                     >
                                         Ver Papelera
@@ -251,7 +251,7 @@ const PlanoIndex: React.FC = () => {
                                                 className={`px-3 py-2 text-sm cursor-pointer ${filterProyecto === String(proj.id)
                                                     ? 'bg-[#1f5dc0] text-white'
                                                     : 'text-gray-200 hover:bg-[#2970E8] hover:text-white'
-                                                }`}
+                                                    }`}
                                             >
                                                 {proj.name}
                                             </div>
@@ -323,7 +323,7 @@ const PlanoIndex: React.FC = () => {
                                             <tr key={plano.id} className="hover:bg-gray-800/50 transition duration-150">
                                                 <td className="px-6 py-4 text-sm font-semibold text-[#2970E8]">{plano.titulo}</td>
                                                 <td className="px-6 py-4 text-sm font-medium text-[#B3E10F]">{plano.proyecto_nombre}</td>
-                                                <td className="px-6 py-4 text-sm text-gray-300">{plano.extension}</td> 
+                                                <td className="px-6 py-4 text-sm text-gray-300">{plano.extension}</td>
                                                 <td className="px-6 py-4 text-sm text-blue-400 truncate max-w-[180px]">
                                                     {plano.tipo === 'URL' || plano.archivo_url ? (
                                                         <a
@@ -340,14 +340,14 @@ const PlanoIndex: React.FC = () => {
                                                 </td>
 
                                                 <td className="px-6 py-4 text-sm text-gray-400">{plano.fecha_subida}</td>
-                                                
+
                                                 {/* LÓGICA DE ACCIONES */}
                                                 <td className="px-6 py-4 border-t border-gray-800">
                                                     <div className="flex flex-col sm:flex-row justify-center items-center gap-2 w-full text-sm font-medium">
-                                                        
+
                                                         {/* 1. Botón VER 3D (Se muestra SIEMPRE que haya archivo_url) */}
                                                         {/* 🔥 CORRECCIÓN AQUÍ: Eliminamos la condición del tipo para mostrarlo siempre que haya archivo. */}
-                                                        {plano.archivo_url && ( 
+                                                        {plano.archivo_url && (
                                                             <button
                                                                 onClick={() => setModal({ type: 'view3d', plano: plano })}
                                                                 className="bg-purple-600 hover:bg-purple-500 px-3 py-1 rounded-md text-xs sm:text-sm font-bold text-white w-full sm:w-auto text-center transition shadow-md shadow-purple-600/30"
@@ -355,7 +355,13 @@ const PlanoIndex: React.FC = () => {
                                                                 Ver 3D
                                                             </button>
                                                         )}
-                                                        
+                                                        <Link
+                                                            href={route('planos.3d', plano.id)}
+                                                            className="bg-indigo-600 hover:bg-indigo-500 px-3 py-1 rounded-md text-xs sm:text-sm font-bold text-white text-center transition shadow-md shadow-indigo-600/30"
+                                                        >
+                                                            Ver en profundidad
+                                                        </Link>
+
                                                         {/* 2. Botón Abrir Enlace / Descargar */}
                                                         {plano.tipo === 'URL' ? (
                                                             // Botón Abrir Enlace (si es tipo 'URL')
@@ -383,14 +389,14 @@ const PlanoIndex: React.FC = () => {
                                                         {isInternalUser && (
                                                             <>
                                                                 <Link
-                                                                    href={route('planos.edit', plano.id)} 
+                                                                    href={route('planos.edit', plano.id)}
                                                                     className="bg-blue-500 hover:bg-blue-400 px-3 py-1 rounded-md text-xs sm:text-sm font-medium text-white w-full sm:w-auto text-center transition"
                                                                 >
                                                                     Editar
                                                                 </Link>
 
                                                                 <button
-                                                                    onClick={() => setModal({ type: 'delete', plano: plano })} 
+                                                                    onClick={() => setModal({ type: 'delete', plano: plano })}
                                                                     className="bg-red-700 hover:bg-red-600 px-3 py-1 rounded-md text-xs sm:text-sm font-medium text-white w-full sm:w-auto text-center transition"
                                                                 >
                                                                     Eliminar
@@ -415,81 +421,81 @@ const PlanoIndex: React.FC = () => {
                 </div>
             </div>
 
-{/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
-{modal.type === 'delete' && modal.plano && ( 
-    <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">
-        <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 shadow-2xl w-[90%] sm:w-[400px] text-center animate-fadeIn">
-            <h2 className="text-xl font-bold text-white mb-3">¿Eliminar plano BIM?</h2>
-            <p className="text-gray-300 mb-6">
-                Estás a punto de eliminar{' '}
-                <span className="text-[#B3E10F] font-semibold">
-                    {modal.plano?.titulo}
-                </span>.
-                <br />
-                Esta acción moverá el archivo a la papelera.
-            </p>
-            <div className="flex justify-center gap-4">
-                <button
-                    onClick={() => setModal({ type: '', plano: null })}
-                    className="px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white font-medium transition"
-                >
-                    Cancelar
-                </button>
-                <button
-                    onClick={() => {
-                        if (modal.plano) {
-                            confirmDelete(modal.plano); 
-                            setModal({ type: '', plano: null });
-                        }
-                    }}
-                    className="px-4 py-2 rounded-md bg-red-700 hover:bg-red-600 text-white font-bold shadow-md shadow-red-800/40 transition"
-                >
-                    Confirmar
-                </button>
-            </div>
-        </div>
-    </div>
-)}
+            {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
+            {modal.type === 'delete' && modal.plano && (
+                <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">
+                    <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 shadow-2xl w-[90%] sm:w-[400px] text-center animate-fadeIn">
+                        <h2 className="text-xl font-bold text-white mb-3">¿Eliminar plano BIM?</h2>
+                        <p className="text-gray-300 mb-6">
+                            Estás a punto de eliminar{' '}
+                            <span className="text-[#B3E10F] font-semibold">
+                                {modal.plano?.titulo}
+                            </span>.
+                            <br />
+                            Esta acción moverá el archivo a la papelera.
+                        </p>
+                        <div className="flex justify-center gap-4">
+                            <button
+                                onClick={() => setModal({ type: '', plano: null })}
+                                className="px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white font-medium transition"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (modal.plano) {
+                                        confirmDelete(modal.plano);
+                                        setModal({ type: '', plano: null });
+                                    }
+                                }}
+                                className="px-4 py-2 rounded-md bg-red-700 hover:bg-red-600 text-white font-bold shadow-md shadow-red-800/40 transition"
+                            >
+                                Confirmar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
-{/* 🚀 MODAL DE VISUALIZACIÓN 3D */}
-{modal.type === 'view3d' && modal.plano && ( 
-    <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">
-        <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 shadow-2xl w-[95%] max-w-4xl h-[95%] flex flex-col animate-fadeIn">
-            
-            {/* ENCABEZADO */}
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-white">
-                    Visualizando: <span className="text-[#B3E10F]">{modal.plano.titulo}</span>
-                </h2>
-                <button
-                    onClick={() => setModal({ type: '', plano: null })}
-                    className="text-gray-300 hover:text-white text-xl font-bold transition"
-                >
-                    ✕
-                </button>
-            </div>
+            {/* 🚀 MODAL DE VISUALIZACIÓN 3D */}
+            {modal.type === 'view3d' && modal.plano && (
+                <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50">
+                    <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 shadow-2xl w-[95%] max-w-4xl h-[95%] flex flex-col animate-fadeIn">
 
-            {/* VISOR 3D */}
-            <div className="flex-grow rounded-lg overflow-hidden bg-black border border-gray-700">
-                <FBXViewer
-                    key={modal.plano.id}
-                    // Usamos archivo_url directamente
-                    file={modal.plano.archivo_url || null} 
-                />
-            </div>
+                        {/* ENCABEZADO */}
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-white">
+                                Visualizando: <span className="text-[#B3E10F]">{modal.plano.titulo}</span>
+                            </h2>
+                            <button
+                                onClick={() => setModal({ type: '', plano: null })}
+                                className="text-gray-300 hover:text-white text-xl font-bold transition"
+                            >
+                                ✕
+                            </button>
+                        </div>
 
-            {/* PIE DEL MODAL */}
-            <div className="mt-4 flex justify-end">
-                <button
-                    onClick={() => setModal({ type: '', plano: null })}
-                    className="bg-red-700 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded-md transition"
-                >
-                    Cerrar
-                </button>
-            </div>
-        </div>
-    </div>
-)}
+                        {/* VISOR 3D */}
+                        <div className="flex-grow rounded-lg overflow-hidden bg-black border border-gray-700">
+                            <FBXViewer
+                                key={modal.plano.id}
+                                // Usamos archivo_url directamente
+                                file={modal.plano.archivo_url || null}
+                            />
+                        </div>
+
+                        {/* PIE DEL MODAL */}
+                        <div className="mt-4 flex justify-end">
+                            <button
+                                onClick={() => setModal({ type: '', plano: null })}
+                                className="bg-red-700 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded-md transition"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </AuthenticatedLayout>
     );

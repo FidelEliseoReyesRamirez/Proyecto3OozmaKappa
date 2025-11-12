@@ -103,14 +103,14 @@ class PlanoController extends Controller
 
         $allowedFileTypes = [
             'PDF',
-            'Excel', 
-            'Word', 
+            'Excel',
+            'Word',
             'Imagen',
-            'BIM-FBX', 
-            'BIM-IFC', 
-            'ZIP', 
+            'BIM-FBX',
+            'BIM-IFC',
+            'ZIP',
             'Otro',
-            'URL' 
+            'URL'
         ];
 
         $validated = $request->validate([
@@ -589,5 +589,26 @@ class PlanoController extends Controller
             Log::error("Error al eliminar permanentemente plano BIM ID {$id}: " . $e->getMessage());
             return back()->with('error', 'Error al intentar eliminar permanentemente el plano BIM: ' . $e->getMessage());
         }
+    }
+    public function obtenerModelo3D($id)
+    {
+        $plano = PlanoBIM::findOrFail($id);
+
+
+        // Si el modelo tiene un archivo local (subido al storage)
+        if ($plano->archivo_url) {
+            // Asegura que la URL sea completa (http://localhost:8000/storage/...)
+            $url = url($plano->archivo_url);
+        } else {
+            return response()->json(['error' => 'Archivo no encontrado'], 404);
+        }
+
+        // Respuesta JSON con la URL del modelo
+        return response()->json([
+            'id' => $plano->id,
+            'titulo' => $plano->titulo,
+            'tipo' => $plano->tipo,
+            'url' => $url,
+        ]);
     }
 }
