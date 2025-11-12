@@ -1,0 +1,90 @@
+[33mf84580a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32munity-viewer[m[33m, [m[1;31morigin/unity-viewer[m[33m)[m HEAD@{0}: reset: moving to HEAD
+[33mf84580a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32munity-viewer[m[33m, [m[1;31morigin/unity-viewer[m[33m)[m HEAD@{1}: reset: moving to HEAD~1
+[33m8c5b9dd[m HEAD@{2}: commit: ya da placeholders de modeslo .bin
+[33mf84580a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32munity-viewer[m[33m, [m[1;31morigin/unity-viewer[m[33m)[m HEAD@{3}: commit: Avances
+[33m060fc15[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{4}: checkout: moving from main to unity-viewer
+[33m060fc15[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{5}: checkout: moving from AporteBIM to main
+[33m324c4d9[m[33m ([m[1;31morigin/AporteBIM[m[33m, [m[1;32mAporteBIM[m[33m)[m HEAD@{6}: commit: no se llego a nada...
+[33m060fc15[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{7}: checkout: moving from main to AporteBIM
+[33m060fc15[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{8}: pull origin main: Merge made by the 'ort' strategy.
+[33m1dada19[m HEAD@{9}: commit: arregle bug de inicio de sesion
+[33m1ec85db[m[33m ([m[1;31morigin/VictorRama[m[33m)[m HEAD@{10}: pull origin main: Fast-forward
+[33mf589246[m HEAD@{11}: commit: Auditorias + planos BIM
+[33ma820ecb[m HEAD@{12}: merge origin/VictorRama: Merge made by the 'ort' strategy.
+[33m9aedc1e[m HEAD@{13}: checkout: moving from main to main
+[33m9aedc1e[m HEAD@{14}: reset: moving to HEAD
+[33m9aedc1e[m HEAD@{15}: commit: ya esta toda la auditorai y bugs reparados
+[33m0c92ee8[m HEAD@{16}: commit: ya se ven las tareas en el kanban
+[33m1ebf29a[m HEAD@{17}: commit: problema de usuarios conc correo duplicado solcuionado
+[33m41ea0d6[m HEAD@{18}: commit: audiotorias a documetnos
+[33mbb60cd2[m HEAD@{19}: pull origin main: Fast-forward
+[33m201479b[m HEAD@{20}: commit: hasta aqui pude encontrar
+[33me9f7361[m HEAD@{21}: commit: ya da todo creo
+[33mc0a2599[m HEAD@{22}: commit: pequeños issues
+[33m8bf99f7[m HEAD@{23}: commit: pequeños issues
+[33m4f17f8d[m HEAD@{24}: commit: arreglo del issue encontrado en el boton de hamburguesa
+[33ma41df99[m HEAD@{25}: pull origin main: Fast-forward
+[33mdfddbd4[m HEAD@{26}: commit: Arreglo del error 404,403,500,413
+[33mb78c1a2[m HEAD@{27}: commit: responsividad
+[33m7e0e4dc[m HEAD@{28}: commit: Correciones sprint 2
+[33m17ee0cc[m HEAD@{29}: commit: manejo de errores 404, 403, 413
+[33mce461d5[m HEAD@{30}: commit: arreglo de migraciones y seeders en notificaciones
+[33ma7b82d8[m HEAD@{31}: pull origin main: Fast-forward
+[33m2dcdf42[m HEAD@{32}: commit: arreglo de sin acceso
+[33mc651746[m[33m ([m[1;31morigin/NotificacionesYCorreo[m[33m, [m[1;32mNotificacionesYCorreo[m[33m)[m HEAD@{33}: merge NotificacionesYCorreo: Fast-forward
+[33macc1de1[m HEAD@{34}: checkout: moving from NotificacionesYCorreo to main
+[33mc651746[m[33m ([m[1;31morigin/NotificacionesYCorreo[m[33m, [m[1;32mNotificacionesYCorreo[m[33m)[m HEAD@{35}: commit: notificaciones con correos
+[33macc1de1[m HEAD@{36}: checkout: moving from main to NotificacionesYCorreo
+[33macc1de1[m HEAD@{37}: merge NotificacionesYCorreo: Fast-forward
+[33m82066fb[m HEAD@{38}: checkout: moving from NotificacionesYCorreo to main
+[33macc1de1[m HEAD@{39}: commit: intento de arreglar el error posttoolargeexpetion
+[33m501013e[m HEAD@{40}: commit: Mas cosas en calendario
+[33m1235da3[m HEAD@{41}: commit: arreglos visuales
+[33m82066fb[m HEAD@{42}: checkout: moving from main to NotificacionesYCorreo
+[33m82066fb[m HEAD@{43}: commit: Modales en Form de gestion de proyecto
+[33m6b4ebcb[m HEAD@{44}: commit: Intentando subir main
+[33m64b3217[m HEAD@{45}: rebase (finish): returning to refs/heads/main
+[33m64b3217[m HEAD@{46}: commit: le quite el ver demo
+[33m92f728e[m HEAD@{47}: commit: conflicto solucionado
+[33m14395bf[m HEAD@{48}: commit: conflicto solucionado
+[33m5f713cf[m[33m ([m[1;31morigin/GestionProyectos[m[33m)[m HEAD@{49}: pull origin main --rebase (start): checkout 5f713cfdbe7d558e2678a5108dfdc114ee3b8199
+[33m4262d04[m HEAD@{50}: commit: ultimos arreglos a proyectos
+[33mb4c3c94[m HEAD@{51}: pull origin main: Fast-forward
+[33m50f7036[m HEAD@{52}: commit: modales de confirmación en documentos
+[33m91d5af6[m[33m ([m[1;31morigin/TableroKanban[m[33m)[m HEAD@{53}: pull origin main: Fast-forward
+[33mebce6ef[m[33m ([m[1;31morigin/feature/notificaciones[m[33m, [m[1;32mfeature/notificaciones[m[33m)[m HEAD@{54}: merge feature/notificaciones: Fast-forward
+[33me23e3d7[m HEAD@{55}: checkout: moving from feature/notificaciones to main
+[33mebce6ef[m[33m ([m[1;31morigin/feature/notificaciones[m[33m, [m[1;32mfeature/notificaciones[m[33m)[m HEAD@{56}: commit: ya dan notificaciones, solo falta que notifique avances y correo
+[33mcd67279[m HEAD@{57}: commit: ya dan notificaciones, solo falta que notifique avances y correo
+[33mbe879f9[m HEAD@{58}: commit: falta responsividad en notificaion y que suene la notifacion en lugares que no sea calendario, y cuando suben un documento
+[33me23e3d7[m HEAD@{59}: checkout: moving from main to feature/notificaciones
+[33me23e3d7[m HEAD@{60}: checkout: moving from main to main
+[33me23e3d7[m HEAD@{61}: commit: correcion de un bug de inertia en gestion de proyectos
+[33m71038bb[m[33m ([m[1;32mDocumentosYProyectos[m[33m)[m HEAD@{62}: merge DocumentosYProyectos: Fast-forward
+[33m6225b8b[m HEAD@{63}: checkout: moving from DocumentosYProyectos to main
+[33m71038bb[m[33m ([m[1;32mDocumentosYProyectos[m[33m)[m HEAD@{64}: checkout: moving from main to DocumentosYProyectos
+[33m6225b8b[m HEAD@{65}: commit: Arreglos de validaciones
+[33mb6f2e45[m HEAD@{66}: commit: Arreglos de validaciones
+[33mb956783[m HEAD@{67}: commit: Arreglos
+[33m5deabc2[m HEAD@{68}: commit: libreria de react-big-calendar moment descargada e integrada
+[33mdf5eee8[m HEAD@{69}: pull origin main: Fast-forward
+[33m9bd2706[m HEAD@{70}: commit: a ver
+[33md3b0649[m HEAD@{71}: commit: Email de verificación
+[33m031ea1c[m HEAD@{72}: pull origin main: Fast-forward
+[33md8857cd[m HEAD@{73}: reset: moving to HEAD
+[33md8857cd[m HEAD@{74}: commit: Merge de rama de autenticacion a rama main
+[33mbd22d94[m[33m ([m[1;31morigin/Autenticacion[m[33m, [m[1;32mAutenticacion[m[33m)[m HEAD@{75}: merge Autenticacion: Fast-forward
+[33m54f492a[m HEAD@{76}: checkout: moving from Autenticacion to main
+[33mbd22d94[m[33m ([m[1;31morigin/Autenticacion[m[33m, [m[1;32mAutenticacion[m[33m)[m HEAD@{77}: commit: usuarios generales y manejo de error 404
+[33mbf70d63[m HEAD@{78}: commit: Registro de clientes y empleados listo
+[33mdc4ec9a[m HEAD@{79}: commit: inicio de sesión Clientes y Empleados
+[33mb1cf987[m HEAD@{80}: commit: Inicio de sesion por roles listo
+[33m9ff4635[m HEAD@{81}: commit: Comando composer dev listo
+[33m962b0d8[m HEAD@{82}: commit: migraciones listas
+[33m38772f6[m HEAD@{83}: checkout: moving from efbe80e894eba28b358cee9a5a2d8d071c1afdb3 to Autenticacion
+[33mefbe80e[m HEAD@{84}: commit: Migraciones para la base de datos creadas
+[33m38772f6[m HEAD@{85}: checkout: moving from Autenticacion to 38772f6
+[33m38772f6[m HEAD@{86}: commit: antes de cambiar de version de php
+[33m54f492a[m HEAD@{87}: checkout: moving from main to Autenticacion
+[33m54f492a[m HEAD@{88}: commit: Inicio para modulo de autenticacion
+[33m3032540[m HEAD@{89}: clone: from https://github.com/FidelEliseoReyesRamirez/Proyecto3OozmaKappa.git

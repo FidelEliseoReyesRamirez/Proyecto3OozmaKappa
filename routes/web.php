@@ -15,6 +15,7 @@ use App\Http\Controllers\TareaController;
 use App\Http\Controllers\AuditoriaController;
 use App\Http\Middleware\PreventManualUrlAccess;
 use App\Http\Controllers\PlanoController;
+
 /*
 |--------------------------------------------------------------------------
 | Rutas Web
@@ -56,7 +57,6 @@ Route::middleware(['auth', PreventManualUrlAccess::class])->group(function () {
         Route::get('/create', [DocController::class, 'create'])->name('create');
         Route::post('/', [DocController::class, 'store'])->name('store');
 
-        // ✅ Ruta de descarga de Documentos (Original: mantiene el middleware)
         Route::get('/download/{documento}', [DocController::class, 'download'])
             ->middleware(['auth', PreventManualUrlAccess::class])
             ->name('download');
@@ -65,61 +65,48 @@ Route::middleware(['auth', PreventManualUrlAccess::class])->group(function () {
         Route::get('/{documento}/edit', [DocController::class, 'edit'])->name('edit');
         Route::put('/{documento}', [DocController::class, 'update'])->name('update');
 
-        // Papelera y restauración
         Route::get('/trash', [DocController::class, 'trash'])->name('trash');
         Route::patch('/{id}/restore', [DocController::class, 'restore'])->name('restore');
 
-        // Purga manual (solo admin)
         Route::middleware('role:admin')->delete('/purge', [DocController::class, 'purgeOld'])->name('purge');
     });
 
-    // ⭐ PLANOS BIM: CORREGIDO ⭐
-    Route::prefix('planos')->name('planos.')->group(function () {
+    // ------------------------------------------------------------
+    //  PLANOS BIM
+    // ------------------------------------------------------------
+    Route::prefix('planos')->name('planos.')->middleware(['auth'])->group(function () {
 
-        // Vistas principales (CRUD base)
         Route::get('/', [PlanoController::class, 'index'])->name('index');
+
         Route::get('/create', [PlanoController::class, 'create'])->name('create');
         Route::post('/', [PlanoController::class, 'store'])->name('store');
 
-        // 📥 RUTA DE DESCARGA: Excluye el middleware 'PreventManualUrlAccess' 
         Route::get('/download/{plano}', [PlanoController::class, 'download'])
             ->withoutMiddleware(PreventManualUrlAccess::class)
             ->name('download');
 
-        // Edición y Actualización
         Route::get('/{plano}/edit', [PlanoController::class, 'edit'])->name('edit');
         Route::put('/{plano}', [PlanoController::class, 'update'])->name('update');
 
-        // Eliminación (a papelera)
         Route::delete('/{plano}', [PlanoController::class, 'destroy'])->name('destroy');
 
-        // ⭐ CORRECCIÓN 1: ELIMINACIÓN PERMANENTE INDIVIDUAL
-        // Ruta: /planos/{plano}/permanentemente
         Route::delete('/{plano}/permanentemente', [PlanoController::class, 'forceDestroy'])->name('forceDestroy');
 
-        // Papelera y restauración
         Route::get('/trash', [PlanoController::class, 'trash'])->name('trash');
         Route::patch('/{id}/restore', [PlanoController::class, 'restore'])->name('restore');
 
-        /*
-    |--------------------------------------------------------------------------
-    |  NUEVAS RUTAS PARA VISUALIZADOR UNITY WEBGL
-    |--------------------------------------------------------------------------
-    */
-
-        //  Página principal del visor (muestra el Unity embebido)
+        // Página donde React carga Unity
         Route::get('/3d/{id}', function ($id) {
             return Inertia::render('Planos/Plano3D', [
                 'planoId' => (int) $id,
             ]);
         })->name('3d');
-
-        //  Endpoint opcional para obtener la URL del modelo .fbx o .ifc
-        // (útil si Unity va a pedir el modelo directamente desde backend)
-        Route::get('/3d/{id}/modelo', [PlanoController::class, 'obtenerModelo3D'])
-            ->name('modelo3d');
-            
     });
+
+    // API para Unity (mantenida pero protegida)
+    Route::get('/3d/{id}/modelo', [PlanoController::class, 'obtenerModelo3D'])
+        ->withoutMiddleware(PreventManualUrlAccess::class)
+        ->name('modelo3d');
 
     // Proyectos
     Route::resource('proyectos', ProyectoController::class);
@@ -130,7 +117,7 @@ Route::middleware(['auth', PreventManualUrlAccess::class])->group(function () {
     Route::get('/proyectos/{id}/permisos', [ProyectoController::class, 'gestionarPermisos'])->name('proyectos.permisos');
     Route::post('/proyectos/{id}/permisos', [ProyectoController::class, 'actualizarPermisos'])->name('proyectos.permisos.actualizar');
 
-    // Avances de proyectos
+    // Avances
     Route::get('/proyectos/{projectId}/timeline', [AvancesProyectoController::class, 'showTimeline'])->name('projects.timeline');
     Route::get('/mis-avances', [AvancesProyectoController::class, 'showClientTimeline'])->name('avances.index');
     Route::post('/projects/{id}/update-status', [AvancesProyectoController::class, 'updateStatus'])->name('projects.updateStatus');
@@ -144,9 +131,10 @@ Route::middleware(['auth', PreventManualUrlAccess::class])->group(function () {
     Route::patch('/tareas/{id}/estado', [TareaController::class, 'actualizarEstado'])->name('tareas.estado');
     Route::get('/tareas/{id}/historial', [TareaController::class, 'historial'])->name('tareas.historial');
 });
+
 /*
 |--------------------------------------------------------------------------
-| Sección de administración (solo admin)
+| SECCIÓN ADMIN
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'role:admin', PreventManualUrlAccess::class])->group(function () {
@@ -160,14 +148,13 @@ Route::middleware(['auth', 'role:admin', PreventManualUrlAccess::class])->group(
     Route::patch('/usuarios/{user}/eliminar', [UserController::class, 'eliminar'])->name('users.eliminar');
     Route::patch('/usuarios/{user}/restaurar', [UserController::class, 'restaurar'])->name('users.restaurar');
 
-    Route::get('/admin/documents/history', [DocumentoHistorialController::class, 'showDownloadHistory'])
-        ->name('documents.history');
+    Route::get('/admin/documents/history', [DocumentoHistorialController::class, 'showDownloadHistory'])->name('documents.history');
     Route::get('/admin/auditorias', [AuditoriaController::class, 'index'])->name('auditoria.index');
 });
 
 /*
 |--------------------------------------------------------------------------
-| Rutas públicas
+| RUTAS PÚBLICAS
 |--------------------------------------------------------------------------
 */
 Route::get('/portafolio', fn() => Inertia::render('Public/Projects'))->name('projects');
@@ -184,7 +171,7 @@ require __DIR__ . '/auth.php';
 
 /*
 |--------------------------------------------------------------------------
-| Rutas de notificaciones
+| Notificaciones
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', PreventManualUrlAccess::class])->group(function () {
@@ -193,6 +180,15 @@ Route::middleware(['auth', PreventManualUrlAccess::class])->group(function () {
     Route::post('/notificaciones/leidas/todas', [NotificacionController::class, 'marcarTodasComoLeidas'])->name('notificaciones.marcarTodas');
     Route::post('/notificaciones/{id}/eliminar', [NotificacionController::class, 'eliminar'])->name('notificaciones.eliminar');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Ruta pública REAL necesaria para Unity (NO toca nada existente)
+|--------------------------------------------------------------------------
+*/
+Route::get('/planos/3d/{id}/modelo', [PlanoController::class, 'obtenerModelo3D'])
+    ->withoutMiddleware(['auth', PreventManualUrlAccess::class])
+    ->name('planos.modelo3d.public');
 
 /*
 |--------------------------------------------------------------------------
@@ -206,5 +202,4 @@ Route::fallback(function () {
     ])->toResponse(request())->setStatusCode(404);
 });
 
-Route::post('/users/verificar-duplicado', [UserController::class, 'verificarDuplicado'])
-    ->name('users.verificarDuplicado');
+Route::post('/users/verificar-duplicado', [UserController::class, 'verificarDuplicado'])->name('users.verificarDuplicado');

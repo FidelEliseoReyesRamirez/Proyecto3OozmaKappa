@@ -592,23 +592,59 @@ class PlanoController extends Controller
     }
     public function obtenerModelo3D($id)
     {
-        $plano = PlanoBIM::findOrFail($id);
+        try {
+            $plano = \App\Models\PlanoBim::find($id);
 
+            if (!$plano) {
+                return response()->json([
+                    'id' => $id,
+                    'titulo' => "Plano {$id}",
+                    'tipo' => 'sin_modelo',
+                    'url' => null,
+                    'error' => 'No existe el plano.'
+                ]);
+            }
 
-        // Si el modelo tiene un archivo local (subido al storage)
-        if ($plano->archivo_url) {
-            // Asegura que la URL sea completa (http://localhost:8000/storage/...)
-            $url = url($plano->archivo_url);
-        } else {
-            return response()->json(['error' => 'Archivo no encontrado'], 404);
+            $proyectoId = $plano->proyecto_id;
+            $directory = "planos/proyecto_{$proyectoId}";
+
+            // Buscar archivos dentro del storage
+            $files = Storage::disk('public')->files($directory);
+
+            // 1) Si existe un archivo .bin → usarlo
+            $modelFile = collect($files)->first(function ($f) {
+                return strtolower(pathinfo($f, PATHINFO_EXTENSION)) === 'bin';
+            });
+
+            // 2) Si NO hay .bin, buscar .fbx / .gltf / .glb
+            if (!$modelFile) {
+                $modelFile = collect($files)->first(function ($f) {
+                    $ext = strtolower(pathinfo($f, PATHINFO_EXTENSION));
+                    return in_array($ext, ['fbx', 'gltf', 'glb']);
+                });
+            }
+
+            // 3) Si no hay modelo → placeholder
+            if (!$modelFile) {
+                return response()->json([
+                    'id'    => $id,
+                    'titulo' => $plano->nombre,
+                    'tipo'  => 'placeholder',
+                    'url'   => asset('unity-viewer/placeholder/cube.fbx'),
+                ]);
+            }
+
+            // 4) Devolver archivo encontrado
+            return response()->json([
+                'id'     => $id,
+                'titulo' => $plano->nombre,
+                'tipo'   => strtoupper(pathinfo($modelFile, PATHINFO_EXTENSION)),
+                'url'    => asset('storage/' . $modelFile),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error' => 'Error interno: ' . $e->getMessage()
+            ]);
         }
-
-        // Respuesta JSON con la URL del modelo
-        return response()->json([
-            'id' => $plano->id,
-            'titulo' => $plano->titulo,
-            'tipo' => $plano->tipo,
-            'url' => $url,
-        ]);
     }
 }

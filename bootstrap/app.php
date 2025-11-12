@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Console\Scheduling\Schedule;
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\PreventManualUrlAccess;
+use App\Http\Middleware\CorsMiddleware;   // ← IMPORTANTE
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,20 +15,44 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //  Middlewares web base (Inertia, etc.)
+
+        /*
+        |--------------------------------------------------------------------------
+        | 1. MIDDLEWARE GLOBAL (CORS)
+        |--------------------------------------------------------------------------
+        |
+        | Esto habilita CORS para Unity WebGL y React. Se ejecuta ANTES que
+        | cualquier otro middleware.
+        |
+        */
+        $middleware->append(CorsMiddleware::class);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | 2. MIDDLEWARES WEB (Inertia y otros)
+        |--------------------------------------------------------------------------
+        */
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        //  Alias personalizados
+        /*
+        |--------------------------------------------------------------------------
+        | 3. ALIAS PERSONALIZADOS
+        |--------------------------------------------------------------------------
+        */
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'prevent.manual' => PreventManualUrlAccess::class,
         ]);
 
-        // Agregar el middleware de protección manual DESPUÉS del de autenticación
-        //    (esto permite que Auth::user() ya esté disponible)
+        /*
+        |--------------------------------------------------------------------------
+        | 4. PROTECCIÓN MANUAL (DESPUÉS DE AUTH)
+        |--------------------------------------------------------------------------
+        */
         $middleware->web(append: [
             PreventManualUrlAccess::class,
         ]);
@@ -36,12 +61,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })
+
     ->withCommands([
-        // Registro del comando para limpiar documentos viejos
         App\Console\Commands\PurgeOldDocuments::class,
     ])
+
     ->withSchedule(function (Schedule $schedule) {
-        // Ejecuta el comando todos los días a la medianoche
         $schedule->command('documents:purge')->daily();
     })
+
     ->create();
