@@ -10,36 +10,55 @@ class PreventManualUrlAccess
 {
     public function handle(Request $request, Closure $next)
     {
-        Log::info('🛰️ [PreventManualUrlAccess] Solicitud detectada', [
+        Log::info('PreventManualUrlAccess: Solicitud detectada', [
             'path' => $request->getPathInfo(),
             'method' => $request->method(),
             'has_inertia' => $request->headers->has('X-Inertia'),
             'user_id' => optional($request->user())->id,
         ]);
 
-        // Excepción: permitir acceso a la carpeta WASM para web-ifc-viewer
-        if (preg_match('#^/wasm/#', $request->getPathInfo())) {
-            Log::info('✅ [PreventManualUrlAccess] Archivo WASM/Worker permitido', [
-                'ruta' => $request->getPathInfo(),
-            ]);
+        $path = $request->getPathInfo();
+
+        /*
+        |--------------------------------------------------------------------------
+        | EXCEPCIONES NECESARIAS PARA UNITY VIEWER
+        |--------------------------------------------------------------------------
+        | Permitimos:
+        | - /planos/3d/*
+        | - /planos/*
+        | - /Build/*
+        | - /StreamingAssets/*
+        | - /storage/planos/*
+        */
+
+        if (preg_match('#^/planos/#', $path)) {
             return $next($request);
         }
 
-        if (preg_match('#^/docs/download/#', $request->getPathInfo())) {
-            Log::info('✅ [PreventManualUrlAccess] Descarga permitida', [
-                'ruta' => $request->getPathInfo(),
-            ]);
+        if (preg_match('#^/Build/#', $path)) {
+            return $next($request);
+        }
+
+        if (preg_match('#^/StreamingAssets/#', $path)) {
+            return $next($request);
+        }
+
+        if (preg_match('#^/storage/planos/#', $path)) {
+            return $next($request);
+        }
+
+        if (preg_match('#^/wasm/#', $path)) {
+            return $next($request);
+        }
+
+        if (preg_match('#^/docs/download/#', $path)) {
             return $next($request);
         }
 
         if (
-            preg_match('#^/tareas/proyecto/#', $request->getPathInfo()) ||
-            preg_match('#^/tareas/[0-9]+/historial$#', $request->getPathInfo())
+            preg_match('#^/tareas/proyecto/#', $path) ||
+            preg_match('#^/tareas/[0-9]+/historial$#', $path)
         ) {
-            Log::info('✅ [PreventManualUrlAccess] Ruta AJAX interna permitida', [
-                'ruta' => $request->getPathInfo(),
-                'user_id' => optional($request->user())->id,
-            ]);
             return $next($request);
         }
 
@@ -65,11 +84,11 @@ class PreventManualUrlAccess
             !$request->headers->has('X-Inertia') &&
             !$request->ajax() &&
             !$request->expectsJson() &&
-            !in_array($request->getPathInfo(), $allowed) &&
-            strpos($request->getPathInfo(), '/verify-email/') !== 0
+            !in_array($path, $allowed) &&
+            strpos($path, '/verify-email/') !== 0
         ) {
-            Log::warning('🚫 [PreventManualUrlAccess] Acceso manual bloqueado', [
-                'path' => $request->getPathInfo(),
+            Log::warning('PreventManualUrlAccess: Acceso manual bloqueado', [
+                'path' => $path,
                 'user_id' => optional($request->user())->id,
             ]);
 
