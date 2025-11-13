@@ -348,20 +348,14 @@ const PlanoIndex: React.FC = () => {
                                                                                                                 {/* === ARCHIVOS 3D === */}
                                                                                                                 {is3DFile(plano) ? (
                                                                                                                         <>
-                                                                                                                                {/* Botón VER 3D */}
-                                                                                                                                <button
-                                                                                                                                        onClick={() => setModal({ type: 'view3d', plano })}
-                                                                                                                                        className="bg-purple-600 hover:bg-purple-500 px-3 py-1 rounded-md text-xs sm:text-sm font-bold text-white shadow-md shadow-purple-600/30 transition"
-                                                                                                                                >
-                                                                                                                                        Ver 3D
-                                                                                                                                </button>
+
 
                                                                                                                                 {/* Botón VER EN PROFUNDIDAD */}
                                                                                                                                 <Link
                                                                                                                                         href={route('planos.3d', plano.id)}
                                                                                                                                         className="bg-indigo-600 hover:bg-indigo-500 px-3 py-1 rounded-md text-xs sm:text-sm font-bold text-white shadow-md shadow-indigo-600/30 transition"
                                                                                                                                 >
-                                                                                                                                        Ver en profundidad
+                                                                                                                                        Ver Modelo
                                                                                                                                 </Link>
                                                                                                                         </>
                                                                                                                 ) : (
@@ -370,12 +364,13 @@ const PlanoIndex: React.FC = () => {
                                                                                                                                 {/* PDF / Imágenes / Word / Excel / ZIP / etc */}
                                                                                                                                 {plano.archivo_url && (
                                                                                                                                         <button
-                                                                                                                                                onClick={() => window.open(plano.enlace_externo ?? undefined, '_blank')}
+                                                                                                                                                onClick={() => window.open(plano.archivo_url!, '_blank')}
                                                                                                                                                 className="bg-blue-700 hover:bg-blue-600 px-3 py-1 rounded-md text-xs sm:text-sm font-medium text-white transition"
                                                                                                                                         >
                                                                                                                                                 Abrir
                                                                                                                                         </button>
                                                                                                                                 )}
+
 
                                                                                                                                 {/* Links externos */}
                                                                                                                                 {plano.tipo === 'URL' && plano.enlace_externo && (
@@ -386,6 +381,7 @@ const PlanoIndex: React.FC = () => {
                                                                                                                                                 Abrir Enlace
                                                                                                                                         </button>
                                                                                                                                 )}
+
 
                                                                                                                                 {/* Descargar archivos locales */}
                                                                                                                                 {plano.archivo_url && plano.tipo !== 'URL' && (
@@ -492,10 +488,10 @@ const PlanoIndex: React.FC = () => {
                                                 <div className="flex-grow rounded-lg overflow-hidden bg-black border border-gray-700">
                                                         <FBXViewer
                                                                 key={modal.plano.id}
-                                                                // Usamos archivo_url directamente
                                                                 file={modal.plano.archivo_url || undefined}
-
+                                                                extension={modal.plano.extension}
                                                         />
+
                                                 </div>
 
                                                 {/* PIE DEL MODAL */}

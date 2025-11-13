@@ -1,59 +1,68 @@
 // resources/js/Pages/Planos/FBXViewer.tsx
 
-import React, { useEffect, useRef, useState } from 'react';
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
+import React, { useEffect, useRef, useState } from "react";
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
 
 type FBXViewerProps = {
-   file: File | string | null | undefined;
+    file: File | string | null | undefined;
+    extension?: string | null;
 };
 
-const FBXViewer: React.FC<FBXViewerProps> = ({ file }) => {
-    const containerRef = useRef<HTMLDivElement | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    
-    // Almacenamos las instancias de Three.js directamente en la referencia
-    const sceneRef = useRef<THREE.Scene | null>(null); 
-    const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-    const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-    const controlsRef = useRef<OrbitControls | null>(null); 
+const FBXViewer: React.FC<FBXViewerProps> = ({ file, extension }) => {
 
-    // --- 1. Configuración de la Escena (Se ejecuta una vez) ---
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const sceneRef = useRef<THREE.Scene | null>(null);
+    const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+    const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+    const controlsRef = useRef<OrbitControls | null>(null);
+
+    const [isLoading, setIsLoading] = useState(false);
+
+    console.log("🟦 Inicializando FBXViewer...");
+
+    // ------------------------------------------
+    // 1) CREAR ESCENA UNA SOLA VEZ
+    // ------------------------------------------
     useEffect(() => {
         if (!containerRef.current) return;
 
-        // Inicializar Scene, Camera, Renderer
-        const scene = new THREE.Scene();
-        sceneRef.current = scene;
-        scene.background = new THREE.Color(0x202020);
+        console.log("🎨 Configurando escena 3D...");
 
+        // Scene
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x202020);
+        sceneRef.current = scene;
+
+        // Camera
         const width = containerRef.current.clientWidth;
         const height = containerRef.current.clientHeight;
-        const aspect = width / height;
-        
-        const camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000); 
+        const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 2000);
+        camera.position.set(0, 1, 4);
         cameraRef.current = camera;
 
+        // Renderer
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        rendererRef.current = renderer;
         renderer.setSize(width, height);
         renderer.setPixelRatio(window.devicePixelRatio);
         containerRef.current.appendChild(renderer.domElement);
+        rendererRef.current = renderer;
 
-        // Controles de Cámara
+        // Controls
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controlsRef.current = controls; 
+        controlsRef.current = controls;
 
-        // Iluminación
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-        scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        directionalLight.position.set(10, 10, 10);
-        scene.add(directionalLight);
+        // Lights
+        const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambient);
 
-        // Loop de Renderizado
+        const directional = new THREE.DirectionalLight(0xffffff, 1.2);
+        directional.position.set(5, 10, 7);
+        scene.add(directional);
+
+        // Animation loop
         const animate = () => {
             requestAnimationFrame(animate);
             controls.update();
@@ -61,130 +70,128 @@ const FBXViewer: React.FC<FBXViewerProps> = ({ file }) => {
         };
         animate();
 
-        // Manejo de Redimensionamiento
-        const onResize = () => {
-            if (containerRef.current) {
-                const w = containerRef.current.clientWidth;
-                const h = containerRef.current.clientHeight;
-                camera.aspect = w / h;
-                camera.updateProjectionMatrix();
-                renderer.setSize(w, h);
-            }
+        // Resize handler
+        const resizeHandler = () => {
+            if (!containerRef.current || !camera || !renderer) return;
+            const w = containerRef.current.clientWidth;
+            const h = containerRef.current.clientHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
         };
-        window.addEventListener('resize', onResize);
 
-        // Limpieza
+        window.addEventListener("resize", resizeHandler);
+
+        // Cleanup
         return () => {
-            window.removeEventListener('resize', onResize);
-            // ✅ CORRECCIÓN 2: Acceder directamente a la instancia del renderizador
-            const currentRenderer = rendererRef.current;
-            if (containerRef.current && currentRenderer) {
-                containerRef.current.removeChild(currentRenderer.domElement);
-                currentRenderer.dispose();
+            window.removeEventListener("resize", resizeHandler);
+            if (renderer && renderer.domElement && containerRef.current) {
+                containerRef.current.removeChild(renderer.domElement);
+                renderer.dispose();
             }
         };
 
     }, []);
 
-    // --- 2. Función de Ajuste a la Vista (Fit to view) ---
+    // ------------------------------------------
+    // 2) FIT CAMERA TO MODEL
+    // ------------------------------------------
     const fitCameraToModel = (model: THREE.Object3D) => {
         const camera = cameraRef.current;
         const controls = controlsRef.current;
         if (!camera || !controls) return;
 
         const box = new THREE.Box3().setFromObject(model);
-        const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
 
-        // 1. Calcular la distancia necesaria para encuadrar el modelo
         const maxDim = Math.max(size.x, size.y, size.z);
-        const fov = camera.fov * (Math.PI / 180);
-        let cameraDistance = Math.abs(maxDim / (2 * Math.tan(fov / 2)));
+        const fov = (camera.fov * Math.PI) / 180;
 
-        // 2. Ajustar el factor para evitar que el modelo toque el borde de la vista
-        cameraDistance *= 1.2; 
-        
-        // 3. Establecer la posición objetivo (target) de la cámara y controles en el centro del modelo
+        let distance = maxDim / Math.tan(fov / 2);
+        distance *= 1.4; // margen
+
+        camera.position.copy(center);
+        camera.position.z += distance;
+        camera.position.y += distance * 0.2;
+
         controls.target.copy(center);
-        
-        // 4. Calcular la nueva posición de la cámara 
-        // Partimos de una posición por defecto (lejos del modelo)
-        const offset = new THREE.Vector3(0, 0, cameraDistance);
-        
-        // Mover la cámara a la nueva posición relativa al centro del modelo
-        camera.position.copy(center).add(offset);
-
-
-        // Asegurar que los cambios se apliquen y los controles se actualicen
         camera.updateProjectionMatrix();
         controls.update();
     };
 
-    // --- 3. Lógica de Carga de FBX (Se ejecuta con el cambio de archivo) ---
+    // ------------------------------------------
+    // 3) CARGA DEL FBX
+    // ------------------------------------------
     useEffect(() => {
         const scene = sceneRef.current;
         if (!file || !scene) return;
 
-        // Determinar un nombre válido tanto para File como para string (URL/ruta)
-        const name = typeof file === 'string' ? file.split(/[#?]/)[0] : file.name;
-        const ext = name.split('.').pop()?.toLowerCase() || '';
+        console.log("📄 Archivo recibido desde PHP:", file);
+        console.log("🔍 Extensión REAL proporcionada:", extension);
 
-if (ext !== 'fbx') {
-    console.warn('Se intenta cargar un archivo no FBX, se intentará de todos modos.');
-}
+        const ext = extension?.toLowerCase() || "";
+
+        if (ext !== "fbx") {
+            console.warn("⛔ Tipo no compatible con FBXViewer:", ext);
+            return;
+        }
+
+        console.log("🟦 Preparando carga del archivo FBX...");
 
         setIsLoading(true);
-        let fileUrl: string | null = null;
-        let createdObjectUrl = false;
-        
-        // Limpiar modelos existentes (remover todos los objetos excepto luces y cámara)
-        scene.children
-            .filter(child => child instanceof THREE.Group || child instanceof THREE.Mesh)
-            .forEach(object => scene.remove(object));
-        
-        // Si nos pasaron una URL/route en string la usamos directamente, si es File creamos un objeto URL.
-        if (typeof file === 'string') {
+
+        // Limpiar modelos anteriores (solo Mesh o Group)
+        scene.children = scene.children.filter(obj => {
+            if (obj instanceof THREE.Mesh || obj instanceof THREE.Group) return false;
+            return true;
+        });
+
+        let fileUrl: string | null;
+        let created = false;
+
+        if (typeof file === "string") {
             fileUrl = file;
         } else {
             fileUrl = URL.createObjectURL(file);
-            createdObjectUrl = true;
+            created = true;
         }
 
+        console.log("➡️ Cargando FBX desde:", fileUrl);
+
         const loader = new FBXLoader();
-        
+
         loader.load(
             fileUrl,
             (fbx) => {
+                console.log("✅ FBX cargado exitosamente.");
                 scene.add(fbx);
-                
-                // 🚀 AJUSTE CLAVE: Llamar a la función de encuadre
-                fitCameraToModel(fbx); 
-                
+                fitCameraToModel(fbx);
                 setIsLoading(false);
             },
             (xhr) => {
-                const progress = (xhr.loaded / (xhr.total || 1)) * 100;
-                // console.log(`Cargando FBX: ${progress.toFixed(2)}%`); // Deshabilitado para reducir spam en la consola
+                const progress = ((xhr.loaded / (xhr.total || 1)) * 100).toFixed(1);
+                console.log(`📦 Progreso carga FBX: ${progress}%`);
             },
             (error) => {
-                console.error('Error cargando FBX.', error);
+                console.error("❌ Error al cargar FBX:", error);
                 setIsLoading(false);
             }
         );
 
-        // Limpieza: Revocar la URL del objeto temporal si fue creada.
         return () => {
-            if (createdObjectUrl && fileUrl) {
-                URL.revokeObjectURL(fileUrl);
-            }
+            if (created && fileUrl) URL.revokeObjectURL(fileUrl);
         };
 
-    }, [file]); 
+    }, [file, extension]);
 
+    // ------------------------------------------
+    // RENDER
+    // ------------------------------------------
     return (
-        <div className="relative w-full h-[600px] border rounded-lg overflow-hidden bg-gray-900">
+        <div className="relative w-full h-[600px] rounded-lg overflow-hidden bg-gray-900">
             {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white text-lg font-semibold z-10">
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 text-white text-lg font-semibold">
                     Cargando modelo FBX...
                 </div>
             )}

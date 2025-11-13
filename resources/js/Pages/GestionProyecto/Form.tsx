@@ -11,14 +11,14 @@ export default function Form({ proyecto, clientes, responsables }: any) {
         descripcion?: string;
         fecha_inicio: string;
         responsable_id: string;
-        archivo_bim: File | null;
+   
     }>({
         nombre: proyecto?.nombre || "",
         cliente_id: proyecto?.cliente_id || "",
         descripcion: proyecto?.descripcion || "",
         fecha_inicio: proyecto?.fecha_inicio || "",
         responsable_id: proyecto?.responsable_id || "",
-        archivo_bim: null,
+
     });
 
 
@@ -66,21 +66,6 @@ export default function Form({ proyecto, clientes, responsables }: any) {
         if (!data.fecha_inicio) {
             mostrarModal("Debe ingresar la fecha de inicio del proyecto.");
             return false;
-        }
-
-        if (data.archivo_bim) {
-            const ext = data.archivo_bim.name.split(".").pop()?.toLowerCase();
-            const formatosPermitidos = ["ifc", "rvt", "nwd", "glb", "gltf"];
-            const maxSizeBytes = 1.5 * 1024 * 1024 * 1024; // 1.5 GB
-
-            if (!formatosPermitidos.includes(ext || "")) {
-                mostrarModal("Formato no permitido. Solo .ifc, .rvt, .nwd, .glb o .gltf.");
-                return false;
-            }
-            if (data.archivo_bim.size > maxSizeBytes) {
-                mostrarModal("El archivo supera el límite de 1.5 GB permitido.");
-                return false;
-            }
         }
         return true;
     };
@@ -257,26 +242,7 @@ export default function Form({ proyecto, clientes, responsables }: any) {
                         />
                     </div>
 
-                    {/* ARCHIVO BIM */}
-                    <div className="pt-4 border-t border-gray-700">
-                        <InputLabel htmlFor="archivo_bim" value="Archivo BIM / Modelo 3D" className="text-gray-200 font-semibold" />
-                        <input
-                            id="archivo_bim"
-                            type="file"
-                            accept=".ifc,.rvt,.nwd,.glb,.gltf"
-                            className="mt-1 block w-full text-sm text-gray-300 truncate
-                                file:mr-4 file:py-2 file:px-4
-                                file:rounded-full file:border-0
-                                file:text-sm file:font-bold
-                                file:bg-[#2970E8] file:text-white
-                                hover:file:bg-indigo-600 transition duration-150 cursor-pointer"
-                            onChange={(e) => setData("archivo_bim", e.target.files?.[0] || null)}
-                        />
-                        <p className="text-xs text-gray-400 mt-2">
-                            Tamaño máximo: <span className="text-[#B3E10F]">1.5 GB</span>. Formatos: .ifc, .rvt, .nwd, .glb, .gltf
-                        </p>
-                        <InputError className="mt-2" message={errors.archivo_bim} />
-                    </div>
+                    
 
                     {/* PROGRESO */}
                     {uploading && (

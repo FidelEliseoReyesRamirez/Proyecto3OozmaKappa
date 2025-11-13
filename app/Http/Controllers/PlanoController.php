@@ -58,10 +58,21 @@ class PlanoController extends Controller
                     'id' => $plano->id,
                     'titulo' => $plano->nombre,
                     'descripcion' => $plano->descripcion,
-                    'archivo_url' => $accessUrl,
+
+                    
+                    'archivo_url' => $plano->archivo_url ? asset($plano->archivo_url) : null,
+
+                    
+                    'download_url' => !$isExternalLink && $plano->archivo_url
+                        ? route('planos.download', $plano->id)
+                        : null,
+
                     'enlace_externo' => $plano->enlace_externo,
                     'tipo' => $plano->tipo,
-                    'extension' => $extension,
+
+                    
+                    'extension' => strtolower(pathinfo($plano->archivo_url ?? '', PATHINFO_EXTENSION)),
+
                     'fecha_subida' => $plano->created_at->format('d/m/Y H:i'),
                     'proyecto_id' => $plano->proyecto_id,
                     'proyecto_nombre' => $plano->proyecto->nombre ?? 'N/A',
