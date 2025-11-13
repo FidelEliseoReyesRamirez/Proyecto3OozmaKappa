@@ -1,123 +1,224 @@
 <!DOCTYPE html>
 <html lang="en-us">
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Unity WebGL Player | DevelArq_UnityViewer</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico" />
-    <link rel="stylesheet" href="TemplateData/style.css" />
-  </head>
 
-  <body>
-    <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width="960" height="600" tabindex="-1"></canvas>
-      <div id="unity-loading-bar">
-        <div id="unity-logo"></div>
-        <div id="unity-progress-bar-empty">
-          <div id="unity-progress-bar-full"></div>
-        </div>
-      </div>
-      <div id="unity-warning"></div>
-      <div id="unity-footer">
-        <div id="unity-webgl-logo"></div>
-        <div id="unity-fullscreen-button"></div>
-        <div id="unity-build-title">DevelArq_UnityViewer</div>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>DevelArq 3D Viewer</title>
+
+  <link rel="shortcut icon" href="TemplateData/favicon.ico" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="TemplateData/style.css" />
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background: #121212;
+      color: white;
+      overflow-x: hidden;
+    }
+
+    /* ============================
+       CONTENEDOR PRINCIPAL
+    ============================= */
+    #unity-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+    }
+
+    /* ============================
+       TÍTULO PRINCIPAL
+    ============================= */
+    #unity-build-title {
+      font-size: 34px;
+      font-weight: 900;
+      color: #B3E10F;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+      letter-spacing: 1px;
+      text-shadow: 0px 0px 12px #B3E10FAA;
+    }
+
+    /* ============================
+       CANVAS: MÁS GRANDE
+    ============================= */
+    #unity-canvas {
+      width: 100%;
+      max-width: 1400px;
+      height: 75vh; /* MÁS GRANDE */
+      background: #000;
+      border-radius: 16px;
+      border: 2px solid #2970E8;
+      box-shadow: 0px 0px 25px #2970E8AA;
+    }
+
+    /* ============================
+       LOADING BAR (sin logo feo)
+    ============================= */
+    #unity-logo {
+      display: none !important; /* OCULTA EL LOGO FEO DE UNITY */
+    }
+
+    #unity-loading-bar {
+      margin-top: 12px;
+      width: 50%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ============================
+       BOTÓN FULLSCREEN DEVELARQ
+    ============================= */
+    #unity-fullscreen-button {
+      margin-top: 18px;
+      width: 220px;
+      height: 55px;
+      background: #2970E8;
+      border-radius: 12px;
+      cursor: pointer;
+      color: #121212;
+      font-weight: 900;
+      font-size: 17px;
+      letter-spacing: .5px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: .25s;
+      box-shadow: 0px 0px 15px #2970E8AA;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    #unity-fullscreen-button:hover {
+      background: #B3E10F;
+      color: #121212;
+      box-shadow: 0px 0px 18px #B3E10FAA;
+    }
+
+    /* ============================
+       RESPONSIVE MÓVIL
+    ============================= */
+    @media (max-width: 768px) {
+
+      #unity-build-title {
+        font-size: 24px;
+        margin-bottom: 10px;
+      }
+
+      #unity-container {
+        padding: 0;
+        margin: 0;
+        width: 100%;
+      }
+
+      #unity-canvas {
+        width: 100vw;
+        height: 60vh;
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+      }
+
+      #unity-loading-bar {
+        width: 80%;
+      }
+
+      #unity-fullscreen-button {
+        width: 90%;
+        height: 50px;
+        border-radius: 8px;
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- TITULO ARRIBA -->
+  <div id="unity-container">
+    <div id="unity-build-title">DevelArq 3D Viewer</div>
+
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+
+    <div id="unity-loading-bar">
+      <div id="unity-progress-bar-empty">
+        <div id="unity-progress-bar-full"></div>
       </div>
     </div>
 
-    <script>
-      var container = document.querySelector("#unity-container");
-      var canvas = document.querySelector("#unity-canvas");
-      var loadingBar = document.querySelector("#unity-loading-bar");
-      var progressBarFull = document.querySelector("#unity-progress-bar-full");
-      var fullscreenButton = document.querySelector("#unity-fullscreen-button");
-      var warningBanner = document.querySelector("#unity-warning");
+    <div id="unity-warning"></div>
 
-      function unityShowBanner(msg, type) {
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? "block" : "none";
-        }
-        var div = document.createElement("div");
-        div.innerHTML = msg;
-        warningBanner.appendChild(div);
-        if (type == "error") div.style = "background: red; padding: 10px;";
-        else {
-          if (type == "warning") div.style = "background: yellow; padding: 10px;";
-          setTimeout(() => {
-            warningBanner.removeChild(div);
-            updateBannerVisibility();
-          }, 5000);
-        }
-        updateBannerVisibility();
-      }
+    <div id="unity-fullscreen-button">Pantalla Completa</div>
+  </div>
 
-      var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/unity-viewer.loader.js";
-      var config = {
-        dataUrl: buildUrl + "/unity-viewer.data",
-        frameworkUrl: buildUrl + "/unity-viewer.framework.js",
-        codeUrl: buildUrl + "/unity-viewer.wasm",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "DevelArq_UnityViewer",
-        productVersion: "0.1",
-        showBanner: unityShowBanner,
-      };
+  <script>
+    var container = document.querySelector("#unity-container");
+    var canvas = document.querySelector("#unity-canvas");
+    var loadingBar = document.querySelector("#unity-loading-bar");
+    var progressBarFull = document.querySelector("#unity-progress-bar-full");
+    var fullscreenButton = document.querySelector("#unity-fullscreen-button");
+    var warningBanner = document.querySelector("#unity-warning");
 
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        var meta = document.createElement("meta");
-        meta.name = "viewport";
-        meta.content =
-          "width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes";
-        document.head.appendChild(meta);
-        container.className = "unity-mobile";
-        canvas.className = "unity-mobile";
-      } else {
-        canvas.style.width = "960px";
-        canvas.style.height = "600px";
-      }
+    function unityShowBanner(msg, type) {
+      var div = document.createElement("div");
+      div.innerHTML = msg;
+      warningBanner.appendChild(div);
+      if (type == "error") div.style = "background: red; padding: 10px;";
+      else if (type == "warning") div.style = "background: yellow; padding: 10px;";
+      setTimeout(() => warningBanner.removeChild(div), 5000);
+    }
 
-      loadingBar.style.display = "block";
+    var buildUrl = "Build";
+    var loaderUrl = buildUrl + "/unity-viewer.loader.js";
+    var config = {
+      dataUrl: buildUrl + "/unity-viewer.data",
+      frameworkUrl: buildUrl + "/unity-viewer.framework.js",
+      codeUrl: buildUrl + "/unity-viewer.wasm",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "DevelArq",
+      productName: "Viewer",
+      productVersion: "1.0",
+      showBanner: unityShowBanner,
+    };
 
-      var script = document.createElement("script");
-      script.src = loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          progressBarFull.style.width = 100 * progress + "%";
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      var meta = document.createElement("meta");
+      meta.name = "viewport";
+      meta.content = "width=device-width, height=device-height, initial-scale=1.0, user-scalable=no";
+      document.head.appendChild(meta);
+      canvas.className = "unity-mobile";
+    }
+
+    loadingBar.style.display = "block";
+
+    var script = document.createElement("script");
+    script.src = loaderUrl;
+    script.onload = () =>
+      createUnityInstance(canvas, config, (p) => progressBarFull.style.width = (p * 100) + "%")
+        .then((unityInstance) => {
+          window.unityInstance = unityInstance;
+          loadingBar.style.display = "none";
+          fullscreenButton.onclick = () => unityInstance.SetFullscreen(1);
+          setupReactMessageListener(unityInstance);
         })
-          .then((unityInstance) => {
-            window.unityInstance = unityInstance;
-            console.log("✅ UnityInstance registrado en window.unityInstance");
+        .catch((message) => alert(message));
 
-            loadingBar.style.display = "none";
-            fullscreenButton.onclick = () => unityInstance.SetFullscreen(1);
+    document.body.appendChild(script);
 
-            // Activamos el listener después de cargar Unity
-            setupReactMessageListener(unityInstance);
-          })
-          .catch((message) => {
-            alert(message);
-          });
-      };
-      document.body.appendChild(script);
+    function setupReactMessageListener(unityInstance) {
+      window.addEventListener("message", (event) => {
+        if (!event.data) return;
+        const msg = JSON.stringify(event.data);
+        unityInstance.SendMessage("WebBridge", "OnMessageReceived", msg);
+      });
+    }
+  </script>
+</body>
 
-      // 🚀 Listener entre React → Unity
-      function setupReactMessageListener(unityInstance) {
-        console.log("🎯 JS listener activo: esperando mensajes desde React");
-
-        window.addEventListener("message", function (event) {
-          if (!event.data) return;
-          console.log("📨 Recibido en JS:", event.data);
-
-          try {
-            const cleanMessage = JSON.stringify(event.data);
-            console.log("✅ Enviando a Unity:", cleanMessage);
-            unityInstance.SendMessage("WebBridge", "OnMessageReceived", cleanMessage);
-          } catch (err) {
-            console.error("❌ Error al serializar mensaje:", err);
-          }
-        });
-      }
-    </script>
-  </body>
 </html>
