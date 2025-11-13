@@ -7,7 +7,7 @@ import { PageProps } from '@/types';
 import FBXViewer from './FBXViewer';
 
 // Definición de tipos
-type FileType = 'PDF' | 'Excel' | 'Word' | 'Imagen' | 'BIM-FBX'; 
+type FileType = 'PDF' | 'Excel' | 'Word' | 'Imagen' | 'BIM-FBX';
 
 interface Project {
     id: number;
@@ -21,7 +21,7 @@ interface PlanoCreateProps extends PageProps {
 const PlanoCreate: React.FC = () => {
     // Asumiendo que 'projectsList' se pasa desde el controlador de Laravel
     const { projectsList } = usePage<PlanoCreateProps>().props;
-    
+
     // Hook de formulario de Inertia
     const { data, setData, post, processing, clearErrors, errors } = useForm({
         titulo: '',
@@ -34,13 +34,13 @@ const PlanoCreate: React.FC = () => {
     });
 
     const [projectSearch, setProjectSearch] = useState('');
-    
+
     // ✅ CORRECCIÓN: Los dos estados de modal ahora tienen nombres únicos
     const [showSizeModal, setShowSizeModal] = useState(false);
-    const [showTypeModal, setShowTypeModal] = useState(false); 
-    
+    const [showTypeModal, setShowTypeModal] = useState(false);
+
     const [frontendError, setFrontendError] = useState('');
-    
+
     // Referencia para limpiar el input de tipo file
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,9 +50,14 @@ const PlanoCreate: React.FC = () => {
         { label: 'Información Excel', value: 'Excel' as FileType, extensions: ['.xls', '.xlsx', '.xlsm'] },
         { label: 'Imagen de Plano (JPG/PNG)', value: 'Imagen' as FileType, extensions: ['.jpg', '.jpeg', '.png'] },
         // Soporte BIM/3D para FBX
-        { label: 'Modelo BIM/3D (FBX)', value: 'BIM-FBX' as FileType, extensions: ['.fbx'] },
+        {
+            label: 'Modelo BIM/3D (FBX / GLB / GLTF)',
+            value: 'BIM-FBX' as FileType,
+            extensions: ['.fbx', '.glb', '.gltf'],
+        },
+
     ], []);
-    
+
     const allValidExtensions = allowedTypes.flatMap(t => t.extensions);
 
     const getAcceptAttribute = (selectedType: FileType): string => {
@@ -73,11 +78,11 @@ const PlanoCreate: React.FC = () => {
     const filteredProjects = projectsList.filter((p) =>
         p.name.toLowerCase().includes(projectSearch.toLowerCase())
     );
-    
+
     const handleFileChange = (file: File | null) => {
         if (file) {
             // Si se carga un archivo, limpiamos el enlace externo
-            setData((prevData) => ({ ...prevData, enlace_externo: '' })); 
+            setData((prevData) => ({ ...prevData, enlace_externo: '' }));
         }
         setData('archivo', file);
         setFrontendError('');
@@ -86,7 +91,7 @@ const PlanoCreate: React.FC = () => {
     const handleEnlaceChange = (value: string) => {
         if (value) {
             // Si se pone un enlace, limpiamos el archivo local
-            setData((prevData) => ({ ...prevData, archivo: null })); 
+            setData((prevData) => ({ ...prevData, archivo: null }));
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
             }
@@ -94,7 +99,7 @@ const PlanoCreate: React.FC = () => {
         setData('enlace_externo', value);
         setFrontendError('');
     };
-    
+
     const handleTipoChange = (newType: FileType) => {
         setData('archivo_tipo', newType);
         // Resetea archivo y enlace al cambiar de tipo
@@ -103,7 +108,7 @@ const PlanoCreate: React.FC = () => {
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
-        setFrontendError(''); 
+        setFrontendError('');
         clearErrors();
     };
 
@@ -123,7 +128,7 @@ const PlanoCreate: React.FC = () => {
         }
 
         // Envío del formulario (Inertia gestiona la subida del archivo 'data.archivo')
-        post(route('planos.store'), { 
+        post(route('planos.store'), {
             onSuccess: () => router.visit(route('planos.index')),
             onError: (errors) => console.error("Error al subir el plano:", errors)
         });
@@ -229,7 +234,7 @@ const PlanoCreate: React.FC = () => {
                                     Subir Archivo de Plano (Máx. 50 MB)
                                 </label>
                                 <input
-                                    ref={fileInputRef} 
+                                    ref={fileInputRef}
                                     id="archivo"
                                     type="file"
                                     accept={acceptFileTypes}
@@ -240,17 +245,17 @@ const PlanoCreate: React.FC = () => {
                                         // Validaciones de tipo y tamaño
                                         if (!isValidFileType(file.name)) {
                                             // Usamos la función de actualización corregida
-                                            setShowTypeModal(true); 
-                                            e.target.value = ''; 
+                                            setShowTypeModal(true);
+                                            e.target.value = '';
                                             return;
                                         }
                                         if (file.size > 50 * 1024 * 1024) {
                                             setShowSizeModal(true);
-                                            e.target.value = ''; 
+                                            e.target.value = '';
                                             return;
                                         }
 
-                                        handleFileChange(file); 
+                                        handleFileChange(file);
                                     }}
                                     className="mt-1 block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#2970E8] file:text-white hover:file:bg-blue-600 transition duration-150"
                                 />
@@ -276,14 +281,14 @@ const PlanoCreate: React.FC = () => {
                                     type="url"
                                     value={data.enlace_externo}
                                     onChange={(e) => {
-                                        handleEnlaceChange(e.target.value); 
+                                        handleEnlaceChange(e.target.value);
                                     }}
                                     placeholder="https://drive.google.com/..."
                                     className={inputStyle}
                                 />
                                 {(data.archivo || data.enlace_externo) && (
                                     <p className={`mt-1 text-xs font-semibold ${data.archivo ? 'text-lime-400' : 'text-gray-400'}`}>
-                                        {data.archivo 
+                                        {data.archivo
                                             ? `Archivo local seleccionado: ${data.archivo.name} (Se ignorará el enlace).`
                                             : `Enlace externo: ${data.enlace_externo}`
                                         }

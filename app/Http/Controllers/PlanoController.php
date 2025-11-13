@@ -97,36 +97,44 @@ class PlanoController extends Controller
      */
     public function store(Request $request)
     {
+        // 1. Permisos
         if (strtolower(optional($request->user())->rol ?? 'cliente') === 'cliente') {
             return back()->with('error', 'No tienes permiso para crear planos BIM.');
         }
 
+        // 2. Tipos permitidos
         $allowedFileTypes = [
             'PDF',
             'Excel',
             'Word',
             'Imagen',
             'BIM-FBX',
+            'BIM-GLB',
+            'BIM-GLTF',
             'BIM-IFC',
             'ZIP',
             'Otro',
             'URL'
         ];
 
+        // 3. Validación
         $validated = $request->validate([
             'titulo' => 'required|string|max:150',
             'descripcion' => 'nullable|string|max:1000',
             'proyecto_id' => 'required|exists:proyectos,id',
-            'archivo' => 'nullable|file|max:51200', // 50MB (50 * 1024)
+
+            // El archivo puede ser cualquiera, no limitar extensión aquí
+            'archivo' => 'nullable|file|max:51200',
+
             'enlace_externo' => 'nullable|url|max:500',
 
-            // La validación ahora incluye los tipos BIM que necesita tu frontend
             'archivo_tipo' => ['required', Rule::in($allowedFileTypes)],
         ]);
 
+        // 4. Si no hay archivo NI enlace → error
         if (empty($validated['archivo']) && empty($validated['enlace_externo'])) {
             return back()->withErrors([
-                'archivo' => 'Debes subir un archivo o ingresar un enlace externo válido (Drive, OneDrive, etc.).'
+                'archivo' => 'Debes subir un archivo o ingresar un enlace externo válido.'
             ])->withInput();
         }
 
@@ -134,38 +142,57 @@ class PlanoController extends Controller
         $archivo_url = null;
         $enlace_externo = null;
 
+        // Carpeta dinámica según proyecto
         $project_folder = 'planos/proyecto_' . $validated['proyecto_id'];
 
+        // --------------------------------------
+        // 5. SUBIR ARCHIVO LOCAL
+        // --------------------------------------
         if ($request->hasFile('archivo')) {
+
             $file = $request->file('archivo');
-            $path = $file->store($project_folder, 'public');
+
+            // Extensión real del archivo
+            $ext = strtolower($file->getClientOriginalExtension());
+
+            // Nombre único
+            $filename = uniqid('plano_') . '.' . $ext;
+
+            // Guardar conservando extensión real
+            $path = $file->storeAs($project_folder, $filename, 'public');
+
             $archivo_url = '/storage/' . $path;
             $enlace_externo = null;
-        } elseif (!empty($validated['enlace_externo'])) {
-            // Si no hay archivo local, usamos el enlace.
-            // Si el frontend está enviando 'PDF' o 'BIM-FBX' pero solo hay un enlace,
-            // puedes sobrescribir el tipo a 'URL' o dejar el tipo que envió el usuario
-            // si consideras que el enlace apunta a ese tipo de archivo.
-
-            // 🚨 Recomendación: Si hay enlace, usa el tipo 'URL' en la BD
-            $tipo = 'URL'; // Sobrescribir el tipo a 'URL' si se usa un enlace
-
-            $enlace_externo = $validated['enlace_externo'];
-            $archivo_url = null;
         }
 
+        // --------------------------------------
+        // 6. ENLACE EXTERNO (Drive, OneDrive...)
+        // --------------------------------------
+        elseif (!empty($validated['enlace_externo'])) {
+
+            // Siempre convertir el tipo a URL cuando hay enlace
+            $tipo = 'URL';
+
+            $archivo_url = null;
+            $enlace_externo = $validated['enlace_externo'];
+        }
+
+        // --------------------------------------
+        // 7. GUARDAR EN BASE DE DATOS
+        // --------------------------------------
         try {
+
             $planoBim = PlanoBim::create([
-                'nombre' => $validated['titulo'],
-                'descripcion' => $validated['descripcion'] ?? null,
-                'proyecto_id' => $validated['proyecto_id'],
-                'archivo_url' => $archivo_url,
+                'nombre'        => $validated['titulo'],
+                'descripcion'   => $validated['descripcion'] ?? null,
+                'proyecto_id'   => $validated['proyecto_id'],
+                'archivo_url'   => $archivo_url,
                 'enlace_externo' => $enlace_externo,
-                'tipo' => $tipo,
-                'subido_por' => Auth::id(),
+                'tipo'          => $tipo,
+                'subido_por'    => Auth::id(),
             ]);
 
-            //  Auditoría
+            // Auditoría
             AuditoriaLog::create([
                 'user_id' => Auth::id(),
                 'accion' => "Creó un nuevo plano BIM: {$planoBim->nombre}",
@@ -175,12 +202,11 @@ class PlanoController extends Controller
                 'eliminado' => 0,
             ]);
 
-            $proyecto = Proyecto::find($validated['proyecto_id']);
+            // Notificación a miembros del proyecto
+            if ($proyecto = Proyecto::find($validated['proyecto_id'])) {
 
-            if ($proyecto) {
                 $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
 
-                // Usar la clase de notificación (asumiendo que está importada)
                 NotificationService::sendToMany(
                     $usuariosProyecto,
                     "Se ha subido un nuevo plano BIM '{$planoBim->nombre}' al proyecto '{$proyecto->nombre}'.",
@@ -190,13 +216,19 @@ class PlanoController extends Controller
                 );
             }
 
-            return redirect()->route('planos.index')->with('success', 'Plano BIM registrado correctamente.');
+            return redirect()->route('planos.index')
+                ->with('success', 'Plano BIM registrado correctamente.');
         } catch (\Exception $e) {
-            // Usar la fachada Log (asumiendo que está importada)
+
             Log::error('Error al guardar plano BIM: ' . $e->getMessage());
-            return back()->with('error', 'Ocurrió un error al guardar el plano BIM: ' . $e->getMessage())->withInput();
+
+            return back()->with(
+                'error',
+                'Ocurrió un error al guardar el plano BIM: ' . $e->getMessage()
+            )->withInput();
         }
     }
+
 
 
     /**
@@ -257,7 +289,7 @@ class PlanoController extends Controller
             'titulo' => 'nullable|string|max:150',
             'descripcion' => 'nullable|string|max:1000',
             'proyecto_id' => 'nullable|exists:proyectos,id',
-            'archivo' => 'nullable|file|max:51200',
+            'archivo' => 'nullable|file|max:51200|mimes:fbx,glb,gltf,pdf,jpg,jpeg,png,xls,xlsx,doc,docx,zip,ifc',
             'enlace_externo' => 'nullable|url|max:500',
             'archivo_tipo' => ['nullable', Rule::in(['DWG', 'DXF', 'IFC', 'PDF', 'URL', 'Otro', 'ZIP'])],
         ]);
