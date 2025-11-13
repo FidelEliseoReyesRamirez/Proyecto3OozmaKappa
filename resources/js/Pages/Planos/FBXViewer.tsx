@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 
 type FBXViewerProps = {
-    file: File | string | null;
+   file: File | string | null | undefined;
 };
 
 const FBXViewer: React.FC<FBXViewerProps> = ({ file }) => {
