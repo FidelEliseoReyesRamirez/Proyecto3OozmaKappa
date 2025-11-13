@@ -102,13 +102,13 @@ Route::middleware(['auth', PreventManualUrlAccess::class])->group(function () {
             ]);
         })
             ->name('3d')
-            ->defaults('_debug_hide', true); 
+            ->defaults('_debug_hide', true);
 
         // API para Unity
         Route::get('/3d/{id}/modelo', [PlanoController::class, 'obtenerModelo3D'])
             ->withoutMiddleware(PreventManualUrlAccess::class)
             ->name('modelo3d')
-            ->defaults('_debug_hide', true);  
+            ->defaults('_debug_hide', true);
     });
 
     // Proyectos
@@ -192,6 +192,14 @@ Route::middleware(['auth', PreventManualUrlAccess::class])->group(function () {
 Route::get('/planos/3d/{id}/modelo', [PlanoController::class, 'obtenerModelo3D'])
     ->withoutMiddleware(['auth', PreventManualUrlAccess::class])
     ->name('planos.modelo3d.public');
+Route::get('/api/proyecto/{id}/tiene-modelo3d', function ($id) {
+    $existe = \App\Models\PlanoBim::where('proyecto_id', $id)
+        ->whereIn('tipo', ['BIM-FBX', 'BIM-GLB', 'BIM-GLTF', 'BIM-IFC'])
+        ->where('eliminado', 0)
+        ->exists();
+
+    return response()->json(['tiene3D' => $existe]);
+});
 
 /*
 |--------------------------------------------------------------------------

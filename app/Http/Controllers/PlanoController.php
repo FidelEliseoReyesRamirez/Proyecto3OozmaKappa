@@ -59,10 +59,10 @@ class PlanoController extends Controller
                     'titulo' => $plano->nombre,
                     'descripcion' => $plano->descripcion,
 
-                    
+
                     'archivo_url' => $plano->archivo_url ? asset($plano->archivo_url) : null,
 
-                    
+
                     'download_url' => !$isExternalLink && $plano->archivo_url
                         ? route('planos.download', $plano->id)
                         : null,
@@ -70,7 +70,7 @@ class PlanoController extends Controller
                     'enlace_externo' => $plano->enlace_externo,
                     'tipo' => $plano->tipo,
 
-                    
+
                     'extension' => strtolower(pathinfo($plano->archivo_url ?? '', PATHINFO_EXTENSION)),
 
                     'fecha_subida' => $plano->created_at->format('d/m/Y H:i'),
@@ -133,12 +133,8 @@ class PlanoController extends Controller
             'titulo' => 'required|string|max:150',
             'descripcion' => 'nullable|string|max:1000',
             'proyecto_id' => 'required|exists:proyectos,id',
-
-            // El archivo puede ser cualquiera, no limitar extensión aquí
             'archivo' => 'nullable|file|max:51200',
-
             'enlace_externo' => 'nullable|url|max:500',
-
             'archivo_tipo' => ['required', Rule::in($allowedFileTypes)],
         ]);
 
@@ -149,6 +145,28 @@ class PlanoController extends Controller
             ])->withInput();
         }
 
+        // 🚫 VALIDACIÓN: Solo 1 modelo 3D por proyecto
+        $esModelo3D = in_array($validated['archivo_tipo'], [
+            'BIM-FBX',
+            'BIM-GLB',
+            'BIM-GLTF',
+            'BIM-IFC'
+        ]);
+
+
+        if ($esModelo3D) {
+            $yaExiste = PlanoBim::where('proyecto_id', $validated['proyecto_id'])
+                ->whereIn('tipo', ['BIM-FBX', 'BIM-GLB', 'BIM-GLTF', 'BIM-IFC'])
+                ->where('eliminado', 0)
+                ->count();
+
+            if ($yaExiste >= 1) {
+                return back()
+                    ->with('error', 'Este proyecto ya tiene un modelo 3D. Solo se permite uno.')
+                    ->withInput();
+            }
+        }
+
         $tipo = $validated['archivo_tipo'];
         $archivo_url = null;
         $enlace_externo = null;
@@ -156,41 +174,26 @@ class PlanoController extends Controller
         // Carpeta dinámica según proyecto
         $project_folder = 'planos/proyecto_' . $validated['proyecto_id'];
 
-        // --------------------------------------
-        // 5. SUBIR ARCHIVO LOCAL
-        // --------------------------------------
+        // 5. Subir archivo local
         if ($request->hasFile('archivo')) {
 
             $file = $request->file('archivo');
-
-            // Extensión real del archivo
             $ext = strtolower($file->getClientOriginalExtension());
-
-            // Nombre único
             $filename = uniqid('plano_') . '.' . $ext;
 
-            // Guardar conservando extensión real
             $path = $file->storeAs($project_folder, $filename, 'public');
-
             $archivo_url = '/storage/' . $path;
+
             $enlace_externo = null;
-        }
+        } elseif (!empty($validated['enlace_externo'])) {
 
-        // --------------------------------------
-        // 6. ENLACE EXTERNO (Drive, OneDrive...)
-        // --------------------------------------
-        elseif (!empty($validated['enlace_externo'])) {
-
-            // Siempre convertir el tipo a URL cuando hay enlace
+            // 6. Enlace externo
             $tipo = 'URL';
-
             $archivo_url = null;
             $enlace_externo = $validated['enlace_externo'];
         }
 
-        // --------------------------------------
-        // 7. GUARDAR EN BASE DE DATOS
-        // --------------------------------------
+        // 7. Guardar en BD
         try {
 
             $planoBim = PlanoBim::create([
@@ -203,7 +206,6 @@ class PlanoController extends Controller
                 'subido_por'    => Auth::id(),
             ]);
 
-            // Auditoría
             AuditoriaLog::create([
                 'user_id' => Auth::id(),
                 'accion' => "Creó un nuevo plano BIM: {$planoBim->nombre}",
@@ -212,20 +214,6 @@ class PlanoController extends Controller
                 'fecha_accion' => now(),
                 'eliminado' => 0,
             ]);
-
-            // Notificación a miembros del proyecto
-            if ($proyecto = Proyecto::find($validated['proyecto_id'])) {
-
-                $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
-
-                NotificationService::sendToMany(
-                    $usuariosProyecto,
-                    "Se ha subido un nuevo plano BIM '{$planoBim->nombre}' al proyecto '{$proyecto->nombre}'.",
-                    'plano_bim',
-                    url('/proyectos/' . $proyecto->id),
-                    'Nuevo Plano BIM'
-                );
-            }
 
             return redirect()->route('planos.index')
                 ->with('success', 'Plano BIM registrado correctamente.');
@@ -302,7 +290,7 @@ class PlanoController extends Controller
             'proyecto_id' => 'nullable|exists:proyectos,id',
             'archivo' => 'nullable|file|max:51200|mimes:fbx,glb,gltf,pdf,jpg,jpeg,png,xls,xlsx,doc,docx,zip,ifc',
             'enlace_externo' => 'nullable|url|max:500',
-            'archivo_tipo' => ['nullable', Rule::in(['DWG', 'DXF', 'IFC', 'PDF', 'URL', 'Otro', 'ZIP'])],
+            'archivo_tipo' => ['nullable', Rule::in(['DWG', 'DXF', 'IFC', 'PDF', 'URL', 'Otro', 'ZIP', 'BIM-FBX', 'BIM-GLB', 'BIM-GLTF', 'BIM-IFC'])],
         ]);
 
         $updateData = [
@@ -312,57 +300,78 @@ class PlanoController extends Controller
             'tipo'            => $validated['archivo_tipo'] ?? $plano->tipo,
         ];
 
+        // 🚫 VALIDACIÓN: Solo un modelo 3D por proyecto
+        if (isset($validated['archivo_tipo'])) {
+
+            $es3D = in_array($validated['archivo_tipo'], [
+                'BIM-FBX',
+                'BIM-GLB',
+                'BIM-GLTF',
+                'BIM-IFC'
+            ]);
+
+            if ($es3D) {
+                $count = PlanoBim::where('proyecto_id', $plano->proyecto_id)
+                    ->whereIn('tipo', ['BIM-FBX', 'BIM-GLB', 'BIM-GLTF', 'BIM-IFC'])
+                    ->where('id', '!=', $plano->id)
+                    ->where('eliminado', 0)
+                    ->count();
+
+                if ($count >= 1) {
+                    return back()
+                        ->with('error', 'Este proyecto ya tiene un modelo 3D. Solo se permite uno.')
+                        ->withInput();
+                }
+            }
+        }
+
+        // Guardar archivo / enlace
         $old_archivo_url = $plano->archivo_url;
-        $old_is_local_file = !empty($old_archivo_url) && $plano->tipo !== 'URL';
+        $old_is_local = !empty($old_archivo_url) && $plano->tipo !== 'URL';
 
         try {
             $new_project_id = $updateData['proyecto_id'];
-            $project_folder = 'planos/proyecto_' . $new_project_id;
+            $folder = 'planos/proyecto_' . $new_project_id;
 
-            // A) Hay un nuevo archivo subido
+            // A) Si hay nuevo archivo
             if ($request->file('archivo')) {
-                $file = $request->file('archivo');
 
-                // Eliminar archivo antiguo local (si existe)
-                if ($old_is_local_file) {
-                    $path_to_delete = str_replace('/storage/', '', $old_archivo_url);
-                    if (Storage::disk('public')->exists($path_to_delete)) {
-                        Storage::disk('public')->delete($path_to_delete);
+                if ($old_is_local) {
+                    $path_delete = str_replace('/storage/', '', $old_archivo_url);
+                    if (Storage::disk('public')->exists($path_delete)) {
+                        Storage::disk('public')->delete($path_delete);
                     }
                 }
 
-                $ruta_archivo_almacenada = $file->store($project_folder, 'public');
+                $file = $request->file('archivo');
+                $stored = $file->store($folder, 'public');
 
-                $updateData['archivo_url'] = '/storage/' . $ruta_archivo_almacenada;
-                $updateData['tipo'] = $validated['archivo_tipo'] ?? 'Otro';
+                $updateData['archivo_url'] = '/storage/' . $stored;
                 $updateData['enlace_externo'] = null;
+            }
+            // B) Si se modificó enlace externo
+            elseif (array_key_exists('enlace_externo', $validated)) {
 
-                // B) Se proporcionó o se modificó el enlace externo
-            } elseif (array_key_exists('enlace_externo', $validated)) {
+                $new_link = $validated['enlace_externo'];
 
-                $new_enlace_externo = $validated['enlace_externo'];
-
-                if ($old_is_local_file && !empty($new_enlace_externo)) {
-                    $path_to_delete = str_replace('/storage/', '', $old_archivo_url);
-                    if (Storage::disk('public')->exists($path_to_delete)) {
-                        Storage::disk('public')->delete($path_to_delete);
+                if ($old_is_local && !empty($new_link)) {
+                    $path_delete = str_replace('/storage/', '', $old_archivo_url);
+                    if (Storage::disk('public')->exists($path_delete)) {
+                        Storage::disk('public')->delete($path_delete);
                     }
                     $updateData['archivo_url'] = null;
                 }
 
-                $updateData['enlace_externo'] = $new_enlace_externo;
+                $updateData['enlace_externo'] = $new_link;
 
-                if (!empty($new_enlace_externo)) {
+                if (!empty($new_link)) {
                     $updateData['tipo'] = 'URL';
                     $updateData['archivo_url'] = null;
                 }
-            } elseif (isset($validated['archivo_tipo'])) {
-                $updateData['tipo'] = $validated['archivo_tipo'];
             }
 
             $plano->update($updateData);
 
-            //  Auditoría
             AuditoriaLog::create([
                 'user_id' => Auth::id(),
                 'accion' => "Actualizó el plano BIM: {$plano->nombre}",
@@ -372,32 +381,16 @@ class PlanoController extends Controller
                 'eliminado' => 0,
             ]);
 
-            $plano->refresh();
-            $proyecto = Proyecto::find($plano->proyecto_id);
-
-            if ($proyecto) {
-                $usuariosProyecto = $proyecto->users()->pluck('users.id')->toArray();
-
-                NotificationService::sendToMany(
-                    $usuariosProyecto,
-                    "El plano BIM '{$plano->nombre}' ha sido actualizado en el proyecto '{$proyecto->nombre}'.",
-                    'plano_bim',
-                    url('/proyectos/' . $proyecto->id),
-                    'Plano BIM actualizado'
-                );
-            }
-
-            return redirect()->route('planos.index')->with('success', 'Plano BIM actualizado exitosamente.');
+            return redirect()->route('planos.index')
+                ->with('success', 'Plano BIM actualizado exitosamente.');
         } catch (\Exception $e) {
-            Log::error("Error al actualizar plano BIM ID {$plano->id}: " . $e->getMessage());
 
-            if (str_contains($e->getMessage(), 'Data truncated for column')) {
-                return back()->withInput()->with('error', 'Error de la Base de Datos: Uno de los campos de texto es demasiado largo o el tipo de dato es incorrecto. Por favor, contacta al administrador.');
-            }
+            Log::error("Error al actualizar plano BIM ID {$plano->id}: " . $e->getMessage());
 
             return back()->withInput()->with('error', 'Error al actualizar el plano BIM: ' . $e->getMessage());
         }
     }
+
 
 
     /**
