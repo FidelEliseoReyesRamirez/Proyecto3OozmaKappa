@@ -14,11 +14,16 @@ use Illuminate\Support\Facades\Validator;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\DB;
 use App\Models\HistorialPermiso;
-use App\Traits\RegistraAuditoria; 
+use App\Models\AuditoriaLog;
+use App\Models\TareaHistorial;
+use App\Models\Documento;
+use App\Models\Hitos;
+
+use App\Traits\RegistraAuditoria;
 
 class ProyectoController extends Controller
 {
-    use RegistraAuditoria; 
+    use RegistraAuditoria;
 
     /**
      * Muestra la lista de proyectos, filtrada por cliente si aplica.
@@ -375,28 +380,120 @@ class ProyectoController extends Controller
     public function versiones($id)
     {
         $proyecto = Proyecto::findOrFail($id);
+
         if (strtolower(Auth::user()->rol) === 'cliente' && $proyecto->cliente_id !== Auth::id()) {
             abort(403, 'No tienes permiso para ver las versiones de este proyecto.');
         }
 
-        $versionesProyecto = ProyectoVersion::where('proyecto_id', $id)
-            ->with('autor')
+        // 1) Metadatos del proyecto
+        $metadatos = ProyectoVersion::where('proyecto_id', $id)
+            ->with('autor:id,name')
             ->orderByDesc('created_at')
-            ->get();
+            ->get()
+            ->map(function ($v) {
+                return [
+                    'tipo'        => 'metadato',
+                    'version'     => $v->version,
+                    'autor'       => optional($v->autor)->name,
+                    'descripcion' => $v->descripcion_cambio,
+                    'fecha'       => $v->created_at,
+                ];
+            });
 
-        $versionesBim = PlanoBim::where('proyecto_id', $id)
-            ->with('subidoPor')
+        // 2) Versiones BIM (planos, modelos 3D, etc.)
+        $bim = PlanoBim::where('proyecto_id', $id)
+            ->with('uploader:id,name')
             ->orderByDesc('created_at')
-            ->get();
+            ->get()
+            ->map(function ($v) {
+                return [
+                    'tipo'        => 'bim',
+                    'version'     => $v->version,
+                    'archivo'     => $v->nombre,
+                    'archivo_url' => $v->archivo_url,
+                    'autor'       => optional($v->uploader)->name,
+                    'fecha'       => $v->created_at,
+                ];
+            });
 
-        self::registrarAccionManual("Consultó historial de versiones del proyecto '{$proyecto->nombre}'.", 'proyectos_versiones', $proyecto->id);
+        // 3) Documentos
+        $docs = Documento::where('proyecto_id', $id)
+            ->with('uploader:id,name')
+            ->orderByDesc('fecha_subida')
+            ->get()
+            ->map(function ($d) {
+                return [
+                    'tipo'        => 'documento',
+                    'archivo'     => $d->nombre,
+                    'descripcion' => $d->descripcion,
+                    'autor'       => optional($d->uploader)->name,
+                    'fecha'       => $d->fecha_subida,
+                ];
+            });
 
-        return inertia('GestionProyecto/Versiones', [
-            'proyecto' => $proyecto,
-            'versionesProyecto' => $versionesProyecto,
-            'versionesBim' => $versionesBim,
+        // 4) Hitos
+        $hitos = Hitos::where('proyecto_id', $id)
+            ->with('encargado:id,name')
+            ->orderByDesc('fecha_hito')
+            ->get()
+            ->map(function ($h) {
+                return [
+                    'tipo'   => 'hito',
+                    'titulo' => $h->nombre,
+                    'estado' => $h->estado,
+                    'fecha'  => $h->fecha_hito,
+                    'autor'  => optional($h->encargado)->name,
+                ];
+            });
+
+        // 5) Cambios de tareas
+        $historialTareas = TareaHistorial::where('proyecto_id', $id)
+            ->with('usuario:id,name')
+            ->orderByDesc('fecha_cambio')
+            ->get()
+            ->map(function ($t) {
+                return [
+                    'tipo'            => 'tarea',
+                    'titulo'          => $t->cambio,
+                    'estado_anterior' => $t->estado_anterior,
+                    'estado_nuevo'    => $t->estado_nuevo,
+                    'autor'           => optional($t->usuario)->name,
+                    'fecha'           => $t->fecha_cambio,
+                ];
+            });
+
+        // 6) Auditoría general del sistema
+        $auditoria = AuditoriaLog::where('id_registro_afectado', $id)
+            ->orderByDesc('fecha_accion')
+            ->get()
+            ->map(function ($a) {
+                return [
+                    'tipo'   => 'auditoria',
+                    'accion' => $a->accion,
+                    'fecha'  => $a->fecha_accion,
+                    'autor'  => optional(User::find($a->user_id))->name,
+                ];
+            });
+
+        // COMBINAR PARA TIMELINE
+        $timeline = collect()
+            ->merge($metadatos)
+            ->merge($bim)
+            ->merge($docs)
+            ->merge($hitos)
+            ->merge($historialTareas)
+            ->merge($auditoria)
+            ->sortByDesc('fecha')    // para backend; en frontend ya se reordena horizontal
+            ->values();
+
+        return Inertia::render('GestionProyecto/Versiones', [
+            'proyecto'          => $proyecto,
+            'timeline'          => $timeline,
+            'versionesProyecto' => $metadatos,
+            'versionesBim'      => $bim,
         ]);
     }
+
 
     public function cambiarEstado(Request $request, $id)
     {
