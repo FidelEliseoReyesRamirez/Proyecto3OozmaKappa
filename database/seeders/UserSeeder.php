@@ -31,7 +31,7 @@ class UserSeeder extends Seeder
                 'email' => 'albarracinvictor251@gmail.com',
                 'password' => '$2y$12$K65t8D3vpNupwSO.4DZKguOE87p4CpqdFW5GT.V8SrU0Egli6.U5u',
                 'telefono' => null,
-                'rol' => 'ingeniero',
+                'rol' => 'Cliente',
                 'estado' => 'activo',
                 'intentos_fallidos' => 0,
                 'eliminado' => 0,

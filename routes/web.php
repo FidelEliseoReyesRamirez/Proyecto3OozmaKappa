@@ -16,7 +16,7 @@ use App\Http\Controllers\AuditoriaController;
 use App\Http\Middleware\PreventManualUrlAccess;
 use App\Http\Controllers\PlanoController;
 use App\Http\Controllers\HitosController;
-
+use Illuminate\Support\Facades\Auth;
 /*
 |--------------------------------------------------------------------------
 | Rutas Web
@@ -98,8 +98,17 @@ Route::middleware(['auth', PreventManualUrlAccess::class])->group(function () {
 
         // Página donde React carga Unity
         Route::get('/3d/{id}', function ($id) {
+
+            $plano = \App\Models\PlanoBim::findOrFail($id);
+
             return Inertia::render('Planos/Plano3D', [
-                'planoId' => (int) $id,
+                'planoId'    => (int) $id,
+                'proyectoId' => $plano->proyecto_id,
+                'galeria'    => \App\Models\GaleriaImagen::where('proyecto_id', $plano->proyecto_id)
+                    ->where('eliminado', 0)
+                    ->orderByDesc('created_at')
+                    ->get(),
+                'user' => Auth::user(),
             ]);
         })
             ->name('3d')
@@ -201,6 +210,11 @@ Route::get('/api/proyecto/{id}/tiene-modelo3d', function ($id) {
 
     return response()->json(['tiene3D' => $existe]);
 });
+Route::prefix('proyectos/{proyecto}/galeria')->group(function () {
+    Route::get('/', [\App\Http\Controllers\GaleriaController::class, 'index'])->name('galeria.index');
+    Route::post('/subir', [\App\Http\Controllers\GaleriaController::class, 'store'])->name('galeria.store');
+    Route::delete('/{id}', [\App\Http\Controllers\GaleriaController::class, 'destroy'])->name('galeria.destroy');
+});
 
 Route::prefix('proyectos/{proyecto_id}/hitos')
     ->withoutMiddleware([PreventManualUrlAccess::class])
@@ -211,7 +225,7 @@ Route::prefix('proyectos/{proyecto_id}/hitos')
         Route::post('/', [HitosController::class, 'store'])->name('hitos.store');
         Route::put('/{id}', [HitosController::class, 'update'])->name('hitos.update');
         Route::delete('/{id}', [HitosController::class, 'destroy'])->name('hitos.destroy');
-});
+    });
 
 
 
