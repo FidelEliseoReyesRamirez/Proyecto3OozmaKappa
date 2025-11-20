@@ -15,6 +15,7 @@ use App\Http\Controllers\TareaController;
 use App\Http\Controllers\AuditoriaController;
 use App\Http\Middleware\PreventManualUrlAccess;
 use App\Http\Controllers\PlanoController;
+use App\Http\Controllers\HitosController;
 
 /*
 |--------------------------------------------------------------------------
@@ -200,6 +201,20 @@ Route::get('/api/proyecto/{id}/tiene-modelo3d', function ($id) {
 
     return response()->json(['tiene3D' => $existe]);
 });
+
+Route::prefix('proyectos/{proyecto_id}/hitos')
+    ->withoutMiddleware([PreventManualUrlAccess::class])
+    ->group(function () {
+
+        Route::get('/', [HitosController::class, 'index'])->name('hitos.index');
+        Route::get('/create', [HitosController::class, 'create'])->name('hitos.create');
+        Route::post('/', [HitosController::class, 'store'])->name('hitos.store');
+        Route::put('/{id}', [HitosController::class, 'update'])->name('hitos.update');
+        Route::delete('/{id}', [HitosController::class, 'destroy'])->name('hitos.destroy');
+});
+
+
+
 
 /*
 |--------------------------------------------------------------------------

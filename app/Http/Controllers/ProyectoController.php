@@ -148,6 +148,14 @@ class ProyectoController extends Controller
                 'eliminado' => 0
             ]
         ]);
+        Hitos::create([
+            'proyecto_id' => $proyecto->id,
+            'nombre' => 'Proyecto iniciado',
+            'fecha_hito' => now(),
+            'descripcion' => 'Creación del proyecto',
+            'estado' => 'completado',
+            'encargado_id' => Auth::id(),
+        ]);
 
         self::registrarAccionManual("Asignó cliente y responsable al proyecto '{$proyecto->nombre}'.", 'proyectos_usuarios', $proyecto->id);
 

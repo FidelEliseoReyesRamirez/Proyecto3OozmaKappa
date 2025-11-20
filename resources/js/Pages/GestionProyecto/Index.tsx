@@ -121,8 +121,8 @@ export default function ProyectosIndex() {
                                                 }
                                                 disabled={!isEmployee}
                                                 className={`rounded-md p-1 text-sm sm:text-base font-medium ${isEmployee
-                                                        ? "bg-[#0B1120] border-gray-600 hover:border-[#B3E10F] text-white"
-                                                        : "bg-gray-800 border-gray-800 text-gray-500 cursor-not-allowed"
+                                                    ? "bg-[#0B1120] border-gray-600 hover:border-[#B3E10F] text-white"
+                                                    : "bg-gray-800 border-gray-800 text-gray-500 cursor-not-allowed"
                                                     }`}
                                             >
                                                 <option value="activo">Activo</option>
@@ -148,6 +148,13 @@ export default function ProyectosIndex() {
                                                 >
                                                     Versiones
                                                 </Link>
+                                                <Link
+                                                    href={route("hitos.index", proyecto.id)}
+                                                    className="bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-500 transition duration-150 text-xs sm:text-sm font-semibold shadow-md shadow-purple-500/30 w-full sm:w-auto text-center"
+                                                >
+                                                    Hitos
+                                                </Link>
+
 
                                                 {auth.user.id === proyecto.responsable_id && (
                                                     <Link
