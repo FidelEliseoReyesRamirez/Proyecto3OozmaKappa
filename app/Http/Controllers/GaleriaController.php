@@ -38,8 +38,9 @@ class GaleriaController extends Controller
         $this->autorizar($proyecto);
 
         $request->validate([
-            'imagen' => 'required|image|max:2048'
+            'imagen' => 'required|image|max:10240|mimes:jpg,jpeg,png,webp',
         ]);
+
 
         $path = $request->file('imagen')->store('galeria', 'public');
 
@@ -58,7 +59,7 @@ class GaleriaController extends Controller
 
         // Notificar al responsable + colaboradores (no al cliente)
         NotificationService::sendToMany(
-            $proyecto->users()->where('rol_en_proyecto', '!=', 'cliente')->pluck('id'),
+            $proyecto->users()->where('rol_en_proyecto', '!=', 'cliente')->pluck('users.id'),
             "Se agregó una nueva imagen en el proyecto: {$proyecto->nombre}",
             'documento',
             url("/proyectos/$proyectoId"),
