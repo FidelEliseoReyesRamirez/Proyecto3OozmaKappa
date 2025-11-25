@@ -629,7 +629,7 @@ class PlanoController extends Controller
     public function obtenerModelo3D($id)
     {
         try {
-            $plano = \App\Models\PlanoBim::find($id);
+            $plano = PlanoBim::find($id);
 
             if (!$plano) {
                 return response()->json([

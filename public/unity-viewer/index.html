@@ -21,7 +21,7 @@
     }
 
     /* ==============================
-       CONTENEDOR DEL VISOR UNITY
+       CONTENEDOR UNITY
        ============================== */
     #unity-container {
       max-width: 1400px;
@@ -59,7 +59,7 @@
     }
 
     /* ==============================
-       BOTONES FUERA DEL VISOR
+       BOTONES
        ============================== */
     .viewer-buttons {
       margin-top: 25px;
@@ -71,19 +71,9 @@
       z-index: 9999;
     }
 
-    .viewer-buttons {
-      margin-top: 25px;
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
     #unity-fullscreen-button {
       min-width: 220px;
-      /* evita que se encoja */
       padding: 14px 40px;
-      /* define tamaño real */
       background: #B3E10F;
       border: none;
       border-radius: 14px;
@@ -91,12 +81,11 @@
       font-weight: 900;
       color: #121212;
       cursor: pointer;
+      transition: .25s;
       display: inline-flex;
       justify-content: center;
       align-items: center;
       white-space: nowrap;
-      /* evita que el texto se parta */
-      transition: .25s;
     }
 
     #unity-fullscreen-button:hover {
@@ -107,10 +96,53 @@
     @media (max-width: 600px) {
       #unity-fullscreen-button {
         width: 90%;
-        /* full width en móvil */
-        min-width: unset;
-        /* permite ancho flexible en móvil */
       }
+    }
+
+    /* ==============================
+       PANEL DE CONTROLES
+       ============================== */
+    #controls-box {
+      max-width: 900px;
+      margin: 25px auto 40px auto;
+      padding: 22px 30px;
+      background: #0F152A;
+      border: 1px solid #2970E8;
+      border-radius: 16px;
+      box-shadow: 0 0 15px #2970E855;
+      color: white;
+    }
+
+    #controls-box h3 {
+      margin-top: 0;
+      font-size: 22px;
+      font-weight: 900;
+      color: #B3E10F;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .ctrl-section {
+      margin-bottom: 18px;
+    }
+
+    .ctrl-section h4 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #2970E8;
+      margin-bottom: 6px;
+    }
+
+    #controls-box ul {
+      margin: 0;
+      padding-left: 18px;
+      list-style-type: disc;
+    }
+
+    #controls-box li {
+      margin-bottom: 5px;
+      font-size: 14px;
+      color: #E0E0E0;
     }
 
     /* Scrollbar */
@@ -138,10 +170,6 @@
         flex-direction: column;
       }
 
-      .viewer-button {
-        width: 95%;
-      }
-
       #unity-canvas {
         width: 100vw;
         height: 60vh;
@@ -153,15 +181,10 @@
   </style>
 </head>
 
-
-
 <body>
 
-  <!-- *** AQUÍ SOLO SE ELIMINÓ EL BOTÓN VOLVER, NADA MÁS *** -->
-
-
   <!-- =======================================================
-       CONTENEDOR DEL UNITY VIEWER
+       UNITY VIEWER
        ======================================================= -->
   <div id="unity-container">
     <div id="unity-build-title">DevelArq 3D Viewer</div>
@@ -177,22 +200,45 @@
     <div id="unity-warning"></div>
   </div>
 
-
   <!-- =======================================================
-       BOTONES FUERA DEL VIEWER (PANTALLA COMPLETA)
+       BOTÓN FULLSCREEN
        ======================================================= -->
   <div class="viewer-buttons">
-    <button id="unity-fullscreen-button" class="viewer-button">
-      Pantalla Completa
-    </button>
+    <button id="unity-fullscreen-button">Pantalla Completa</button>
   </div>
-  <br>
-
-
-
 
   <!-- =======================================================
-       UNITY SCRIPT (NO SE MODIFICÓ NADA)
+       INSTRUCCIONES DE CONTROLES
+       ======================================================= -->
+  <div id="controls-box">
+    <h3>Controles de Navegación</h3>
+
+    <div class="ctrl-section">
+      <h4>Computadora</h4>
+      <ul>
+        <li><strong>W / A / S / D</strong> – Mover</li>
+        <li><strong>Q / E</strong> – Bajar / Subir</li>
+        <li><strong>Shift Izq.</strong> – Modo rápido</li>
+        <li><strong>Mouse</strong> – Rotación</li>
+        <li><strong>Scroll</strong> – Zoom</li>
+        <li><strong>Click izquierdo</strong> – Activar cámara</li>
+        <li><strong>Esc</strong> – Liberar cursor</li>
+        <li><strong>R</strong> – Reset a posición inicial</li>
+      </ul>
+    </div>
+
+    <div class="ctrl-section">
+      <h4>Móvil / Tablet</h4>
+      <ul>
+        <li><strong>Arrastrar</strong> – Girar</li>
+        <li><strong>Deslizar arriba/abajo</strong> – Acercar / Alejar</li>
+        <li><strong>Un dedo</strong> – Navegación completa</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- =======================================================
+       UNITY SCRIPT ORIGINAL
        ======================================================= -->
   <script>
     var canvas = document.querySelector("#unity-canvas");
