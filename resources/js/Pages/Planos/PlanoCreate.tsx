@@ -234,7 +234,7 @@ const PlanoCreate: React.FC = () => {
 
                             {/* ARCHIVO */}
                             <div>
-                                <label className={labelStyle}>Subir Archivo (50 MB máx.)</label>
+                                <label className={labelStyle}>Subir Archivo (500 MB máx.)</label>
 
                                 <input
                                     ref={fileInputRef}
@@ -250,7 +250,7 @@ const PlanoCreate: React.FC = () => {
                                             return;
                                         }
 
-                                        if (file.size > 50 * 1024 * 1024) {
+                                        if (file.size > 500 * 1024 * 1024) {
                                             setShowSizeModal(true);
                                             e.target.value = '';
                                             return;
@@ -319,7 +319,7 @@ const PlanoCreate: React.FC = () => {
                 <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
                     <div className="bg-[#0F172A] p-6 rounded-xl text-center border border-lime-400/50">
                         <h2 className="text-xl font-bold text-lime-400 mb-2">Archivo demasiado grande</h2>
-                        <p className="text-gray-300 text-sm mb-4">Máximo permitido: <b>50 MB</b></p>
+                        <p className="text-gray-300 text-sm mb-4">Máximo permitido: <b>500 MB</b></p>
                         <button
                             onClick={() => setShowSizeModal(false)}
                             className="bg-lime-400 text-gray-900 px-4 py-2 rounded-md font-semibold"

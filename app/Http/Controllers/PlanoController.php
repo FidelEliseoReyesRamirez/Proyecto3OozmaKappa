@@ -13,6 +13,8 @@ use App\Services\NotificationService;
 use App\Models\DescargaHistorial;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use App\Services\FbxConverterService;
+
 
 class PlanoController extends Controller
 {
@@ -133,7 +135,7 @@ class PlanoController extends Controller
             'titulo' => 'required|string|max:150',
             'descripcion' => 'nullable|string|max:1000',
             'proyecto_id' => 'required|exists:proyectos,id',
-            'archivo' => 'nullable|file|max:51200',
+            'archivo' => 'nullable|file|max:512000',
             'enlace_externo' => 'nullable|url|max:500',
             'archivo_tipo' => ['required', Rule::in($allowedFileTypes)],
         ]);
@@ -179,10 +181,40 @@ class PlanoController extends Controller
 
             $file = $request->file('archivo');
             $ext = strtolower($file->getClientOriginalExtension());
+
+            // Nombre temporal original
             $filename = uniqid('plano_') . '.' . $ext;
 
+            // Guardar el archivo original
             $path = $file->storeAs($project_folder, $filename, 'public');
-            $archivo_url = '/storage/' . $path;
+
+            $absoluteInput = storage_path('app/public/' . $path);
+
+            // Si es FBX → convertir a GLB
+            if ($ext === 'fbx') {
+
+                $converter = new FbxConverterService();
+
+                // Nuevo nombre convertivo
+                $glbName = uniqid('plano_') . '.glb';
+                $glbPath = storage_path('app/public/' . $project_folder . '/' . $glbName);
+
+                $ok = $converter->convertirFbxAGlb($absoluteInput, $glbPath);
+
+                if ($ok) {
+                    // Borrar el FBX original
+                    Storage::disk('public')->delete($path);
+
+                    // Guardar URL final
+                    $archivo_url = '/storage/' . $project_folder . '/' . $glbName;
+                    $tipo = 'BIM-GLB';
+                } else {
+                    return back()->with('error', 'Falló la conversión del modelo FBX a GLB.');
+                }
+            } else {
+                // Cualquier archivo NO FBX
+                $archivo_url = '/storage/' . $path;
+            }
 
             $enlace_externo = null;
         } elseif (!empty($validated['enlace_externo'])) {
@@ -627,58 +659,56 @@ class PlanoController extends Controller
         }
     }
     public function obtenerModelo3D($id)
-{
-    try {
-        $plano = PlanoBim::find($id);
+    {
+        try {
+            $plano = PlanoBim::find($id);
 
-        if (!$plano) {
-            return response()->json([
-                'id' => $id,
-                'titulo' => "Plano {$id}",
-                'tipo' => 'sin_modelo',
-                'url' => null,
-                'error' => 'No existe el plano.'
-            ]);
-        }
+            if (!$plano) {
+                return response()->json([
+                    'id' => $id,
+                    'titulo' => "Plano {$id}",
+                    'tipo' => 'sin_modelo',
+                    'url' => null,
+                    'error' => 'No existe el plano.'
+                ]);
+            }
 
-        // Si tiene enlace externo, no es modelo 3D
-        if ($plano->tipo === 'URL' && $plano->enlace_externo) {
+            // Si tiene enlace externo, no es modelo 3D
+            if ($plano->tipo === 'URL' && $plano->enlace_externo) {
+                return response()->json([
+                    'id'     => $id,
+                    'titulo' => $plano->nombre,
+                    'tipo'   => 'URL',
+                    'url'    => $plano->enlace_externo,
+                ]);
+            }
+
+            // Si no tiene archivo real
+            if (!$plano->archivo_url) {
+                return response()->json([
+                    'id'    => $id,
+                    'titulo' => $plano->nombre,
+                    'tipo'  => 'placeholder',
+                    'url'   => asset('unity-viewer/placeholder/cube.fbx'),
+                ]);
+            }
+
+            // Convertir ruta
+            $url = asset(ltrim($plano->archivo_url, '/'));
+
+            // Extensión exacta
+            $ext = strtoupper(pathinfo($plano->archivo_url, PATHINFO_EXTENSION));
+
             return response()->json([
                 'id'     => $id,
                 'titulo' => $plano->nombre,
-                'tipo'   => 'URL',
-                'url'    => $plano->enlace_externo,
+                'tipo'   => $ext,
+                'url'    => $url
             ]);
-        }
-
-        // Si no tiene archivo real
-        if (!$plano->archivo_url) {
+        } catch (\Throwable $e) {
             return response()->json([
-                'id'    => $id,
-                'titulo' => $plano->nombre,
-                'tipo'  => 'placeholder',
-                'url'   => asset('unity-viewer/placeholder/cube.fbx'),
+                'error' => 'Error interno: ' . $e->getMessage()
             ]);
         }
-
-        // Convertir ruta
-        $url = asset(ltrim($plano->archivo_url, '/'));
-
-        // Extensión exacta
-        $ext = strtoupper(pathinfo($plano->archivo_url, PATHINFO_EXTENSION));
-
-        return response()->json([
-            'id'     => $id,
-            'titulo' => $plano->nombre,
-            'tipo'   => $ext,
-            'url'    => $url
-        ]);
-
-    } catch (\Throwable $e) {
-        return response()->json([
-            'error' => 'Error interno: ' . $e->getMessage()
-        ]);
     }
-}
-
 }
