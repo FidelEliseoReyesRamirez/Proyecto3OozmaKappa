@@ -2,48 +2,48 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Head, usePage, router } from "@inertiajs/react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { PageProps } from "@/types";
- 
+
 interface Props extends PageProps {
     planoId: number;
     proyectoId: number;
     galeria: any[];
     user: any;
 }
- 
+
 const MAX_SIZE_MB = 10;
- 
+
 const Plano3D: React.FC = () => {
     // NO TOCAR UNITY
     console.log = () => {};
     console.warn = () => {};
     console.error = () => {};
     console.info = () => {};
- 
+
     const { planoId, proyectoId, galeria, user } = usePage<Props>().props;
     const esCliente = user?.rol === "cliente";
- 
+
     // FORM
     const [titulo, setTitulo] = useState("");
     const [imagen, setImagen] = useState<File | null>(null);
     const [formVisible, setFormVisible] = useState(false);
- 
+
     // VISTAS
     const [vista, setVista] = useState<
         "grid" | "masonry" | "lista" | "carousel"
     >("grid");
- 
+
     // FULLSCREEN
     const [modalIndex, setModalIndex] = useState<number>(0);
     const [modalOpen, setModalOpen] = useState(false);
- 
+
     // BUSCADOR + ORDEN
     const [busqueda, setBusqueda] = useState("");
     const [orden, setOrden] = useState<"reciente" | "antiguo">("reciente");
- 
+
     // GALERÍA FILTRADA
     const galeriaFiltrada = useMemo(() => {
         let data = galeria;
- 
+
         if (busqueda.trim() !== "") {
             data = data.filter((i) =>
                 (i.titulo || "")
@@ -51,7 +51,7 @@ const Plano3D: React.FC = () => {
                     .includes(busqueda.toLowerCase())
             );
         }
- 
+
         data = [...data].sort((a, b) =>
             orden === "reciente"
                 ? new Date(b.created_at).getTime() -
@@ -59,41 +59,29 @@ const Plano3D: React.FC = () => {
                 : new Date(a.created_at).getTime() -
                   new Date(b.created_at).getTime()
         );
- 
+
         return data;
     }, [galeria, busqueda, orden]);
- 
+
     // UNITY
     useEffect(() => {
-    const iframe = document.querySelector("iframe");
-    if (!iframe) return;
- 
-    let intentos = 0;
-    const MAX_INTENTOS = 20; // 10 segundos aprox.
- 
-    const intervalo = setInterval(() => {
-        intentos++;
- 
-        // Enviar LOAD_MODEL varias veces hasta que Unity ya esté listo.
-        iframe.contentWindow?.postMessage(
-            { type: "LOAD_MODEL", id: planoId },
-            "*"
-        );
- 
-        // detener después de varios intentos
-        if (intentos >= MAX_INTENTOS) {
-            clearInterval(intervalo);
-        }
-    }, 500);
- 
-    return () => clearInterval(intervalo);
-}, [planoId]);
- 
- 
+        const timer = setTimeout(() => {
+            const iframe = document.querySelector("iframe");
+            if (!iframe) return;
+
+            iframe.contentWindow?.postMessage(
+                { type: "LOAD_MODEL", id: planoId },
+                "*"
+            );
+        }, 1200);
+
+        return () => clearTimeout(timer);
+    }, [planoId]);
+
     // FILE VALIDATION
     const handleFile = (file: File | null) => {
         if (!file) return;
- 
+
         const sizeMB = file.size / (1024 * 1024);
         if (sizeMB > MAX_SIZE_MB) {
             alert(`La imagen supera los ${MAX_SIZE_MB} MB`);
@@ -102,16 +90,16 @@ const Plano3D: React.FC = () => {
         }
         setImagen(file);
     };
- 
+
     // SUBIR IMAGEN
     const subirImagen = (e: any) => {
         e.preventDefault();
         if (!imagen) return alert("Selecciona una imagen");
- 
+
         const form = new FormData();
         form.append("imagen", imagen);
         form.append("titulo", titulo);
- 
+
         router.post(route("galeria.store", proyectoId), form, {
             forceFormData: true,
             onSuccess: () => {
@@ -121,34 +109,34 @@ const Plano3D: React.FC = () => {
             },
         });
     };
- 
+
     // ELIMINAR
     const eliminarImagen = (id: number) => {
         if (!confirm("¿Eliminar imagen?")) return;
         router.delete(route("galeria.destroy", { proyecto: proyectoId, id }));
     };
- 
+
     // FULLSCREEN
     const abrirFullscreen = (i: number) => {
         setModalIndex(i);
         setModalOpen(true);
     };
- 
+
     const cerrarFullscreen = () => setModalOpen(false);
- 
+
     const siguiente = () =>
         setModalIndex((modalIndex + 1) % galeriaFiltrada.length);
- 
+
     const anterior = () =>
         setModalIndex(
             (modalIndex - 1 + galeriaFiltrada.length) %
                 galeriaFiltrada.length
         );
- 
+
     return (
         <AuthenticatedLayout>
             <Head title={`Visor 3D - Plano ${planoId}`} />
- 
+
             {/* VISOR UNITY */}
             <div className="py-12 flex justify-center">
                 <iframe
@@ -157,13 +145,13 @@ const Plano3D: React.FC = () => {
                     className="w-[92%] h-[80vh] border border-gray-700 rounded-xl shadow-lg bg-black"
                 />
             </div>
- 
+
             <div className="max-w-7xl mx-auto px-4 pb-12">
                 {/* TÍTULO GALERÍA */}
                 <h2 className="text-2xl font-bold text-[#B3E10F] mb-4">
                     Galería del Proyecto
                 </h2>
- 
+
                 {/* PANEL COMPLETO: CONTROLES + FORM + GALERÍA */}
                 <div className="bg-[#050814] border border-gray-800 rounded-2xl p-4 md:p-5 shadow-lg">
                     {/* CONTROLES SUPERIORES */}
@@ -177,7 +165,7 @@ const Plano3D: React.FC = () => {
                                 {formVisible ? "Cancelar" : "Nueva Imagen"}
                             </button>
                         )}
- 
+
                         <div className="flex flex-1 flex-col md:flex-row gap-3 md:justify-end">
                             {/* Buscador */}
                             <input
@@ -187,7 +175,7 @@ const Plano3D: React.FC = () => {
                                 onChange={(e) => setBusqueda(e.target.value)}
                                 className="bg-[#0F152A] text-white border border-gray-700 p-2 rounded w-full md:w-56"
                             />
- 
+
                             {/* Orden */}
                             <select
                                 value={orden}
@@ -207,7 +195,7 @@ const Plano3D: React.FC = () => {
                                     Más antiguo primero
                                 </option>
                             </select>
- 
+
                             {/* Vista */}
                             <select
                                 value={vista}
@@ -229,7 +217,7 @@ const Plano3D: React.FC = () => {
                             </select>
                         </div>
                     </div>
- 
+
                     {/* FORMULARIO DENTRO DEL PANEL */}
                     {formVisible && !esCliente && (
                         <form
@@ -239,7 +227,7 @@ const Plano3D: React.FC = () => {
                             <h3 className="text-lg font-semibold text-[#B3E10F] mb-3">
                                 Subir imagen (máx. 10 MB)
                             </h3>
- 
+
                             <input
                                 type="text"
                                 placeholder="Título (opcional)"
@@ -247,7 +235,7 @@ const Plano3D: React.FC = () => {
                                 onChange={(e) => setTitulo(e.target.value)}
                                 className="w-full bg-[#080D15] border border-gray-700 p-2 rounded mb-3 text-white"
                             />
- 
+
                             <input
                                 type="file"
                                 accept="image/*"
@@ -256,13 +244,13 @@ const Plano3D: React.FC = () => {
                                 }
                                 className="w-full bg-[#080D15] border border-gray-700 p-2 rounded mb-4 text-white"
                             />
- 
+
                             <button className="bg-[#2970E8] text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-600 transition">
                                 Subir
                             </button>
                         </form>
                     )}
- 
+
                     {/* GALERÍA */}
                     {galeriaFiltrada.length === 0 ? (
                         <p className="text-gray-400 italic">
@@ -281,13 +269,13 @@ const Plano3D: React.FC = () => {
                                         src={`/storage/${img.archivo_url}`}
                                         className="rounded-lg w-full h-44 object-cover"
                                     />
- 
+
                                     {img.titulo && (
                                         <p className="mt-2 text-xs text-center text-gray-300 truncate">
                                             {img.titulo}
                                         </p>
                                     )}
- 
+
                                     {!esCliente && (
                                         <button
                                             onClick={(e) => {
@@ -322,7 +310,7 @@ const Plano3D: React.FC = () => {
                                             </p>
                                         )}
                                     </div>
- 
+
                                     {!esCliente && (
                                         <button
                                             onClick={(e) => {
@@ -355,7 +343,7 @@ const Plano3D: React.FC = () => {
                                             {img.titulo || "Sin título"}
                                         </p>
                                     </div>
- 
+
                                     {!esCliente && (
                                         <button
                                             onClick={(e) => {
@@ -394,7 +382,7 @@ const Plano3D: React.FC = () => {
                     )}
                 </div>
             </div>
- 
+
             {/* FULLSCREEN */}
             {modalOpen && (
                 <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -404,19 +392,19 @@ const Plano3D: React.FC = () => {
                     >
                         ×
                     </button>
- 
+
                     <button
                         className="absolute left-5 text-white text-4xl font-bold"
                         onClick={anterior}
                     >
                         ‹
                     </button>
- 
+
                     <img
                         src={`/storage/${galeriaFiltrada[modalIndex].archivo_url}`}
                         className="max-h-[85vh] max-w-[90vw] rounded-xl shadow-xl transition-transform transform hover:scale-105 duration-300"
                     />
- 
+
                     <button
                         className="absolute right-5 text-white text-4xl font-bold"
                         onClick={siguiente}
@@ -428,5 +416,5 @@ const Plano3D: React.FC = () => {
         </AuthenticatedLayout>
     );
 };
- 
+
 export default Plano3D;
