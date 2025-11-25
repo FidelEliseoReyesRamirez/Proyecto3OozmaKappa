@@ -627,60 +627,58 @@ class PlanoController extends Controller
         }
     }
     public function obtenerModelo3D($id)
-    {
-        try {
-            $plano = PlanoBim::find($id);
+{
+    try {
+        $plano = PlanoBim::find($id);
 
-            if (!$plano) {
-                return response()->json([
-                    'id' => $id,
-                    'titulo' => "Plano {$id}",
-                    'tipo' => 'sin_modelo',
-                    'url' => null,
-                    'error' => 'No existe el plano.'
-                ]);
-            }
+        if (!$plano) {
+            return response()->json([
+                'id' => $id,
+                'titulo' => "Plano {$id}",
+                'tipo' => 'sin_modelo',
+                'url' => null,
+                'error' => 'No existe el plano.'
+            ]);
+        }
 
-            $proyectoId = $plano->proyecto_id;
-            $directory = "planos/proyecto_{$proyectoId}";
-
-            // Buscar archivos dentro del storage
-            $files = Storage::disk('public')->files($directory);
-
-            // 1) Si existe un archivo .bin → usarlo
-            $modelFile = collect($files)->first(function ($f) {
-                return strtolower(pathinfo($f, PATHINFO_EXTENSION)) === 'bin';
-            });
-
-            // 2) Si NO hay .bin, buscar .fbx / .gltf / .glb
-            if (!$modelFile) {
-                $modelFile = collect($files)->first(function ($f) {
-                    $ext = strtolower(pathinfo($f, PATHINFO_EXTENSION));
-                    return in_array($ext, ['fbx', 'gltf', 'glb']);
-                });
-            }
-
-            // 3) Si no hay modelo → placeholder
-            if (!$modelFile) {
-                return response()->json([
-                    'id'    => $id,
-                    'titulo' => $plano->nombre,
-                    'tipo'  => 'placeholder',
-                    'url'   => asset('unity-viewer/placeholder/cube.fbx'),
-                ]);
-            }
-
-            // 4) Devolver archivo encontrado
+        // Si tiene enlace externo, no es modelo 3D
+        if ($plano->tipo === 'URL' && $plano->enlace_externo) {
             return response()->json([
                 'id'     => $id,
                 'titulo' => $plano->nombre,
-                'tipo'   => strtoupper(pathinfo($modelFile, PATHINFO_EXTENSION)),
-                'url'    => asset('storage/' . $modelFile),
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'error' => 'Error interno: ' . $e->getMessage()
+                'tipo'   => 'URL',
+                'url'    => $plano->enlace_externo,
             ]);
         }
+
+        // Si no tiene archivo real
+        if (!$plano->archivo_url) {
+            return response()->json([
+                'id'    => $id,
+                'titulo' => $plano->nombre,
+                'tipo'  => 'placeholder',
+                'url'   => asset('unity-viewer/placeholder/cube.fbx'),
+            ]);
+        }
+
+        // Convertir ruta
+        $url = asset(ltrim($plano->archivo_url, '/'));
+
+        // Extensión exacta
+        $ext = strtoupper(pathinfo($plano->archivo_url, PATHINFO_EXTENSION));
+
+        return response()->json([
+            'id'     => $id,
+            'titulo' => $plano->nombre,
+            'tipo'   => $ext,
+            'url'    => $url
+        ]);
+
+    } catch (\Throwable $e) {
+        return response()->json([
+            'error' => 'Error interno: ' . $e->getMessage()
+        ]);
     }
+}
+
 }
