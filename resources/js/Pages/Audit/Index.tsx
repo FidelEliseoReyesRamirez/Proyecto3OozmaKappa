@@ -14,8 +14,10 @@ interface Auditoria {
     user_id: number | null;
     user?: Usuario | null;
     accion: string;
-    tabla_afectada: string | null; // sigue existiendo en el tipo, pero NO se muestra
+    descripcion_detallada?: string | null;
+    tabla_afectada: string | null;
     id_registro_afectado: number | null;
+    ip_address?: string | null;
     fecha_accion: string;
     eliminado: boolean;
 }
@@ -29,7 +31,6 @@ interface AuditoriaPagination {
 
 interface AuditPageProps extends PageProps {
     auditorias: AuditoriaPagination;
-    // filtros y tablas ya no se usan para UI; los dejamos opcionales por compatibilidad
     filtros?: {
         search?: string;
         tabla?: string;
@@ -40,7 +41,6 @@ interface AuditPageProps extends PageProps {
 const AuditIndex: React.FC = () => {
     const { auditorias, filtros } = usePage<AuditPageProps>().props;
 
-    // Filtros solo del lado del cliente (no exponemos tablas)
     const [search, setSearch] = useState(filtros?.search || '');
     const [filterAccion, setFilterAccion] = useState('');
     const [filterUser, setFilterUser] = useState('');
@@ -49,7 +49,8 @@ const AuditIndex: React.FC = () => {
     const [order, setOrder] = useState<'asc' | 'desc'>('desc');
     const [dateError, setDateError] = useState('');
 
-    // Acciones únicas (para combo)
+    const [selected, setSelected] = useState<Auditoria | null>(null);
+
     const accionesUnicas = useMemo(() => {
         const allAcciones = auditorias.data.map((a) => a.accion);
         const setAcciones = new Set<string>();
@@ -60,7 +61,6 @@ const AuditIndex: React.FC = () => {
         return Array.from(setAcciones);
     }, [auditorias]);
 
-    // Usuarios únicos (para combo)
     const usuariosUnicos = useMemo(() => {
         const setUsers = new Map<number, string>();
         auditorias.data.forEach((a) => {
@@ -71,7 +71,6 @@ const AuditIndex: React.FC = () => {
         return Array.from(setUsers.entries()).map(([id, name]) => ({ id, name }));
     }, [auditorias]);
 
-    // Filtrado local (sobre la página actual)
     const filteredAudits = useMemo(() => {
         const term = search.toLowerCase().trim();
         const startDate = filterStart ? new Date(filterStart + 'T00:00:00') : null;
@@ -126,12 +125,11 @@ const AuditIndex: React.FC = () => {
         setDateError('');
     };
 
-    // Paginación con Inertia (envía X-Inertia y pasa tu middleware)
     const goToPage = (page: number) => {
         if (page < 1 || page > auditorias.last_page) return;
         router.get(
-            route('auditoria.index'),           // asegúrate de que tu ruta se llame así
-            { page },                           // solo page; los filtros son client-side
+            route('auditoria.index'),
+            { page },
             {
                 preserveScroll: true,
                 preserveState: true,
@@ -148,16 +146,13 @@ const AuditIndex: React.FC = () => {
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     <div className="bg-[#0B1120] shadow-2xl sm:rounded-xl p-8 border border-gray-800/80">
 
-                        {/* Encabezado */}
                         <div className="flex flex-col sm:flex-row justify-between items-center mb-8 border-b border-gray-700 pb-4">
                             <h1 className="text-3xl font-extrabold text-white tracking-wider text-center sm:text-left">
                                 REGISTROS DE AUDITORÍA
                             </h1>
                         </div>
 
-                        {/* Filtros (sin “Tabla”) */}
                         <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-6 flex flex-wrap gap-3 justify-between items-center">
-                            {/* Buscador general */}
                             <input
                                 type="text"
                                 placeholder="Buscar (acción, usuario, ID registro)..."
@@ -166,7 +161,6 @@ const AuditIndex: React.FC = () => {
                                 className="flex-grow min-w-[180px] px-3 py-2 rounded-md bg-[#080D15] text-white border border-gray-700 text-sm focus:ring-2 focus:ring-[#B3E10F]"
                             />
 
-                            {/* Usuario (buscable) */}
                             <div className="relative">
                                 <input
                                     type="text"
@@ -183,7 +177,6 @@ const AuditIndex: React.FC = () => {
                                 </datalist>
                             </div>
 
-                            {/* Acción */}
                             <select
                                 value={filterAccion}
                                 onChange={(e) => setFilterAccion(e.target.value)}
@@ -197,7 +190,6 @@ const AuditIndex: React.FC = () => {
                                 ))}
                             </select>
 
-                            {/* Fechas */}
                             <div className="flex flex-col sm:flex-row gap-2 items-center">
                                 <div className="flex flex-col">
                                     <label className="text-gray-400 text-xs mb-1">Desde</label>
@@ -219,7 +211,6 @@ const AuditIndex: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Orden */}
                             <select
                                 value={order}
                                 onChange={(e) => setOrder(e.target.value as 'asc' | 'desc')}
@@ -229,7 +220,6 @@ const AuditIndex: React.FC = () => {
                                 <option value="asc">Más antiguos primero</option>
                             </select>
 
-                            {/* Limpiar */}
                             <button
                                 onClick={handleClearFilters}
                                 className="px-3 py-2 bg-red-700 hover:bg-red-600 text-white text-sm rounded-md transition duration-150 font-semibold"
@@ -242,7 +232,6 @@ const AuditIndex: React.FC = () => {
                             <p className="text-red-400 text-sm text-center mb-4">{dateError}</p>
                         )}
 
-                        {/* Tabla (sin columna “Tabla”) */}
                         {filteredAudits.length > 0 ? (
                             <div className="overflow-x-auto border border-gray-800 rounded-lg">
                                 <table className="min-w-full divide-y divide-gray-800 table-auto">
@@ -252,6 +241,7 @@ const AuditIndex: React.FC = () => {
                                             <th className="px-6 py-3 text-left uppercase tracking-wider">Acción</th>
                                             <th className="px-6 py-3 text-left uppercase tracking-wider">Registro</th>
                                             <th className="px-6 py-3 text-left uppercase tracking-wider">Fecha</th>
+                                            <th className="px-6 py-3 text-left uppercase tracking-wider">Detalle</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-[#080D15] divide-y divide-gray-800/50">
@@ -269,6 +259,14 @@ const AuditIndex: React.FC = () => {
                                                 <td className="px-6 py-4 text-sm text-gray-300">
                                                     {new Date(a.fecha_accion).toLocaleString()}
                                                 </td>
+                                                <td className="px-6 py-4 text-sm">
+                                                    <button
+                                                        onClick={() => setSelected(a)}
+                                                        className="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-white text-xs"
+                                                    >
+                                                        Ver
+                                                    </button>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -280,7 +278,6 @@ const AuditIndex: React.FC = () => {
                             </p>
                         )}
 
-                        {/* Pie + Paginación con Inertia */}
                         <div className="mt-4 text-sm text-gray-400 flex flex-col sm:flex-row justify-between items-center gap-2">
                             <div className="flex items-center gap-2">
                                 <button
@@ -316,6 +313,44 @@ const AuditIndex: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* MODAL */}
+            {selected && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50">
+                    <div className="bg-[#0B1120] p-6 rounded-xl w-full max-w-lg border border-gray-700">
+                        <h2 className="text-xl font-bold text-[#B3E10F] mb-4">
+                            Detalle del Registro
+                        </h2>
+
+                        <div className="space-y-2 text-gray-300 text-sm">
+                            <p><strong>Usuario:</strong> {selected.user?.name || '—'}</p>
+                            <p><strong>Acción:</strong> {selected.accion}</p>
+                            <p><strong>ID Registro:</strong> {selected.id_registro_afectado || '—'}</p>
+                            <p><strong>IP:</strong> {selected.ip_address || '—'}</p>
+                            <p><strong>Fecha:</strong> {new Date(selected.fecha_accion).toLocaleString()}</p>
+
+                            {selected.descripcion_detallada && (
+                                <div>
+                                    <strong>Descripción:</strong>
+                                    <p className="whitespace-pre-line text-gray-400 mt-1">
+                                        {selected.descripcion_detallada}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mt-6 text-right">
+                            <button
+                                onClick={() => setSelected(null)}
+                                className="px-4 py-2 bg-red-600 rounded hover:bg-red-500 text-white"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </AuthenticatedLayout>
     );
 };

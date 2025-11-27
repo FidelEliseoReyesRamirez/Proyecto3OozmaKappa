@@ -5,21 +5,29 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\AuditoriaLog;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Auth;
 
 class AuditoriaController extends Controller
 {
     public function index(Request $request)
     {
+        $search = $request->input('search');
+        $tabla  = $request->input('tabla');
+
         $query = AuditoriaLog::with('user')
-            ->when($request->input('search'), function ($q, $search) {
-                $q->where('accion', 'like', "%{$search}%")
-                  ->orWhere('tabla_afectada', 'like', "%{$search}%")
-                  ->orWhereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%"));
+            ->when($search, function ($q) use ($search) {
+                $q->where(function($q) use ($search) {
+                    $q->where('accion', 'like', "%{$search}%")
+                      ->orWhere('descripcion_detallada', 'like', "%{$search}%")
+                      ->orWhere('ip_address', 'like', "%{$search}%")
+                      ->orWhere('id_registro_afectado', 'like', "%{$search}%")
+                      ->orWhereHas('user', fn($u) => 
+                          $u->where('name', 'like', "%{$search}%")
+                      );
+                });
             })
-            ->when($request->input('tabla'), function ($q, $tabla) {
-                $q->where('tabla_afectada', $tabla);
-            })
+            ->when($tabla, fn($q) => 
+                $q->where('tabla_afectada', $tabla)
+            )
             ->orderBy('fecha_accion', 'desc');
 
         $auditorias = $query->paginate(15)->withQueryString();
