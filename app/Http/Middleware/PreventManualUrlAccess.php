@@ -10,59 +10,79 @@ class PreventManualUrlAccess
 {
     public function handle(Request $request, Closure $next)
     {
+        $path = $request->getPathInfo();
+        $user = $request->user();
+
         Log::info('PreventManualUrlAccess: Solicitud detectada', [
-            'path' => $request->getPathInfo(),
+            'path' => $path,
             'method' => $request->method(),
             'has_inertia' => $request->headers->has('X-Inertia'),
-            'user_id' => optional($request->user())->id,
+            'user_id' => optional($user)->id,
         ]);
-
-        $path = $request->getPathInfo();
 
         /*
         |--------------------------------------------------------------------------
-        | EXCEPCIONES NECESARIAS PARA UNITY VIEWER
+        | EXCEPCIONES DEL UNITY VIEWER Y ARCHIVOS ESTÁTICOS
         |--------------------------------------------------------------------------
-        | Permitimos:
-        | - /planos/3d/*
-        | - /planos/*
-        | - /Build/*
-        | - /StreamingAssets/*
-        | - /storage/planos/*
         */
+        $allowPrefixes = [
+            '/planos/',
+            '/Build/',
+            '/StreamingAssets/',
+            '/storage/planos/',
+            '/wasm/',
+            '/docs/download/',
+        ];
 
-        if (preg_match('#^/planos/#', $path)) {
-            return $next($request);
+        foreach ($allowPrefixes as $prefix) {
+            if (str_starts_with($path, $prefix)) {
+                return $next($request);
+            }
         }
 
-        if (preg_match('#^/Build/#', $path)) {
-            return $next($request);
-        }
-
-        if (preg_match('#^/StreamingAssets/#', $path)) {
-            return $next($request);
-        }
-
-        if (preg_match('#^/storage/planos/#', $path)) {
-            return $next($request);
-        }
-
-        if (preg_match('#^/wasm/#', $path)) {
-            return $next($request);
-        }
-
-        if (preg_match('#^/docs/download/#', $path)) {
-            return $next($request);
-        }
-
-        if (
-            preg_match('#^/tareas/proyecto/#', $path) ||
+        /*
+        |--------------------------------------------------------------------------
+        | RUTAS INTERNAS DE TAREAS
+        |--------------------------------------------------------------------------
+        */
+        if (preg_match('#^/tareas/proyecto/#', $path) ||
             preg_match('#^/tareas/[0-9]+/historial$#', $path)
         ) {
             return $next($request);
         }
 
-        $allowed = [
+        /*
+        |--------------------------------------------------------------------------
+        | RUTAS PRINCIPALES DEDE INERTIA – DEVELARQ
+        | (ESTO ARREGLA EL PROBLEMA DE REDIRECCIÓN A DASHBOARD)
+        |--------------------------------------------------------------------------
+        */
+        if (str_starts_with($path, '/proyectos')) {
+            return $next($request);
+        }
+
+        if (str_starts_with($path, '/users')) {
+            return $next($request);
+        }
+
+        if (str_starts_with($path, '/hitos')) {
+            return $next($request);
+        }
+
+        if (str_starts_with($path, '/documentos')) {
+            return $next($request);
+        }
+
+        if (str_starts_with($path, '/tareas')) {
+            return $next($request);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | RUTAS PERMITIDAS GENÉRICAS
+        |--------------------------------------------------------------------------
+        */
+        $allowedExact = [
             '/',
             '/login',
             '/register',
@@ -80,16 +100,29 @@ class PreventManualUrlAccess
             '/profile/update',
         ];
 
+        if (in_array($path, $allowedExact)) {
+            return $next($request);
+        }
+
+        // Excepción: rutas como /verify-email/asdadasdas
+        if (str_starts_with($path, '/verify-email/')) {
+            return $next($request);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | BLOQUEO DE ACCESO MANUAL
+        | (solo si no es petición Inertia/AJAX/JSON)
+        |--------------------------------------------------------------------------
+        */
         if (
             !$request->headers->has('X-Inertia') &&
             !$request->ajax() &&
-            !$request->expectsJson() &&
-            !in_array($path, $allowed) &&
-            strpos($path, '/verify-email/') !== 0
+            !$request->expectsJson()
         ) {
             Log::warning('PreventManualUrlAccess: Acceso manual bloqueado', [
                 'path' => $path,
-                'user_id' => optional($request->user())->id,
+                'user_id' => optional($user)->id,
             ]);
 
             return redirect()->route('login');
@@ -98,3 +131,4 @@ class PreventManualUrlAccess
         return $next($request);
     }
 }
+

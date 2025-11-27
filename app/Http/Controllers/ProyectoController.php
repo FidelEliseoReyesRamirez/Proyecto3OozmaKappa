@@ -227,17 +227,16 @@ class ProyectoController extends Controller
 
     public function show($id)
     {
-        // Buscar el proyecto, o devolver 404 si no existe
         $proyecto = Proyecto::with(['cliente', 'responsable'])->find($id);
 
         if (!$proyecto) {
-            abort(404, 'Proyecto no encontrado');
+            return redirect()->route('proyectos.index')
+                ->with('error', 'El proyecto solicitado no existe.');
         }
 
-
-        // Verificación de permisos
         if (strtolower(Auth::user()->rol) === 'cliente' && $proyecto->cliente_id !== Auth::id()) {
-            abort(403, 'No tienes permiso para ver este proyecto.');
+            return redirect()->route('proyectos.index')
+                ->with('error', 'No tienes permiso para ver este proyecto.');
         }
 
         return Inertia::render('GestionProyecto/Show', [
@@ -247,13 +246,36 @@ class ProyectoController extends Controller
 
 
 
+
     public function edit($id)
     {
         if (strtolower(Auth::user()->rol) === 'cliente') {
-            abort(403, 'No tienes permiso para editar proyectos.');
+            return redirect()->route('proyectos.index')
+                ->with('error', 'No tienes permiso para editar proyectos.');
         }
 
-        $proyecto = Proyecto::with('cliente', 'responsable')->findOrFail($id);
+        // Buscar proyecto
+        $proyecto = Proyecto::with('cliente', 'responsable')->find($id);
+
+        // Si no existe → redirección segura
+        if (!$proyecto) {
+            return redirect()->route('proyectos.index')
+                ->with('error', 'El proyecto solicitado no existe.');
+        }
+
+        // Si el usuario NO pertenece al proyecto → bloqueado
+        if (
+            Auth::user()->rol !== 'admin' &&
+            Auth::id() !== $proyecto->responsable_id &&
+            !DB::table('proyectos_usuarios')
+                ->where('proyecto_id', $proyecto->id)
+                ->where('user_id', Auth::id())
+                ->where('permiso', 'editar')
+                ->exists()
+        ) {
+            return redirect()->route('proyectos.index')
+                ->with('error', 'No estás asignado a este proyecto.');
+        }
 
         $clientes = User::where('rol', 'cliente')
             ->where('estado', 'activo')
@@ -265,14 +287,13 @@ class ProyectoController extends Controller
             ->where('eliminado', 0)
             ->get();
 
-        self::registrarAccionManual("Ingresó al formulario de edición del proyecto '{$proyecto->nombre}'.", 'proyectos', $proyecto->id);
-
         return Inertia::render('GestionProyecto/Edit', [
             'proyecto' => $proyecto,
             'clientes' => $clientes,
             'responsables' => $responsables,
         ]);
     }
+
 
     public function update(Request $request, $id)
     {
