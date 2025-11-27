@@ -16,6 +16,7 @@ use App\Http\Controllers\AuditoriaController;
 use App\Http\Middleware\PreventManualUrlAccess;
 use App\Http\Controllers\PlanoController;
 use App\Http\Controllers\HitosController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Auth;
 /*
 |--------------------------------------------------------------------------
@@ -31,10 +32,8 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 })->name('welcome');
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
 
 /*
 |--------------------------------------------------------------------------

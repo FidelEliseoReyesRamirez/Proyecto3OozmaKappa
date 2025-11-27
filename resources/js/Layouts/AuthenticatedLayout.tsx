@@ -94,12 +94,6 @@ export default function Authenticated({
                                 Planos
                             </NavLink>
 
-                            {user.rol === 'cliente' && (
-                                <NavLink href={route('avances.index')} active={route().current('avances.index')}>
-                                    Avances Proyecto
-                                </NavLink>
-                            )}
-
                             {user.rol === 'admin' && (
                                 <NavLink href={route('documents.history')} active={route().current('documents.history')}>
                                     Historial Descargas

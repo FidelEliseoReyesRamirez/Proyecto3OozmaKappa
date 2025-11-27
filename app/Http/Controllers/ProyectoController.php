@@ -423,9 +423,6 @@ class ProyectoController extends Controller
                     ? 'Se ha creado una nueva versión de información del proyecto.'
                     : 'Se ha creado una nueva versión del documento BIM.'));
     }
-    /**
-     * @return mixed
-     */
 
 
     public function versiones($id)

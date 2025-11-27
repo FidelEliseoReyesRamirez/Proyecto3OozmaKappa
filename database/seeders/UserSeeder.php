@@ -14,7 +14,7 @@ class UserSeeder extends Seeder
                 'name' => 'Fidel Eliseo',
                 'apellido' => 'Reyes Ramirez',
                 'email' => 'fideleliseoreyesramirez@gmail.com',
-                'password' => '$2y$12$HTc89fEiYapIuUMzDh1J5O5QhwcUi582LSqr7byzoK8XeCUbgjD8.',
+                'password' => '$2y$12$K65t8D3vpNupwSO.4DZKguOE87p4CpqdFW5GT.V8SrU0Egli6.U5u',
                 'telefono' => '73223555',
                 'rol' => 'admin',
                 'estado' => 'activo',
