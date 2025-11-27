@@ -30,10 +30,8 @@ const PlanoCreate: React.FC = () => {
     });
 
     const [projectSearch, setProjectSearch] = useState('');
-
     const [showSizeModal, setShowSizeModal] = useState(false);
     const [showTypeModal, setShowTypeModal] = useState(false);
-
     const [frontendError, setFrontendError] = useState('');
 
     // BLOQUEO MODELO 3D
@@ -41,6 +39,12 @@ const PlanoCreate: React.FC = () => {
     const [showModelo3DModal, setShowModelo3DModal] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // =============================
+    // ⚡ NUEVO: PROGRESO DE SUBIDA
+    // =============================
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [showUploadModal, setShowUploadModal] = useState(false);
 
     // TIPOS PERMITIDOS
     const allowedTypes = useMemo(() => [
@@ -50,8 +54,6 @@ const PlanoCreate: React.FC = () => {
 
         { label: 'Modelo FBX', value: 'BIM-FBX' as FileType, extensions: ['.fbx'] },
         { label: 'Modelo GLB', value: 'BIM-GLB' as FileType, extensions: ['.glb'] },
-        { label: 'Modelo GLTF', value: 'BIM-GLTF' as FileType, extensions: ['.gltf'] },
-        { label: 'Modelo IFC', value: 'BIM-IFC' as FileType, extensions: ['.ifc'] },
     ], []);
 
     const allValidExtensions = allowedTypes.flatMap(t => t.extensions);
@@ -120,19 +122,18 @@ const PlanoCreate: React.FC = () => {
             });
     }, [data.proyecto_id, data.archivo_tipo]);
 
-    // SUBMIT
+    // =============================
+    // 🔥 SUBMIT CON BARRA DE PROGRESO
+    // =============================
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
         setFrontendError('');
         clearErrors();
 
-        // 🚫 BLOQUEO MODELO 3D
         if (tieneModelo3D && ['BIM-FBX', 'BIM-GLB', 'BIM-GLTF', 'BIM-IFC'].includes(data.archivo_tipo)) {
-
             setShowModelo3DModal(true);
             return;
         }
-
 
         if (!data.archivo && !data.enlace_externo) {
             setFrontendError('Debes subir un archivo o ingresar un enlace externo.');
@@ -144,8 +145,24 @@ const PlanoCreate: React.FC = () => {
             return;
         }
 
+        // Mostrar modal de carga
+        setShowUploadModal(true);
+        setUploadProgress(0);
+
         post(route('planos.store'), {
-            onSuccess: () => router.visit(route('planos.index')),
+            onProgress: (event) => {
+                if (event && event.percentage) {
+                    setUploadProgress(event.percentage);
+                }
+            },
+            onSuccess: () => {
+                setUploadProgress(100);
+                setTimeout(() => router.visit(route('planos.index')), 500);
+            },
+            onError: () => {
+                setShowUploadModal(false);
+                setUploadProgress(0);
+            }
         });
     };
 
@@ -153,12 +170,41 @@ const PlanoCreate: React.FC = () => {
         "mt-1 block w-full border border-gray-700 bg-[#080D15] text-white rounded-md shadow-inner py-2 px-3 focus:outline-none focus:ring-[#2970E8] focus:border-[#2970E8] sm:text-sm";
     const labelStyle = "block text-sm font-bold text-gray-300";
 
-
     return (
         <AuthenticatedLayout
             header={<h2 className="font-extrabold text-xl text-[#B3E10F]">SUBIR NUEVO PLANO</h2>}
         >
+
             <Head title="Subir Plano" />
+
+            {/* =============================
+                MODAL DE CARGA CON PORCENTAJE
+            ============================== */}
+            {showUploadModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999]">
+                    <div className="bg-[#0F172A] p-8 rounded-xl border border-[#B3E10F] w-11/12 max-w-md shadow-2xl text-center">
+
+                        <h2 className="text-xl font-bold text-[#B3E10F] mb-4">
+                            Subiendo archivo…
+                        </h2>
+
+                        <p className="text-gray-300 text-sm mb-4">
+                            Espera mientras tu archivo se carga.
+                        </p>
+
+                        <div className="w-full bg-gray-700/40 rounded-md h-3 overflow-hidden mb-3">
+                            <div
+                                className="h-full bg-[#B3E10F] transition-all duration-200"
+                                style={{ width: `${uploadProgress}%` }}
+                            ></div>
+                        </div>
+
+                        <p className="text-[#B3E10F] font-bold text-lg">
+                            {uploadProgress}%
+                        </p>
+                    </div>
+                </div>
+            )}
 
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -357,7 +403,7 @@ const PlanoCreate: React.FC = () => {
                         </h2>
                         <p className="text-gray-300 text-sm mb-4">
                             Solo se permite un modelo 3D por proyecto
-                            (FBX / GLB / GLTF / IFC).
+                            (FBX / GLB ).
                             Para subir otro debes eliminar o editar el existente.
                         </p>
 

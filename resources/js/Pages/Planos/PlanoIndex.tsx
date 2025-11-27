@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Head, usePage, router, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { PageProps } from '@/types';
-import FBXViewer from '@/Pages/Planos/FBXViewer';
+
 
 // INTERFAZ
 interface PlanoBim {
@@ -483,17 +483,6 @@ const PlanoIndex: React.FC = () => {
                                                                 ✕
                                                         </button>
                                                 </div>
-
-                                                {/* VISOR 3D */}
-                                                <div className="flex-grow rounded-lg overflow-hidden bg-black border border-gray-700">
-                                                        <FBXViewer
-                                                                key={modal.plano.id}
-                                                                file={modal.plano.archivo_url || undefined}
-                                                                extension={modal.plano.extension}
-                                                        />
-
-                                                </div>
-
                                                 {/* PIE DEL MODAL */}
                                                 <div className="mt-4 flex justify-end">
                                                         <button

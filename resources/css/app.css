@@ -5,3 +5,13 @@
     0% { opacity: 0; transform: translateY(18px); }
     100% { opacity: 1; transform: translateY(0px); }
 }
+@keyframes loading-bar {
+    0% { width: 0%; }
+    40% { width: 40%; }
+    70% { width: 60%; }
+    100% { width: 100%; }
+}
+
+.animate-loading-bar {
+    animation: loading-bar 1.8s infinite ease-in-out;
+}

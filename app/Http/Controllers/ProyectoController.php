@@ -35,16 +35,33 @@ class ProyectoController extends Controller
 
         $query = Proyecto::with(['cliente', 'responsable']);
 
-        if ($userRole === 'cliente') {
+        // ADMIN: ve todos
+        if ($userRole === 'admin') {
+            // no se filtra nada
+        }
+
+        // CLIENTE: ve solo sus proyectos
+        elseif ($userRole === 'cliente') {
             $query->where('cliente_id', $user->id);
         }
-        if ($userRole === 'admin') {
-        } elseif (in_array($userRole, ['arquitecto', 'ingeniero', 'admin'])) {
-            $query->whereIn('id', function ($q) use ($user) {
-                $q->select('proyecto_id')
-                    ->from('proyectos_usuarios')
-                    ->where('user_id', $user->id)
-                    ->where('permiso', 'editar');
+
+        // ARQUITECTO / INGENIERO: ver los proyectos donde participa
+        else {
+            $query->where(function ($q) use ($user) {
+
+                // Es responsable del proyecto
+                $q->where('responsable_id', $user->id)
+
+                    // Está asignado en la tabla proyectos_usuarios (cualquier permiso)
+                    ->orWhereIn('id', function ($sub) use ($user) {
+                        $sub->select('proyecto_id')
+                            ->from('proyectos_usuarios')
+                            ->where('user_id', $user->id)
+                            ->where('eliminado', 0);
+                    })
+
+                    // Es cliente (por si acaso)
+                    ->orWhere('cliente_id', $user->id);
             });
         }
 
@@ -55,6 +72,7 @@ class ProyectoController extends Controller
             'userRole' => $userRole,
         ]);
     }
+
 
 
     public function create()
@@ -384,6 +402,10 @@ class ProyectoController extends Controller
                     ? 'Se ha creado una nueva versión de información del proyecto.'
                     : 'Se ha creado una nueva versión del documento BIM.'));
     }
+    /**
+     * @return mixed
+     */
+
 
     public function versiones($id)
     {

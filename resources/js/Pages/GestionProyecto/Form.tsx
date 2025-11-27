@@ -3,6 +3,7 @@ import InputLabel from "@/Components/InputLabel";
 import TextInput from "@/Components/TextInput";
 import { Link, useForm, Head } from "@inertiajs/react";
 import { FormEventHandler, useState } from "react";
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 
 export default function Form({ proyecto, clientes, responsables }: any) {
     const { data, setData, post, errors } = useForm<{
@@ -11,16 +12,13 @@ export default function Form({ proyecto, clientes, responsables }: any) {
         descripcion?: string;
         fecha_inicio: string;
         responsable_id: string;
-   
     }>({
         nombre: proyecto?.nombre || "",
         cliente_id: proyecto?.cliente_id || "",
         descripcion: proyecto?.descripcion || "",
         fecha_inicio: proyecto?.fecha_inicio || "",
         responsable_id: proyecto?.responsable_id || "",
-
     });
-
 
     const [showModal, setShowModal] = useState(false);
     const [modalMessage, setModalMessage] = useState("");
@@ -80,7 +78,7 @@ export default function Form({ proyecto, clientes, responsables }: any) {
         const start = Date.now();
 
         const options: any = {
-            forceFormData: true, // convierte automáticamente todo a FormData
+            forceFormData: true,
             onProgress: (progress: any) => {
                 if (progress.total && progress.loaded) {
                     const percent = Math.round((progress.loaded / progress.total) * 100);
@@ -108,194 +106,196 @@ export default function Form({ proyecto, clientes, responsables }: any) {
         };
 
         if (proyecto) {
-            // modo edición
             post(route("proyectos.update", proyecto.id), options);
         } else {
-            // modo creación
             post(route("proyectos.store"), options);
         }
     };
-
 
     const inputFieldStyles =
         "mt-1 block w-full bg-gray-900 border border-gray-700 text-white rounded-lg shadow-inner focus:border-[#2970E8] focus:ring-[#2970E8] transition duration-200 ease-in-out placeholder-gray-500";
 
     return (
-        <section className="flex justify-center items-center py-12 px-4 min-h-screen bg-gray-950 relative">
-            <Head title="DEVELARQ | Crear Proyecto" />
-            <div className="w-full max-w-4xl bg-gray-900 border border-gray-800 p-8 md:p-10 rounded-xl shadow-lg shadow-gray-900/50">
-                <h2 className="text-3xl font-extrabold text-[#2970E8] mb-1 tracking-wider">
-                    {proyecto ? "EDITAR PROYECTO" : "CREAR NUEVO PROYECTO"}
+        <AuthenticatedLayout
+            header={
+                <h2 className="text-xl font-extrabold leading-tight text-[#B3E10F] tracking-wider">
+                    {proyecto ? "EDITAR PROYECTO" : "CREAR PROYECTO"}
                 </h2>
-                <p className="mb-8 text-md text-[#B3E10F]">
-                    ✨ Define los parámetros del proyecto y sube tu modelo BIM.
-                </p>
+            }
+        >
+            <Head title="DEVELARQ | Crear Proyecto" />
 
-                <form onSubmit={submit} className="space-y-6" noValidate>
-                    {/* NOMBRE */}
-                    <div>
-                        <InputLabel htmlFor="nombre" value="Nombre del Proyecto" className="text-gray-200 font-semibold" />
-                        <TextInput
-                            id="nombre"
-                            className={inputFieldStyles}
-                            value={data.nombre}
-                            onChange={(e) => setData("nombre", e.target.value)}
-                            required
-                        />
-                        <InputError className="mt-2" message={errors.nombre} />
-                    </div>
+            <section className="flex justify-center items-center py-12 px-4 min-h-screen bg-gray-950 relative">
+                <div className="w-full max-w-4xl bg-gray-900 border border-gray-800 p-8 md:p-10 rounded-xl shadow-lg shadow-gray-900/50">
+                    <h2 className="text-3xl font-extrabold text-[#2970E8] mb-1 tracking-wider">
+                        {proyecto ? "EDITAR PROYECTO" : "CREAR NUEVO PROYECTO"}
+                    </h2>
+                    <p className="mb-8 text-md text-[#B3E10F]">
+                        Define los parámetros del proyecto.
+                    </p>
 
-                    {/* CLIENTE */}
-                    <div>
-                        <InputLabel htmlFor="cliente_id" value="Cliente" className="text-gray-200 font-semibold" />
-                        <input
-                            type="text"
-                            placeholder="Buscar cliente..."
-                            value={clienteSearch}
-                            onFocus={() => setOpenCliente(true)}
-                            onChange={(e) => setClienteSearch(e.target.value)}
-                            className={inputFieldStyles}
-                        />
-                        {openCliente && (
-                            <ul className="max-h-48 overflow-y-auto text-white bg-gray-800 rounded-md mt-2 border border-gray-700">
-                                {filteredClientes.length > 0 ? (
-                                    filteredClientes.map((c: any) => (
-                                        <li
-                                            key={c.id}
-                                            onClick={() => {
-                                                setData("cliente_id", c.id);
-                                                setClienteSearch(c.name);
-                                                setOpenCliente(false);
-                                            }}
-                                            className={`px-3 py-2 cursor-pointer hover:bg-[#2970E8] hover:text-white ${data.cliente_id === c.id ? "bg-[#2970E8]/40" : ""
-                                                }`}
-                                        >
-                                            {c.name}
-                                        </li>
-                                    ))
-                                ) : (
-                                    <li className="px-3 py-2 text-gray-400">Sin coincidencias</li>
-                                )}
-                            </ul>
-                        )}
-                        <InputError className="mt-2" message={errors.cliente_id} />
-                    </div>
+                    <form onSubmit={submit} className="space-y-6" noValidate>
 
-                    {/* RESPONSABLE */}
-                    <div>
-                        <InputLabel htmlFor="responsable_id" value="Responsable" className="text-gray-200 font-semibold" />
-                        <input
-                            type="text"
-                            placeholder="Buscar responsable..."
-                            value={responsableSearch}
-                            onFocus={() => setOpenResponsable(true)}
-                            onChange={(e) => setResponsableSearch(e.target.value)}
-                            className={inputFieldStyles}
-                        />
-                        {openResponsable && (
-                            <ul className="max-h-48 overflow-y-auto bg-gray-800 rounded-md mt-2 border text-white border-gray-700">
-                                {filteredResponsables.length > 0 ? (
-                                    filteredResponsables.map((r: any) => (
-                                        <li
-                                            key={r.id}
-                                            onClick={() => {
-                                                setData("responsable_id", r.id);
-                                                setResponsableSearch(r.name);
-                                                setOpenResponsable(false);
-                                            }}
-                                            className={`px-3 py-2 cursor-pointer hover:bg-[#2970E8] hover:text-white ${data.responsable_id === r.id ? "bg-[#2970E8]/40" : ""
-                                                }`}
-                                        >
-                                            {r.name}
-                                        </li>
-                                    ))
-                                ) : (
-                                    <li className="px-3 py-2 text-gray-400">Sin coincidencias</li>
-                                )}
-                            </ul>
-                        )}
-                        <InputError className="mt-2" message={errors.responsable_id} />
-                    </div>
-
-                    {/* FECHA */}
-                    <div>
-                        <InputLabel htmlFor="fecha_inicio" value="Fecha de Inicio" className="text-gray-200 font-semibold" />
-                        <TextInput
-                            id="fecha_inicio"
-                            type="date"
-                            className={inputFieldStyles}
-                            value={data.fecha_inicio}
-                            onChange={(e) => setData("fecha_inicio", e.target.value)}
-                            required
-                        />
-                        <InputError className="mt-2" message={errors.fecha_inicio} />
-                    </div>
-
-                    {/* DESCRIPCIÓN */}
-                    <div>
-                        <InputLabel htmlFor="descripcion" value="Descripción del Proyecto" className="text-gray-200 font-semibold" />
-                        <textarea
-                            id="descripcion"
-                            className={`${inputFieldStyles} h-28 resize-none`}
-                            value={data.descripcion || ""}
-                            onChange={(e) => setData("descripcion", e.target.value)}
-                        />
-                    </div>
-
-                    
-
-                    {/* PROGRESO */}
-                    {uploading && (
-                        <div className="mt-6">
-                            <div className="w-full bg-gray-800 rounded-full h-4 overflow-hidden">
-                                <div
-                                    className="bg-[#B3E10F] h-4 rounded-full transition-all duration-300"
-                                    style={{ width: `${uploadProgress}%` }}
-                                ></div>
-                            </div>
-                            <p className="text-gray-300 mt-2 text-sm">
-                                Progreso: {uploadProgress}%{" "}
-                                {uploadTime ? `(Tiempo restante: ${Math.ceil(uploadTime)} s)` : ""}
-                            </p>
+                        {/* NOMBRE */}
+                        <div>
+                            <InputLabel value="Nombre del Proyecto" />
+                            <TextInput
+                                className={inputFieldStyles}
+                                value={data.nombre}
+                                onChange={(e) => setData("nombre", e.target.value)}
+                            />
+                            <InputError message={errors.nombre} />
                         </div>
-                    )}
 
-                    <div className="flex items-center justify-between pt-6 border-t border-gray-700">
-                        <button
-                            type="submit"
-                            disabled={uploading}
-                            className={`px-3 py-2 rounded-md text-sm font-bold transition duration-150 shadow-md ${uploading
-                                ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                                : "bg-[#B3E10F] text-gray-900 hover:bg-lime-300 shadow-[#B3E10F]/30"
+                        {/* CLIENTE */}
+                        <div>
+                            <InputLabel value="Cliente" />
+                            <input
+                                type="text"
+                                placeholder="Buscar cliente..."
+                                value={clienteSearch}
+                                onFocus={() => setOpenCliente(true)}
+                                onChange={(e) => setClienteSearch(e.target.value)}
+                                className={inputFieldStyles}
+                            />
+                            {openCliente && (
+                                <ul className="max-h-48 overflow-y-auto text-white bg-gray-800 rounded-md mt-2 border border-gray-700">
+                                    {filteredClientes.length > 0 ? (
+                                        filteredClientes.map((c: any) => (
+                                            <li
+                                                key={c.id}
+                                                onClick={() => {
+                                                    setData("cliente_id", c.id);
+                                                    setClienteSearch(c.name);
+                                                    setOpenCliente(false);
+                                                }}
+                                                className="px-3 py-2 cursor-pointer hover:bg-[#2970E8]"
+                                            >
+                                                {c.name}
+                                            </li>
+                                        ))
+                                    ) : (
+                                        <li className="px-3 py-2 text-gray-400">Sin coincidencias</li>
+                                    )}
+                                </ul>
+                            )}
+                            <InputError message={errors.cliente_id} />
+                        </div>
+
+                        {/* RESPONSABLE */}
+                        <div>
+                            <InputLabel value="Responsable" />
+                            <input
+                                type="text"
+                                placeholder="Buscar responsable..."
+                                value={responsableSearch}
+                                onFocus={() => setOpenResponsable(true)}
+                                onChange={(e) => setResponsableSearch(e.target.value)}
+                                className={inputFieldStyles}
+                            />
+
+                            {openResponsable && (
+                                <ul className="max-h-48 overflow-y-auto bg-gray-800 rounded-md mt-2 border text-white border-gray-700">
+                                    {filteredResponsables.length > 0 ? (
+                                        filteredResponsables.map((r: any) => (
+                                            <li
+                                                key={r.id}
+                                                onClick={() => {
+                                                    setData("responsable_id", r.id);
+                                                    setResponsableSearch(r.name);
+                                                    setOpenResponsable(false);
+                                                }}
+                                                className="px-3 py-2 cursor-pointer hover:bg-[#2970E8]"
+                                            >
+                                                {r.name}
+                                            </li>
+                                        ))
+                                    ) : (
+                                        <li className="px-3 py-2 text-gray-400">Sin coincidencias</li>
+                                    )}
+                                </ul>
+                            )}
+                            <InputError message={errors.responsable_id} />
+                        </div>
+
+                        {/* FECHA */}
+                        <div>
+                            <InputLabel value="Fecha de Inicio" />
+                            <TextInput
+                                type="date"
+                                className={inputFieldStyles}
+                                value={data.fecha_inicio}
+                                onChange={(e) => setData("fecha_inicio", e.target.value)}
+                            />
+                            <InputError message={errors.fecha_inicio} />
+                        </div>
+
+                        {/* DESCRIPCIÓN */}
+                        <div>
+                            <InputLabel value="Descripción del Proyecto" />
+                            <textarea
+                                className={`${inputFieldStyles} h-28`}
+                                value={data.descripcion || ""}
+                                onChange={(e) => setData("descripcion", e.target.value)}
+                            />
+                        </div>
+
+                        {/* PROGRESO */}
+                        {uploading && (
+                            <div className="mt-6">
+                                <div className="w-full bg-gray-800 rounded-full h-4 overflow-hidden">
+                                    <div
+                                        className="bg-[#B3E10F] h-4 rounded-full transition-all duration-300"
+                                        style={{ width: `${uploadProgress}%` }}
+                                    />
+                                </div>
+                                <p className="text-gray-300 mt-2 text-sm">
+                                    Progreso: {uploadProgress}%{" "}
+                                    {uploadTime ? `(Tiempo restante: ${Math.ceil(uploadTime)} s)` : ""}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* BOTONES */}
+                        <div className="flex items-center justify-between pt-6 border-t border-gray-700">
+                            <button
+                                type="submit"
+                                disabled={uploading}
+                                className={`px-3 py-2 rounded-md text-sm font-bold transition duration-150 ${
+                                    uploading
+                                        ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                                        : "bg-[#B3E10F] text-gray-900 hover:bg-lime-300"
                                 }`}
-                        >
-                            {uploading ? "Subiendo..." : "GUARDAR PROYECTO"}
-                        </button>
-                        <Link
-                            href={route("proyectos.index")}
-                            className="bg-red-700 hover:bg-red-600 px-3 py-2 rounded-md text-sm font-medium text-white transition duration-150"
-                        >
-                            Cancelar
-                        </Link>
-                    </div>
-                </form>
-            </div>
+                            >
+                                {uploading ? "Subiendo..." : "GUARDAR PROYECTO"}
+                            </button>
 
-            {/* MODAL */}
-            {showModal && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
-                    <div className="bg-gray-900 border border-gray-700 p-6 rounded-xl shadow-xl w-96 text-center">
-                        <h3 className="text-[#B3E10F] text-lg font-bold mb-3">Atención</h3>
-                        <p className="text-gray-200 mb-6">{modalMessage}</p>
-                        <button
-                            onClick={cerrarModal}
-                            className="bg-[#2970E8] px-4 py-2 rounded-md text-white font-semibold hover:bg-[#1f5dc0] transition duration-150"
-                        >
-                            Entendido
-                        </button>
-                    </div>
+                            <Link
+                                href={route("proyectos.index")}
+                                className="bg-red-700 hover:bg-red-600 px-3 py-2 rounded-md text-sm font-medium text-white"
+                            >
+                                Cancelar
+                            </Link>
+                        </div>
+                    </form>
                 </div>
-            )}
-        </section>
+
+                {/* MODAL */}
+                {showModal && (
+                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
+                        <div className="bg-gray-900 border border-gray-700 p-6 rounded-xl shadow-xl w-96 text-center">
+                            <h3 className="text-[#B3E10F] text-lg font-bold mb-3">Atención</h3>
+                            <p className="text-gray-200 mb-6">{modalMessage}</p>
+                            <button
+                                onClick={cerrarModal}
+                                className="bg-[#2970E8] px-4 py-2 rounded-md text-white font-semibold hover:bg-[#1f5dc0]"
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </section>
+        </AuthenticatedLayout>
     );
 }
