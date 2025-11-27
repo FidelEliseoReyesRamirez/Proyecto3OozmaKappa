@@ -12,16 +12,16 @@ export default function NotificationsBell() {
     markAllAsRead,
     timeAgo,
     getIcon,
-    handleClickNotification, // ✅ del hook (redirige si hay URL)
+    handleClickNotification,
   } = useNotifications();
 
   return (
     <div className="relative flex items-center" ref={dropdownRef}>
-      {/* ICONO CAMPANA */}
+
+      {/* CAMPANA */}
       <button
         onClick={toggleDropdown}
-        className="relative p-2 text-white hover:text-[#B3E10F] focus:outline-none transition"
-        title="Notificaciones"
+        className="relative p-2 text-white hover:text-[var(--accent)] transition"
       >
         <svg
           className="w-6 h-6"
@@ -40,29 +40,27 @@ export default function NotificationsBell() {
           />
         </svg>
 
-        {/* PUNTO DE ALERTA */}
-        {hasUnread && (
-          <span className="absolute top-1 right-1 h-2 w-2 bg-[#B3E10F] rounded-full animate-pulse" />
-        )}
+        {/* DOT de alertas */}
+        {hasUnread && <span className="notif-dot absolute top-1 right-1 h-2 w-2 rounded-full animate-pulse"></span>}
       </button>
 
       {/* DROPDOWN */}
       {open && (
         <div
-          ref={dropdownRef}
           className="fixed w-80 bg-[#0B1120] text-white border border-gray-700 rounded-xl shadow-xl z-[9999] animate-fadeIn"
           style={{
-            top: "70px", // ajusta si tu navbar es más alto/bajo
+            top: "70px",
             right: "20px",
           }}
         >
           {/* HEADER */}
           <div className="flex justify-between items-center px-4 py-2 border-b border-gray-700">
             <span className="font-medium text-sm">Notificaciones</span>
+
             {hasUnread && (
               <button
                 onClick={markAllAsRead}
-                className="text-xs text-[#B3E10F] hover:underline"
+                className="text-xs text-[var(--accent)] hover:underline"
               >
                 Marcar todas
               </button>
@@ -80,28 +78,30 @@ export default function NotificationsBell() {
                 <div
                   key={n.id}
                   onClick={() => handleClickNotification(n)}
-                  className={`cursor-pointer px-4 py-3 text-sm border-b border-gray-800 hover:bg-gray-800 transition ${
-                    !n.leida ? "bg-gray-900/40" : ""
-                  }`}
+                  className={`cursor-pointer px-4 py-3 text-sm border-b border-gray-800 hover:bg-gray-800 transition ${!n.leida ? "bg-gray-900/40" : ""
+                    }`}
                 >
                   <div className="flex items-start gap-2">
-                    <span className="mt-0.5 text-lg">{getIcon(n.tipo)}</span>
+                    <span className="mt-0.5 text-lg text-[var(--accent)]">
+                      {getIcon(n.tipo)}
+                    </span>
+
                     <div className="flex-1 min-w-0">
                       {n.asunto && (
                         <div className="font-semibold text-white truncate">
                           {n.asunto}
                         </div>
                       )}
+
                       <div
-                        className={`${
-                          !n.leida ? "font-medium" : "text-gray-300"
-                        } truncate`}
+                        className={
+                          !n.leida ? "font-medium truncate" : "text-gray-300 truncate"
+                        }
                       >
                         {n.mensaje}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {timeAgo(n.fecha_envio)}
-                      </div>
+
+                      <div className="text-xs text-gray-500">{timeAgo(n.fecha_envio)}</div>
                     </div>
                   </div>
                 </div>
@@ -113,7 +113,7 @@ export default function NotificationsBell() {
           <div className="px-4 py-2 text-center border-t border-gray-700">
             <Link
               href={route("notificaciones.index")}
-              className="text-sm text-[#B3E10F] hover:underline"
+              className="text-sm text-[var(--accent)] hover:underline"
             >
               Ver todas →
             </Link>

@@ -1,0 +1,132 @@
+/* ==========================================================
+   VARIABLES POR ROL
+   ========================================================== */
+
+.rol-admin {
+    --accent: #ff3b3b;
+    --accent-hover: #ff5252;
+    --accent-bg: rgba(255, 59, 59, 0.18);
+    --text-muted: #e8a2a2;
+}
+
+.rol-cliente {
+    --accent: #89e10f;
+    --accent-hover: #a4ff2b;
+    --accent-bg: rgba(137,225,15,0.20);
+    --text-muted: #d9f8b3;
+}
+
+.rol-arquitecto {
+    --accent: #4db2ff;
+    --accent-hover: #78caff;
+    --accent-bg: rgba(77,178,255,0.20);
+    --text-muted: #b9dfff;
+}
+
+.rol-ingeniero {
+    --accent: #a259ff;
+    --accent-hover: #b774ff;
+    --accent-bg: rgba(162,89,255,0.22);
+    --text-muted: #e0c6ff;
+}
+
+
+/* ==========================================================
+   NAVBAR DESKTOP
+   ========================================================== */
+
+[class*="rol-"] .nav-item {
+    padding: 8px 16px;
+    border-radius: 8px;
+    color: white;
+    transition: background .2s, color .2s;
+}
+
+[class*="rol-"] .nav-item[data-active="true"] {
+    background-color: var(--accent-bg) !important;
+    color: var(--accent) !important;
+    font-weight: 600;
+}
+
+[class*="rol-"] .nav-item:hover {
+    background-color: var(--accent-bg) !important;
+    color: var(--accent) !important;
+}
+
+
+/* ==========================================================
+   BOTÓN USUARIO
+   ========================================================== */
+
+[class*="rol-"] .user-button {
+    background-color: var(--accent) !important;
+    color: black !important;
+}
+
+[class*="rol-"] .user-button:hover {
+    background-color: var(--accent-hover) !important;
+}
+
+
+/* ==========================================================
+   DROPDOWN LINKS
+   ========================================================== */
+
+/* ==== Alinear perfectamente Perfil y Cerrar Sesión ==== */
+
+[class*="rol-"] .dropdown-content {
+    padding: 0 !important;
+      background-color: #1a1a1a !important;
+}
+
+[class*="rol-"] .dropdown-link {
+    display: block !important;
+    width: 100% !important;
+    padding: 10px 14px !important;
+    text-align: left !important;
+    line-height: 1.4 !important;
+    border-radius: 0 !important;
+}
+
+[class*="rol-"] .dropdown-link:hover {
+    background-color: var(--accent-bg) !important;
+    color: var(--accent) !important;
+}
+
+
+
+/* ==========================================================
+   MENÚ MÓVIL
+   ========================================================== */
+
+[class*="rol-"] .mobile-link {
+    display: block;
+    color: white !important;
+    padding: 10px 14px;
+    border-radius: 6px;
+    transition: background .2s, color .2s;
+}
+
+[class*="rol-"] .mobile-link:hover {
+    background-color: var(--accent-bg) !important;
+    color: var(--accent) !important;
+}
+
+[class*="rol-"] .mobile-link[data-active="true"] {
+    background-color: var(--accent-bg) !important;
+    color: var(--accent) !important;
+    font-weight: 600;
+}
+
+
+/* ==========================================================
+   NOTIFICACIONES
+   ========================================================== */
+
+[class*="rol-"] .notif-accent {
+    color: var(--accent) !important;
+}
+
+[class*="rol-"] .notif-dot {
+    background-color: var(--accent) !important;
+}

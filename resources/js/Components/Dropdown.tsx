@@ -1,38 +1,52 @@
 import { Transition } from '@headlessui/react';
-import { InertiaLinkProps, Link } from '@inertiajs/react';
+import { Link, InertiaLinkProps } from '@inertiajs/react';
 import {
     createContext,
     Dispatch,
     PropsWithChildren,
+    ReactNode,
     SetStateAction,
     useContext,
     useState,
 } from 'react';
 
-const DropDownContext = createContext<{
+/* ================================
+   CONTEXT TIPADO CORRECTAMENTE
+================================ */
+type DropdownContextType = {
     open: boolean;
     setOpen: Dispatch<SetStateAction<boolean>>;
     toggleOpen: () => void;
-}>({
+};
+
+const DropDownContext = createContext<DropdownContextType>({
     open: false,
     setOpen: () => {},
     toggleOpen: () => {},
 });
 
+/* ================================
+   CONTENEDOR PRINCIPAL
+================================ */
 const Dropdown = ({ children }: PropsWithChildren) => {
     const [open, setOpen] = useState(false);
 
-    const toggleOpen = () => {
-        setOpen((previousState) => !previousState);
-    };
-
     return (
-        <DropDownContext.Provider value={{ open, setOpen, toggleOpen }}>
+        <DropDownContext.Provider
+            value={{
+                open,
+                setOpen,
+                toggleOpen: () => setOpen(o => !o),
+            }}
+        >
             <div className="relative">{children}</div>
         </DropDownContext.Provider>
     );
 };
 
+/* ================================
+   TRIGGER
+================================ */
 const Trigger = ({ children }: PropsWithChildren) => {
     const { open, setOpen, toggleOpen } = useContext(DropDownContext);
 
@@ -50,10 +64,13 @@ const Trigger = ({ children }: PropsWithChildren) => {
     );
 };
 
+/* ================================
+   CONTENT
+================================ */
 const Content = ({
     align = 'right',
     width = '48',
-    contentClasses = 'py-1 bg-[#B3E10F]',
+    contentClasses = '',
     children,
 }: PropsWithChildren<{
     align?: 'left' | 'right';
@@ -62,61 +79,37 @@ const Content = ({
 }>) => {
     const { open, setOpen } = useContext(DropDownContext);
 
-    let alignmentClasses = 'origin-top';
-
-    if (align === 'left') {
-        alignmentClasses = 'ltr:origin-top-left rtl:origin-top-right start-0';
-    } else if (align === 'right') {
-        alignmentClasses = 'ltr:origin-top-right rtl:origin-top-left end-0';
-    }
-
-    let widthClasses = '';
-
-    if (width === '48') {
-        widthClasses = 'w-48';
-    }
+    const alignment =
+        align === 'left'
+            ? 'origin-top-left start-0'
+            : 'origin-top-right end-0';
 
     return (
-        <>
-            <Transition
-                show={open}
-                enter="transition ease-out duration-200"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
-                leave="transition ease-in duration-75"
-                leaveFrom="opacity-100 scale-100"
-                leaveTo="opacity-0 scale-95"
+        <Transition show={open}>
+            <div
+                className={`absolute z-50 mt-2 rounded-md shadow-lg ${alignment} w-48`}
+                onClick={() => setOpen(false)}
             >
-                <div
-                    className={`absolute z-50 mt-2 rounded-md shadow-lg ${alignmentClasses} ${widthClasses}`}
-                    onClick={() => setOpen(false)}
-                >
-                    <div
-                        className={
-                            `rounded-md ring-1 ring-black ring-opacity-5 ` +
-                            contentClasses
-                        }
-                    >
-                        {children}
-                    </div>
+                <div className={`dropdown-content rounded-md ring-1 ring-black ring-opacity-5 ${contentClasses}`}>
+                    {children}
                 </div>
-            </Transition>
-        </>
+            </div>
+        </Transition>
     );
 };
 
+/* ================================
+   LINK DEL DROPDOWN
+================================ */
 const DropdownLink = ({
     className = '',
     children,
     ...props
-}: InertiaLinkProps) => {
+}: InertiaLinkProps & { children: ReactNode }) => {
     return (
         <Link
             {...props}
-            className={
-                'block w-full px-4 py-2 text-start text-sm leading-5 text-black transition duration-150 ease-in-out bg-[#B3E10F] hover:bg-white focus:bg-[#B3E10F] focus:outline-none ' +
-                className
-            }
+            className={`dropdown-link ${className}`}
         >
             {children}
         </Link>

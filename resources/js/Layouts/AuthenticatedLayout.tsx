@@ -15,54 +15,46 @@ export default function Authenticated({
     const user = usePage().props.auth.user;
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
 
-    // Bloquear botón atrás
     useEffect(() => {
         window.history.pushState(null, '', window.location.href);
-        window.onpopstate = function () {
-            window.history.pushState(null, '', window.location.href);
-        };
+        window.onpopstate = () => window.history.pushState(null, '', window.location.href);
     }, []);
 
-    // Recargar al volver desde caché
     useEffect(() => {
-        const handlePageShow = (event: PageTransitionEvent) => {
-            if (event.persisted) {
-                window.location.reload();
-            }
+        const handler = (e: PageTransitionEvent) => {
+            if (e.persisted) window.location.reload();
         };
-        window.addEventListener('pageshow', handlePageShow);
-        return () => window.removeEventListener('pageshow', handlePageShow);
+        window.addEventListener('pageshow', handler);
+        return () => window.removeEventListener('pageshow', handler);
     }, []);
 
-    // ✅ Scroll horizontal con la rueda del mouse (tipado correcto)
     useEffect(() => {
-        const navScroll = document.querySelector('.scrollable-nav') as HTMLElement | null;
-        if (!navScroll) return;
+        const el = document.querySelector('.scrollable-nav') as HTMLElement | null;
+        if (!el) return;
 
-        const handleWheel = (event: WheelEvent) => {
-            if (event.deltaY === 0) return;
-            event.preventDefault();
-            navScroll.scrollLeft += event.deltaY;
+        const wheel = (e: WheelEvent) => {
+            if (e.deltaY === 0) return;
+            e.preventDefault();
+            el.scrollLeft += e.deltaY;
         };
 
-        // 👇 el casteo garantiza que TypeScript reconozca el tipo
-        navScroll.addEventListener('wheel', handleWheel as EventListener, { passive: false });
-        return () => navScroll.removeEventListener('wheel', handleWheel as EventListener);
+        el.addEventListener('wheel', wheel as EventListener, { passive: false });
+        return () => el.removeEventListener('wheel', wheel as EventListener);
     }, []);
 
     return (
-        <div className="min-h-screen flex flex-col bg-[#121212] text-white">
+        <div className={`min-h-screen flex flex-col bg-[#121212] text-white rol-${user.rol}`}>
+
             <nav className="bg-[#121212] border-b border-gray-800">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16 items-center">
-                        {/* Logo */}
+
                         <div className="flex items-center flex-shrink-0">
                             <Link href="/">
                                 <ApplicationLogo className="block h-9 w-auto fill-current text-white" />
                             </Link>
                         </div>
 
-                        {/* ===== MENÚ PRINCIPAL (ESCRITORIO) ===== */}
                         <div
                             className="scrollable-nav hidden lg:flex items-center space-x-4 text-sm font-medium overflow-x-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent max-w-[80vw] px-2"
                             style={{
@@ -121,41 +113,37 @@ export default function Authenticated({
                             )}
                         </div>
 
-                        {/* ===== LADO DERECHO (NOTIFICACIONES + USUARIO) ===== */}
                         <div className="hidden lg:flex items-center space-x-4">
                             <NotificationsBell />
                             <Dropdown>
                                 <Dropdown.Trigger>
-                                    <button className="inline-flex items-center max-w-[150px] rounded-md bg-[#B3E10F] px-3 py-2 text-sm font-semibold text-black hover:bg-lime-400 transition">
+                                    <button className="user-button inline-flex items-center max-w-[150px] rounded-md px-3 py-2 text-sm font-semibold transition">
                                         <span className="truncate block max-w-[100px]" title={user.name}>
                                             {user.name}
                                         </span>
-                                        <svg
-                                            className="ml-2 h-4 w-4 flex-shrink-0"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                        >
+                                        <svg className="ml-2 h-4 w-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                                         </svg>
                                     </button>
                                 </Dropdown.Trigger>
+
                                 <Dropdown.Content>
-                                    <Dropdown.Link href={route('profile.edit')}>Perfil</Dropdown.Link>
-                                    <Dropdown.Link href={route('logout')} method="post" as="button">
+                                    <Dropdown.Link className="dropdown-link" href={route('profile.edit')}>
+                                        Perfil
+                                    </Dropdown.Link>
+
+                                    <Dropdown.Link className="dropdown-link" href={route('logout')} method="post" as="button">
                                         Cerrar sesión
                                     </Dropdown.Link>
                                 </Dropdown.Content>
                             </Dropdown>
                         </div>
 
-                        {/* ===== MENÚ MÓVIL (CAMPANA + HAMBURGUESA) ===== */}
                         <div className="flex items-center lg:hidden space-x-2">
                             <NotificationsBell />
                             <button
                                 onClick={() => setShowingNavigationDropdown(!showingNavigationDropdown)}
-                                className="inline-flex items-center justify-center rounded-md p-2 text-gray-200 hover:bg-gray-800 focus:outline-none transition"
+                                className="inline-flex items-center justify-center rounded-md p-2 text-gray-200 hover:bg-gray-800 transition"
                             >
                                 <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                                     {showingNavigationDropdown ? (
@@ -166,55 +154,57 @@ export default function Authenticated({
                                 </svg>
                             </button>
                         </div>
+
                     </div>
                 </div>
 
-                {/* ===== MENÚ RESPONSIVE (MÓVIL) ===== */}
+                {/* ===== MENÚ RESPONSIVE ===== */}
                 <div className={`${showingNavigationDropdown ? 'block' : 'hidden'} lg:hidden border-t border-gray-700`}>
                     <div className="px-4 py-3 space-y-2 bg-[#1A1A1A]">
-                        <ResponsiveNavLink href={route('dashboard')} active={route().current('dashboard')}>
+
+                        <ResponsiveNavLink className="mobile-link" href={route('dashboard')} active={route().current('dashboard')}>
                             Dashboard
                         </ResponsiveNavLink>
 
                         {user.rol === 'admin' && (
-                            <ResponsiveNavLink href={route('users.index')} active={route().current('users.index')}>
+                            <ResponsiveNavLink className="mobile-link" href={route('users.index')} active={route().current('users.index')}>
                                 Usuarios
                             </ResponsiveNavLink>
                         )}
 
-                        <ResponsiveNavLink href={route('proyectos.index')} active={route().current('proyectos.index')}>
+                        <ResponsiveNavLink className="mobile-link" href={route('proyectos.index')} active={route().current('proyectos.index')}>
                             Proyectos
                         </ResponsiveNavLink>
 
-                        <ResponsiveNavLink href={route('tareas.index')} active={route().current('tareas.index')}>
+                        <ResponsiveNavLink className="mobile-link" href={route('tareas.index')} active={route().current('tareas.index')}>
                             Tablero Kanban
                         </ResponsiveNavLink>
 
-                        <ResponsiveNavLink href={route('calendar')} active={route().current('calendar')}>
+                        <ResponsiveNavLink className="mobile-link" href={route('calendar')} active={route().current('calendar')}>
                             Calendario
                         </ResponsiveNavLink>
 
-                        <ResponsiveNavLink href={route('docs.index')} active={route().current('docs.index')}>
+                        <ResponsiveNavLink className="mobile-link" href={route('docs.index')} active={route().current('docs.index')}>
                             Documentos
                         </ResponsiveNavLink>
 
-                        <ResponsiveNavLink href={route('planos.index')} active={route().current('planos.index')}>
+                        <ResponsiveNavLink className="mobile-link" href={route('planos.index')} active={route().current('planos.index')}>
                             Planos
                         </ResponsiveNavLink>
 
                         {user.rol === 'cliente' && (
-                            <ResponsiveNavLink href={route('avances.index')} active={route().current('avances.index')}>
+                            <ResponsiveNavLink className="mobile-link" href={route('avances.index')} active={route().current('avances.index')}>
                                 Avances Proyecto
                             </ResponsiveNavLink>
                         )}
 
                         {user.rol === 'admin' && (
                             <>
-                                <ResponsiveNavLink href={route('documents.history')} active={route().current('documents.history')}>
+                                <ResponsiveNavLink className="mobile-link" href={route('documents.history')} active={route().current('documents.history')}>
                                     Historial Descargas
                                 </ResponsiveNavLink>
 
-                                <ResponsiveNavLink href={route('auditoria.index')} active={route().current('auditoria.index')}>
+                                <ResponsiveNavLink className="mobile-link" href={route('auditoria.index')} active={route().current('auditoria.index')}>
                                     Auditoría
                                 </ResponsiveNavLink>
                             </>
@@ -224,10 +214,16 @@ export default function Authenticated({
                     <div className="border-t border-gray-700 bg-[#121212] px-4 py-3 space-y-1">
                         <div className="text-sm font-semibold text-white">{user.name}</div>
                         <div className="text-xs text-gray-400 mb-2">{user.email}</div>
-                        <ResponsiveNavLink href={route('profile.edit')}>Perfil</ResponsiveNavLink>
-                        <ResponsiveNavLink method="post" href={route('logout')} as="button">
+
+                        <ResponsiveNavLink href={route('profile.edit')} active={false} className="dropdown-link">
+                            Perfil
+                        </ResponsiveNavLink>
+
+                        <ResponsiveNavLink method="post" href={route('logout')} active={false} className="dropdown-link" as="button">
                             Cerrar sesión
                         </ResponsiveNavLink>
+
+
                     </div>
                 </div>
             </nav>
