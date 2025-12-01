@@ -33,6 +33,8 @@ Route::get('/', function () {
     ]);
 })->name('welcome');
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+Route::get('/dashboard/proyecto/{id}', [DashboardController::class, 'statsProyecto'])
+    ->name('dashboard.statsProyecto');
 
 
 /*

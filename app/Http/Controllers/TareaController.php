@@ -23,14 +23,37 @@ class TareaController extends Controller
      */
     public function index()
     {
-        $proyectos = Proyecto::select('id', 'nombre')->get();
-        $usuarios = [];
+        $user = Auth::user();
+
+        if ($user->rol === 'admin') {
+
+            $proyectos = Proyecto::select('id', 'nombre')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } else {
+
+            $proyectos = Proyecto::select('id', 'nombre')
+                ->where(function ($q) use ($user) {
+                    $q->where('responsable_id', $user->id)
+                        ->orWhere('cliente_id', $user->id)
+                        ->orWhereIn('id', function ($q2) use ($user) {
+                            $q2->select('proyecto_id')
+                                ->from('proyectos_usuarios')
+                                ->where('user_id', $user->id);
+                        });
+                })
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
 
         return Inertia::render('Tareas/Tablero', [
-            'proyectos' => $proyectos,
-            'usuarios' => $usuarios,
+            'proyectos'       => $proyectos,
+            'usuarios'        => [],
+            'ultimoProyecto'  => $proyectos->first()?->id ?? null,
         ]);
     }
+
+
 
     /**
      * Obtiene las tareas y usuarios con permiso "editar" de un proyecto.
@@ -72,26 +95,68 @@ class TareaController extends Controller
             abort(403, 'No tienes permiso para crear tareas.');
         }
 
-        $proyectos = Proyecto::select('id', 'nombre')->get();
+        // Lista de proyectos filtrada
+        if ($user->rol === 'admin') {
+            $proyectos = Proyecto::select('id', 'nombre')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } else {
+            $proyectos = Proyecto::select('id', 'nombre')
+                ->where(function ($q) use ($user) {
+                    $q->where('responsable_id', $user->id)
+                        ->orWhere('cliente_id', $user->id)
+                        ->orWhereIn('id', function ($q2) use ($user) {
+                            $q2->select('proyecto_id')
+                                ->from('proyectos_usuarios')
+                                ->where('user_id', $user->id);
+                        });
+                })
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+
         $usuarios = collect();
+        $responsablePorDefecto = null;
 
         if ($proyecto_id) {
-            $usuarios = DB::table('proyectos_usuarios')
-                ->join('users', 'users.id', '=', 'proyectos_usuarios.user_id')
-                ->where('proyectos_usuarios.proyecto_id', $proyecto_id)
-                ->where('proyectos_usuarios.permiso', 'editar')
-                ->where('users.estado', 'activo')
-                ->where('users.eliminado', 0)
-                ->select('users.id', 'users.name', 'users.email')
-                ->get();
+
+            $proyecto = Proyecto::find($proyecto_id);
+
+            if ($proyecto) {
+
+                // Usuarios con permiso editar del proyecto
+                $usuarios = DB::table('proyectos_usuarios')
+                    ->join('users', 'users.id', '=', 'proyectos_usuarios.user_id')
+                    ->where('proyectos_usuarios.proyecto_id', $proyecto_id)
+                    ->where('proyectos_usuarios.permiso', 'editar')
+                    ->where('users.estado', 'activo')
+                    ->where('users.eliminado', 0)
+                    ->select('users.id', 'users.name', 'users.email')
+                    ->get();
+
+                // PRIORIDAD PARA RESPONSABLE DEFECTO
+                if ($proyecto->responsable_id) {
+                    $responsablePorDefecto = $proyecto->responsable_id;
+                } else {
+                    // creador del proyecto
+                    $responsablePorDefecto = $proyecto->creado_por ?? null;
+                }
+
+                // Si aún no hay, tomar el primer usuario permitido
+                if (!$responsablePorDefecto && $usuarios->count() > 0) {
+                    $responsablePorDefecto = $usuarios->first()->id;
+                }
+            }
         }
 
         return Inertia::render('Tareas/Form', [
             'proyectos' => $proyectos,
-            'usuarios' => $usuarios,
+            'usuarios'  => $usuarios,
             'proyectoSeleccionado' => $proyecto_id,
+            'responsablePorDefecto' => $responsablePorDefecto
         ]);
     }
+
 
     /**
      * Guarda una nueva tarea.

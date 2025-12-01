@@ -113,7 +113,7 @@ class ProyectoController extends Controller
             'archivo_bim' => [
                 'nullable',
                 'file',
-                'max:2097152', // 2 GB en kilobytes
+                'max:2097152',
                 function ($attribute, $value, $fail) {
                     if ($value) {
                         $ext = strtolower($value->getClientOriginalExtension());
@@ -123,7 +123,6 @@ class ProyectoController extends Controller
                     }
                 },
             ],
-
         ], [
             'archivo_bim.max' => 'El archivo BIM no puede superar los 1.5 GB.',
         ]);
@@ -141,31 +140,58 @@ class ProyectoController extends Controller
             return redirect()->back()->with('error', 'El cliente o responsable seleccionado no está activo.');
         }
 
+        // Crear el proyecto
         $proyecto = Proyecto::create([
-            'nombre' => $request->nombre,
-            'cliente_id' => $request->cliente_id,
-            'descripcion' => $request->descripcion,
+            'nombre'         => $request->nombre,
+            'cliente_id'     => $request->cliente_id,
+            'descripcion'    => $request->descripcion,
             'responsable_id' => $request->responsable_id,
-            'fecha_inicio' => $request->fecha_inicio,
-            'estado' => 'activo',
+            'fecha_inicio'   => $request->fecha_inicio,
+            'estado'         => 'activo',
+            'creado_por'     => Auth::id(), // ✔ Guardar creador
         ]);
 
-        // Auditoría creación
-        self::registrarAccionManual("Creó el proyecto '{$proyecto->nombre}' con cliente #{$request->cliente_id} y responsable #{$request->responsable_id}.", 'proyectos', $proyecto->id);
+        // AUDITORÍA
+        self::registrarAccionManual(
+            "Creó el proyecto '{$proyecto->nombre}' con cliente #{$request->cliente_id} y responsable #{$request->responsable_id}.",
+            'proyectos',
+            $proyecto->id
+        );
 
+        // ---------------------------------------------------------------
+        // ✔ REGISTRAR CLIENTE
+        // ---------------------------------------------------------------
         $proyecto->users()->syncWithoutDetaching([
             $request->cliente_id => [
                 'rol_en_proyecto' => 'cliente',
-                'eliminado' => 0
+                'permiso' => 'ninguno',
+                'eliminado' => 0,
             ]
         ]);
 
+        // ---------------------------------------------------------------
+        // ✔ REGISTRAR RESPONSABLE con PERMISO EDITAR
+        // ---------------------------------------------------------------
         $proyecto->users()->syncWithoutDetaching([
             $request->responsable_id => [
                 'rol_en_proyecto' => 'responsable',
-                'eliminado' => 0
+                'permiso' => 'editar', // ✔ CORRECCIÓN
+                'eliminado' => 0,
             ]
         ]);
+
+        // ---------------------------------------------------------------
+        // ✔ REGISTRAR CREADOR DEL PROYECTO con PERMISO EDITAR
+        // ---------------------------------------------------------------
+        $proyecto->users()->syncWithoutDetaching([
+            Auth::id() => [
+                'rol_en_proyecto' => 'creador',
+                'permiso' => 'editar', // ✔ AGREGADO
+                'eliminado' => 0,
+            ]
+        ]);
+
+        // Crear hito inicial
         Hitos::create([
             'proyecto_id' => $proyecto->id,
             'nombre' => 'Proyecto iniciado',
@@ -175,13 +201,17 @@ class ProyectoController extends Controller
             'encargado_id' => Auth::id(),
         ]);
 
-        self::registrarAccionManual("Asignó cliente y responsable al proyecto '{$proyecto->nombre}'.", 'proyectos_usuarios', $proyecto->id);
+        self::registrarAccionManual(
+            "Asignó cliente, responsable y creador al proyecto '{$proyecto->nombre}'.",
+            'proyectos_usuarios',
+            $proyecto->id
+        );
 
         // -----------------------------------------------------------
-        // NOTIFICACIONES AL CREAR PROYECTO
+        // NOTIFICACIONES
         // -----------------------------------------------------------
 
-        // Notificar al responsable
+        // Notificar responsable
         NotificationService::send(
             $request->responsable_id,
             "Se te ha asignado el proyecto: {$proyecto->nombre}",
@@ -190,7 +220,7 @@ class ProyectoController extends Controller
             "Asignación de proyecto"
         );
 
-        // Notificar al cliente
+        // Notificar cliente
         NotificationService::send(
             $request->cliente_id,
             "Tu proyecto '{$proyecto->nombre}' ha sido creado correctamente.",
@@ -202,6 +232,7 @@ class ProyectoController extends Controller
         // Si hay archivo BIM
         if ($request->hasFile('archivo_bim')) {
             $path = $request->file('archivo_bim')->store('planos_bim', 'public');
+
             PlanoBim::create([
                 'proyecto_id' => $proyecto->id,
                 'nombre' => $request->file('archivo_bim')->getClientOriginalName(),
@@ -210,9 +241,12 @@ class ProyectoController extends Controller
                 'subido_por' => Auth::id(),
             ]);
 
-            self::registrarAccionManual("Subió archivo BIM inicial del proyecto '{$proyecto->nombre}'.", 'planos_bim', $proyecto->id);
+            self::registrarAccionManual(
+                "Subió archivo BIM inicial del proyecto '{$proyecto->nombre}'.",
+                'planos_bim',
+                $proyecto->id
+            );
 
-            // Notificar subida de archivo BIM
             NotificationService::sendToMany(
                 [$request->responsable_id, $request->cliente_id],
                 "Se ha subido el primer archivo BIM del proyecto '{$proyecto->nombre}'.",
@@ -222,8 +256,10 @@ class ProyectoController extends Controller
             );
         }
 
-        return redirect()->route('proyectos.index')->with('success', 'Proyecto creado correctamente.');
+        return redirect()->route('proyectos.index')
+            ->with('success', 'Proyecto creado correctamente.');
     }
+
 
     public function show($id)
     {
@@ -596,10 +632,10 @@ class ProyectoController extends Controller
             abort(403, 'No tienes permiso para gestionar este proyecto.');
         }
 
-        $usuarios = User::whereIn('rol', ['arquitecto', 'ingeniero'])
+        $usuarios = User::where('estado', 'activo')
+            ->where('eliminado', 0)
             ->where('id', '!=', $proyecto->responsable_id)
-            ->where('estado', 'activo')
-            ->select('id', 'name', 'email')
+            ->select('id', 'name', 'email', 'rol')
             ->get();
 
         $asignaciones = DB::table('proyectos_usuarios')
@@ -630,6 +666,10 @@ class ProyectoController extends Controller
         ]);
 
         foreach ($request->permisos as $permiso) {
+            // NO PERMITIR QUITARLE PERMISOS AL RESPONSABLE DEL PROYECTO
+            if ($permiso['user_id'] == $proyecto->responsable_id) {
+                continue;
+            }
             $actual = DB::table('proyectos_usuarios')
                 ->where('proyecto_id', $proyecto->id)
                 ->where('user_id', $permiso['user_id'])

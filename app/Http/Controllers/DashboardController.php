@@ -15,117 +15,132 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    private function baseStats(): array
+    {
+        return [
+            'totalProyectos'       => 0,
+            'proyectosActivos'     => 0,
+            'proyectosProgreso'    => 0,
+            'proyectosFinalizados' => 0,
+
+            'documentosPDF'   => 0,
+            'documentosExcel' => 0,
+            'documentosWord'  => 0,
+            'documentosURL'   => 0,
+
+            'usuariosTotales' => 0,
+
+            'auditoriaSemana' => 0,
+            'auditoriaDias'   => [],
+
+            'tareasBaja'        => 0,
+            'tareasMedia'       => 0,
+            'tareasAlta'        => 0,
+            'tareasPendientes'  => 0,
+            'tareasEnProgreso'  => 0,
+            'tareasCompletadas' => 0,
+        ];
+    }
+
     public function index()
     {
         $user = Auth::user();
-        $rol = $user->rol;
+        $rol  = $user->rol;
 
-        /* ==========================================================
-           ESTADÍSTICAS GENERALES
-        ========================================================== */
-        $totalProyectos       = Proyecto::count();
-        $proyectosActivos     = Proyecto::where('estado', 'activo')->count();
-        $proyectosProgreso    = Proyecto::where('estado', 'en progreso')->count();
-        $proyectosFinalizados = Proyecto::where('estado', 'finalizado')->count();
+        $stats = $this->baseStats();
 
-        $documentosPDF   = Documento::where('tipo', 'PDF')->count();
-        $documentosExcel = Documento::where('tipo', 'Excel')->count();
-        $documentosWord  = Documento::where('tipo', 'Word')->count();
-        $documentosURL   = Documento::where('tipo', 'URL')->count();
+        if ($rol === 'admin') {
+            $stats['totalProyectos']       = Proyecto::count();
+            $stats['proyectosActivos']     = Proyecto::where('estado', 'activo')->count();
+            $stats['proyectosProgreso']    = Proyecto::where('estado', 'en progreso')->count();
+            $stats['proyectosFinalizados'] = Proyecto::where('estado', 'finalizado')->count();
 
-        $usuariosTotales = User::count();
+            $stats['documentosPDF']   = Documento::where('tipo', 'PDF')->count();
+            $stats['documentosExcel'] = Documento::where('tipo', 'Excel')->count();
+            $stats['documentosWord']  = Documento::where('tipo', 'Word')->count();
+            $stats['documentosURL']   = Documento::where('tipo', 'URL')->count();
 
-        $tareasBaja  = Tarea::where('prioridad', 'baja')->count();
-        $tareasMedia = Tarea::where('prioridad', 'media')->count();
-        $tareasAlta  = Tarea::where('prioridad', 'alta')->count();
+            $stats['usuariosTotales'] = User::count();
 
-        $tareasPendientes = Tarea::where('estado', 'pendiente')->count();
+            $stats['tareasPendientes']  = Tarea::where('estado', 'pendiente')->count();
+            $stats['tareasEnProgreso']  = Tarea::where('estado', 'en progreso')->count();
+            $stats['tareasCompletadas'] = Tarea::where('estado', 'completado')->count();
 
-        $auditoriaSemana = AuditoriaLog::whereBetween(
-            'fecha_accion',
-            [now()->subDays(7), now()]
-        )->count();
+            $stats['tareasBaja']  = Tarea::where('prioridad', 'baja')->count();
+            $stats['tareasMedia'] = Tarea::where('prioridad', 'media')->count();
+            $stats['tareasAlta']  = Tarea::where('prioridad', 'alta')->count();
 
-        /* ==========================================================
-           AUDITORÍA POR DÍA (ÚLTIMOS 7 DÍAS)
-        ========================================================== */
-        $auditoriaDias = AuditoriaLog::select(
+            $stats['auditoriaSemana'] = AuditoriaLog::whereBetween(
+                'fecha_accion',
+                [now()->subDays(7), now()]
+            )->count();
+
+            $auditoriaDias = AuditoriaLog::select(
                 DB::raw('DATE(fecha_accion) as fecha'),
                 DB::raw('COUNT(*) as total')
             )
-            ->where('fecha_accion', '>=', Carbon::now()->subDays(6)->startOfDay())
-            ->groupBy('fecha')
-            ->orderBy('fecha', 'ASC')
-            ->get()
-            ->map(fn($r) => [
-                'fecha' => Carbon::parse($r->fecha)->format('d/m'),
-                'total' => $r->total
-            ]);
+                ->groupBy('fecha')
+                ->orderBy('fecha', 'ASC')
+                ->get();
 
-        /* Forzar días faltantes a "0" */
-        $auditoriaDiasCompleto = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $dia = Carbon::now()->subDays($i)->format('d/m');
-            $valor = $auditoriaDias->firstWhere('fecha', $dia)['total'] ?? 0;
-            $auditoriaDiasCompleto[] = [
-                'fecha' => $dia,
-                'total' => $valor
-            ];
-        }
-
-        /* ==========================================================
-           PROYECTOS MOSTRADOS EN TARJETAS
-        ========================================================== */
-        if ($rol === 'admin') {
-            $proyectosListado = Proyecto::with([
-                'responsable:id,name,apellido',
-                'cliente:id,name,apellido'
-            ])
-            ->latest()
-            ->take(12)
-            ->get()
-            ->map(fn($p) => [
-                'id'          => $p->id,
-                'nombre'      => $p->nombre,
-                'responsable' => $p->responsable ? $p->responsable->name : null,
-                'cliente'     => $p->cliente ? $p->cliente->name : null,
+            $stats['auditoriaDias'] = $auditoriaDias->map(fn($d) => [
+                'fecha' => Carbon::parse($d->fecha)->format('d/m'),
+                'total' => $d->total,
             ]);
         } else {
-            $proyectosListado = Proyecto::where('responsable_id', $user->id)
+            $misProyectosIds = Proyecto::where('responsable_id', $user->id)
                 ->orWhere('cliente_id', $user->id)
-                ->with(['responsable:id,name', 'cliente:id,name'])
-                ->take(12)
-                ->get()
-                ->map(fn($p) => [
-                    'id'          => $p->id,
-                    'nombre'      => $p->nombre,
-                    'responsable' => $p->responsable ? $p->responsable->name : null,
-                    'cliente'     => $p->cliente ? $p->cliente->name : null,
-                ]);
+                ->pluck('id');
+
+            $baseTareas = Tarea::whereIn('proyecto_id', $misProyectosIds);
+
+            $stats['tareasPendientes']  = (clone $baseTareas)->where('estado', 'pendiente')->count();
+            $stats['tareasEnProgreso']  = (clone $baseTareas)->where('estado', 'en progreso')->count();
+            $stats['tareasCompletadas'] = (clone $baseTareas)->where('estado', 'completado')->count();
+
+            $stats['tareasBaja']  = (clone $baseTareas)->where('prioridad', 'baja')->count();
+            $stats['tareasMedia'] = (clone $baseTareas)->where('prioridad', 'media')->count();
+            $stats['tareasAlta']  = (clone $baseTareas)->where('prioridad', 'alta')->count();
+
+            $stats['documentosPDF'] = Documento::whereIn('proyecto_id', $misProyectosIds)
+                ->where('tipo', 'PDF')->count();
+            $stats['documentosExcel'] = Documento::whereIn('proyecto_id', $misProyectosIds)
+                ->where('tipo', 'Excel')->count();
+            $stats['documentosWord'] = Documento::whereIn('proyecto_id', $misProyectosIds)
+                ->where('tipo', 'Word')->count();
+            $stats['documentosURL'] = Documento::whereIn('proyecto_id', $misProyectosIds)
+                ->where('tipo', 'URL')->count();
         }
 
-        /* ==========================================================
-           DATOS ESPECÍFICOS POR ROL
-        ========================================================== */
+        if ($rol === 'admin') {
+            $proyectos = Proyecto::with(['responsable:id,name', 'cliente:id,name'])
+                ->latest()
+                ->take(12)
+                ->get();
+        } else {
+            $proyectos = Proyecto::where('responsable_id', $user->id)
+                ->orWhere('cliente_id', $user->id)
+                ->get();
+        }
+
         $rolData = match ($rol) {
             'admin' => [
-                'usuariosActivos'        => User::where('estado', 'activo')->count(),
-                'proyectosFinalizados'   => $proyectosFinalizados,
-                'descargasDocumentos'    => Documento::count(), // reemplazar si llevas tabla descargas
+                'usuariosActivos'       => User::where('estado', 'activo')->count(),
+                'proyectosFinalizados'  => Proyecto::where('estado', 'finalizado')->count(),
+                'descargasDocumentos'   => Documento::count(),
             ],
-
             'arquitecto' => [
                 'proyectosDiseño' => Proyecto::where('responsable_id', $user->id)->count(),
                 'tareasActivas'   => Tarea::where('asignado_id', $user->id)->count(),
                 'planosSubidos'   => Documento::where('subido_por', $user->id)->count(),
             ],
-
             'ingeniero' => [
                 'hitosAsignados'       => Tarea::where('asignado_id', $user->id)->count(),
                 'proyectosTecnicos'    => Proyecto::where('responsable_id', $user->id)->count(),
-                'reunionesProgramadas' => Meeting::count(),
+                'reunionesProgramadas' => Meeting::where('creador_id', $user->id)
+                    ->where('eliminado', 0)
+                    ->count(),
             ],
-
             'cliente' => [
                 'misProyectos'        => Proyecto::where('cliente_id', $user->id)->count(),
                 'documentosRecibidos' => Documento::whereIn(
@@ -133,40 +148,73 @@ class DashboardController extends Controller
                     Proyecto::where('cliente_id', $user->id)->pluck('id')
                 )->count(),
             ],
-
-            default => []
         };
 
-        /* ==========================================================
-           RETORNAR A VISTA
-        ========================================================== */
         return Inertia::render('Dashboard', [
-            'user'    => $user,
-            'rol'     => $rol,
-            'stats'   => [
-                'totalProyectos'       => $totalProyectos,
-                'proyectosActivos'     => $proyectosActivos,
-                'proyectosProgreso'    => $proyectosProgreso,
-                'proyectosFinalizados' => $proyectosFinalizados,
-
-                'documentosPDF'   => $documentosPDF,
-                'documentosExcel' => $documentosExcel,
-                'documentosWord'  => $documentosWord,
-                'documentosURL'   => $documentosURL,
-
-                'usuariosTotales'   => $usuariosTotales,
-                'tareasPendientes'  => $tareasPendientes,
-                'auditoriaSemana'   => $auditoriaSemana,
-
-                'tareasBaja'  => $tareasBaja,
-                'tareasMedia' => $tareasMedia,
-                'tareasAlta'  => $tareasAlta,
-
-                'auditoriaDias' => $auditoriaDiasCompleto,
-            ],
-
-            'proyectos' => $proyectosListado,
+            'user'      => $user,
+            'rol'       => $rol,
+            'stats'     => $stats,
+            'proyectos' => $proyectos,
             'rolData'   => $rolData,
         ]);
+    }
+
+    public function statsProyecto($proyectoId)
+    {
+        $user = Auth::user();
+        $rol  = $user->rol;
+
+        $proyecto = Proyecto::findOrFail($proyectoId);
+
+        if (
+            $rol !== 'admin' &&
+            $proyecto->responsable_id !== $user->id &&
+            $proyecto->cliente_id !== $user->id
+        ) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        $stats = $this->baseStats();
+
+        $baseTareas = Tarea::where('proyecto_id', $proyectoId);
+
+        $stats['tareasPendientes']  = (clone $baseTareas)->where('estado', 'pendiente')->count();
+        $stats['tareasEnProgreso']  = (clone $baseTareas)->where('estado', 'en progreso')->count();
+        $stats['tareasCompletadas'] = (clone $baseTareas)->where('estado', 'completado')->count();
+
+        $stats['tareasBaja']  = (clone $baseTareas)->where('prioridad', 'baja')->count();
+        $stats['tareasMedia'] = (clone $baseTareas)->where('prioridad', 'media')->count();
+        $stats['tareasAlta']  = (clone $baseTareas)->where('prioridad', 'alta')->count();
+
+        $stats['documentosPDF'] = Documento::where('proyecto_id', $proyectoId)
+            ->where('tipo', 'PDF')->count();
+        $stats['documentosExcel'] = Documento::where('proyecto_id', $proyectoId)
+            ->where('tipo', 'Excel')->count();
+        $stats['documentosWord'] = Documento::where('proyecto_id', $proyectoId)
+            ->where('tipo', 'Word')->count();
+        $stats['documentosURL'] = Documento::where('proyecto_id', $proyectoId)
+            ->where('tipo', 'URL')->count();
+
+        if ($rol === 'admin') {
+            $stats['auditoriaSemana'] = AuditoriaLog::where('proyecto_id', $proyectoId)
+                ->whereBetween('fecha_accion', [now()->subDays(7), now()])
+                ->count();
+
+            $dias = AuditoriaLog::select(
+                DB::raw('DATE(fecha_accion) as fecha'),
+                DB::raw('COUNT(*) as total')
+            )
+                ->where('proyecto_id', $proyectoId)
+                ->groupBy('fecha')
+                ->orderBy('fecha', 'ASC')
+                ->get();
+
+            $stats['auditoriaDias'] = $dias->map(fn($d) => [
+                'fecha' => Carbon::parse($d->fecha)->format('d/m'),
+                'total' => $d->total,
+            ]);
+        }
+
+        return response()->json(['stats' => $stats]);
     }
 }
