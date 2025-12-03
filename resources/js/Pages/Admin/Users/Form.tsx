@@ -56,6 +56,7 @@ export default function UserForm({ isEdit = false }: { isEdit?: boolean }) {
 
         try {
             const response = await axios.post('/users/verificar-duplicado', {
+                id: isEdit ? user.id : null,  
                 email: data.email,
                 telefono: data.telefono,
             });
@@ -79,6 +80,7 @@ export default function UserForm({ isEdit = false }: { isEdit?: boolean }) {
             setErrorMsg("Ocurrió un error al verificar los datos.");
         }
     };
+
 
     const isSelf = isEdit && auth.user.id === user?.id;
 

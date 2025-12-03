@@ -143,10 +143,15 @@ class UserController extends Controller
     {
         $email = $request->input('email');
         $telefono = $request->input('telefono');
+        $id = $request->input('id'); // id del usuario en edición
 
-        $emailExiste = User::where('email', $email)->exists();
+        $emailExiste = User::where('email', $email)
+            ->where('id', '!=', $id)
+            ->exists();
+
         $telefonoExiste = User::where('telefono', $telefono)
             ->whereNotNull('telefono')
+            ->where('id', '!=', $id)
             ->exists();
 
         return response()->json([
