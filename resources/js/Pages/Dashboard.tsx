@@ -232,7 +232,17 @@ export default function Dashboard() {
     return (
         <AuthenticatedLayout>
             <Head title="Dashboard" />
-
+ {/* Bienvenida personalizada */}
+        <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 mt-6">
+            <div className="bg-gray-900 p-4 rounded-xl border border-gray-700 text-white">
+                <h1 className="text-2xl font-bold" style={{ color: "var(--accent)" }}>
+                    Bienvenido, {user?.name}
+                </h1>
+                <p className="text-gray-400 text-sm mt-1">
+                    Rol asignado: <span className="font-semibold text-[var(--accent)]">{rol}</span>
+                </p>
+            </div>
+        </div>
             <div ref={containerRef} className={`min-h-screen bg-[#121212] ${"rol-" + rol}`}>
                 <div className="py-12">
                     <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
