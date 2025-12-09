@@ -9,11 +9,9 @@ export default function Tablero() {
     const url = usePage().url;
     const params = new URLSearchParams(url.split("?")[1] || "");
     const proyectoFromUrl = params.get("proyecto_id");
-
     const initialProjectId = proyectoFromUrl || ultimoProyecto || null;
 
     const [proyectoSeleccionado, setProyectoSeleccionado] = useState(initialProjectId);
-
     const [usuarios, setUsuarios] = useState<any[]>([]);
     const [tareas, setTareas] = useState<any[]>([]);
     const [usuarioFiltro, setUsuarioFiltro] = useState("todos");
@@ -34,7 +32,6 @@ export default function Tablero() {
     // ============================================================
     useEffect(() => {
         if (!proyectoSeleccionado) return;
-
         fetch(`/tareas/proyecto/${proyectoSeleccionado}`)
             .then((res) => res.json())
             .then((data) => {
@@ -56,16 +53,22 @@ export default function Tablero() {
     // ============================================================
     // ▶ MANEJO DE DRAG & DROP
     // ============================================================
-    const onDrop = (_e: any, nuevoEstado: string) => {
-        if (!dragged) return;
+    const onDragStart = (e: React.DragEvent<HTMLDivElement>, tarea: any) => {
+        setDragged(tarea);
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", tarea.id.toString());
+    };
 
-        const tareaId = dragged.id;
-        const estadoAnterior = dragged.estado;
+    const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+    };
+
+    const cambiarEstado = (tarea: any, nuevoEstado: string) => {
+        const tareaId = tarea.id;
+        const estadoAnterior = tarea.estado;
 
         setTareas((prev) =>
-            prev.map((t) =>
-                t.id === tareaId ? { ...t, estado: nuevoEstado } : t
-            )
+            prev.map((t) => (t.id === tareaId ? { ...t, estado: nuevoEstado } : t))
         );
 
         router.patch(
@@ -76,15 +79,18 @@ export default function Tablero() {
                 onError: () => {
                     setTareas((prev) =>
                         prev.map((t) =>
-                            t.id === tareaId
-                                ? { ...t, estado: estadoAnterior }
-                                : t
+                            t.id === tareaId ? { ...t, estado: estadoAnterior } : t
                         )
                     );
                 },
             }
         );
+    };
 
+    const onDrop = (e: React.DragEvent<HTMLDivElement>, nuevoEstado: string) => {
+        e.preventDefault();
+        if (!dragged) return;
+        cambiarEstado(dragged, nuevoEstado);
         setDragged(null);
     };
 
@@ -95,7 +101,6 @@ export default function Tablero() {
         setTareaSeleccionada(tarea);
         setMostrarModal(true);
         setHistorial([]);
-
         fetch(`/tareas/${tarea.id}/historial`)
             .then((res) => res.json())
             .then((data) => setHistorial(data));
@@ -119,7 +124,6 @@ export default function Tablero() {
         p.nombre.toLowerCase().includes(busquedaProyecto.toLowerCase())
     );
 
-    // cerrar dropdown si se hace click fuera
     useEffect(() => {
         const close = (e: MouseEvent) => {
             const target = e.target as HTMLElement;
@@ -136,30 +140,19 @@ export default function Tablero() {
     // ============================================================
     return (
         <AuthenticatedLayout
-            header={
-                <h2 className="text-xl font-semibold text-white">
-                    Tablero Kanban
-                </h2>
-            }
+            header={<h2 className="text-xl font-semibold text-white">Tablero Kanban</h2>}
         >
             <Head title="DEVELARQ | Tablero Kanban" />
 
             <div className="flex justify-center mt-10 px-2 sm:px-4">
                 <div className="w-full max-w-7xl bg-[#0B1120] rounded-lg shadow-lg p-6 text-white border border-gray-800 overflow-x-auto">
                     
-                    {/* ===========================
-                        HEADER
-                    =========================== */}
+                    {/* HEADER */}
                     <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
-                        
                         <div className="flex flex-col sm:flex-row space-x-0 sm:space-x-4 w-full sm:w-auto gap-4">
-
                             {/* COMBO PROYECTO */}
                             <div className="relative combo-proyecto w-64">
-                                <label className="text-[#B3E10F] font-semibold">
-                                    Proyecto:
-                                </label>
-
+                                <label className="text-[#B3E10F] font-semibold">Proyecto:</label>
                                 <div
                                     onClick={() => setOpenProyecto(!openProyecto)}
                                     className="bg-[#080D15] border border-gray-600 rounded-lg p-2 mt-1 cursor-pointer flex justify-between items-center"
@@ -167,30 +160,14 @@ export default function Tablero() {
                                     <span>
                                         {
                                             proyectos.find(
-                                                (p: any) =>
-                                                    String(p.id) ===
-                                                    String(proyectoSeleccionado)
-                                            )?.nombre || 
-                                            "Selecciona un proyecto..."
+                                                (p: any) => String(p.id) === String(proyectoSeleccionado)
+                                            )?.nombre || "Selecciona un proyecto..."
                                         }
                                     </span>
-
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className="w-4 h-4 text-gray-400"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M19 9l-7 7-7-7"
-                                        />
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                                     </svg>
                                 </div>
-
                                 {openProyecto && (
                                     <div className="absolute z-50 bg-[#0B1120] border border-gray-700 rounded-lg mt-1 w-full shadow-xl">
                                         <input
@@ -198,44 +175,28 @@ export default function Tablero() {
                                             placeholder="Buscar proyecto..."
                                             className="w-full px-3 py-2 bg-gray-800 text-gray-200 border-b border-gray-700 text-sm"
                                             value={busquedaProyecto}
-                                            onChange={(e) =>
-                                                setBusquedaProyecto(
-                                                    e.target.value
-                                                )
-                                            }
+                                            onChange={(e) => setBusquedaProyecto(e.target.value)}
                                         />
-
                                         {proyectosFiltrados.length ? (
-                                            proyectosFiltrados.map(
-                                                (p: any) => (
-                                                    <div
-                                                        key={p.id}
-                                                        onClick={() => {
-                                                            setProyectoSeleccionado(
-                                                                p.id
-                                                            );
-                                                            setOpenProyecto(
-                                                                false
-                                                            );
-                                                            setBusquedaProyecto(
-                                                                ""
-                                                            );
-                                                        }}
-                                                        className={`px-3 py-2 cursor-pointer text-sm ${
-                                                            p.id ==
-                                                            proyectoSeleccionado
-                                                                ? "bg-[#2970E8] text-white"
-                                                                : "hover:bg-[#1f5dc0] text-gray-200"
-                                                        }`}
-                                                    >
-                                                        {p.nombre}
-                                                    </div>
-                                                )
-                                            )
+                                            proyectosFiltrados.map((p: any) => (
+                                                <div
+                                                    key={p.id}
+                                                    onClick={() => {
+                                                        setProyectoSeleccionado(p.id);
+                                                        setOpenProyecto(false);
+                                                        setBusquedaProyecto("");
+                                                    }}
+                                                    className={`px-3 py-2 cursor-pointer text-sm ${
+                                                        p.id == proyectoSeleccionado
+                                                            ? "bg-[#2970E8] text-white"
+                                                            : "hover:bg-[#1f5dc0] text-gray-200"
+                                                    }`}
+                                                >
+                                                    {p.nombre}
+                                                </div>
+                                            ))
                                         ) : (
-                                            <div className="px-3 py-2 text-gray-500 text-sm">
-                                                Sin resultados
-                                            </div>
+                                            <div className="px-3 py-2 text-gray-500 text-sm">Sin resultados</div>
                                         )}
                                     </div>
                                 )}
@@ -243,23 +204,15 @@ export default function Tablero() {
 
                             {/* RESPONSABLE */}
                             <div>
-                                <label className="text-[#B3E10F] font-semibold">
-                                    Responsable:
-                                </label>
-
+                                <label className="text-[#B3E10F] font-semibold">Responsable:</label>
                                 <select
                                     className="bg-[#080D15] border border-gray-600 rounded-lg p-2 text-white text-sm w-full sm:w-auto mt-1"
                                     value={usuarioFiltro}
-                                    onChange={(e) =>
-                                        setUsuarioFiltro(e.target.value)
-                                    }
+                                    onChange={(e) => setUsuarioFiltro(e.target.value)}
                                 >
                                     <option value="todos">Todos</option>
-
                                     {usuarios.map((u: any) => (
-                                        <option key={u.id} value={u.id}>
-                                            {u.name}
-                                        </option>
+                                        <option key={u.id} value={u.id}>{u.name}</option>
                                     ))}
                                 </select>
                             </div>
@@ -268,9 +221,7 @@ export default function Tablero() {
                         {/* BOTÓN CREAR */}
                         {proyectoSeleccionado && isEmployee && (
                             <Link
-                                href={route("tareas.create", {
-                                    proyecto_id: proyectoSeleccionado,
-                                })}
+                                href={route("tareas.create", { proyecto_id: proyectoSeleccionado })}
                                 className="bg-[#B3E10F] text-gray-900 px-4 py-2 rounded-md font-bold hover:bg-lime-300 mt-4 sm:mt-0"
                             >
                                 Crear Tarea
@@ -278,135 +229,85 @@ export default function Tablero() {
                         )}
                     </div>
 
-                    {/* ===========================
-                        KANBAN GRID
-                    =========================== */}
+                    {/* KANBAN GRID */}
                     {proyectoSeleccionado ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-
                             {columnas.map((col) => (
                                 <div
                                     key={col}
-                                    onDragOver={(e) => e.preventDefault()}
+                                    onDragOver={onDragOver}
                                     onDrop={(e) => onDrop(e, col)}
                                     className="bg-[#0B1120] border border-gray-700 p-4 rounded-xl min-h-[460px]"
                                 >
-                                    <h3 className="text-center text-[#B3E10F] font-semibold capitalize mb-3">
-                                        {col}
-                                    </h3>
+                                    <h3 className="text-center text-[#B3E10F] font-semibold capitalize mb-3">{col}</h3>
+                                    {tareasFiltradas.filter((t) => t.estado === col).map((t) => (
+                                        <div
+                                            key={t.id}
+                                            draggable
+                                            onDragStart={(e) => onDragStart(e, t)}
+                                            className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-3 cursor-grab shadow hover:shadow-[#2970E8]"
+                                        >
+                                            <p className="font-semibold text-[#2970E8]">{t.titulo}</p>
+                                            <p className="text-sm text-gray-400">{t.descripcion}</p>
+                                            <div className="text-xs text-gray-500 mt-2">
+                                                <p><strong>Prioridad:</strong> {t.prioridad}</p>
+                                                <p><strong>Fecha límite:</strong> {t.fecha_limite}</p>
+                                                <p><strong>Responsable:</strong> {t.asignado?.name ?? "Sin asignar"}</p>
+                                            </div>
 
-                                    {tareasFiltradas
-                                        .filter((t) => t.estado === col)
-                                        .map((t) => (
-                                            <div
-                                                key={t.id}
-                                                draggable
-                                                onDragStart={() =>
-                                                    setDragged(t)
-                                                }
-                                                className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-3 cursor-grab shadow hover:shadow-[#2970E8]"
-                                            >
-                                                <p className="font-semibold text-[#2970E8]">
-                                                    {t.titulo}
-                                                </p>
-
-                                                <p className="text-sm text-gray-400">
-                                                    {t.descripcion}
-                                                </p>
-
-                                                <div className="text-xs text-gray-500 mt-2">
-                                                    <p>
-                                                        <strong>Prioridad:</strong>{" "}
-                                                        {t.prioridad}
-                                                    </p>
-                                                    <p>
-                                                        <strong>Fecha límite:</strong>{" "}
-                                                        {t.fecha_limite}
-                                                    </p>
-                                                    <p>
-                                                        <strong>Responsable:</strong>{" "}
-                                                        {t.asignado?.name ??
-                                                            "Sin asignar"}
-                                                    </p>
-                                                </div>
-
+                                            <div className="flex justify-between mt-3 gap-2">
                                                 <button
-                                                    onClick={() =>
-                                                        verHistorial(t)
-                                                    }
-                                                    className="text-xs text-[#B3E10F] underline mt-3"
+                                                    onClick={() => verHistorial(t)}
+                                                    className="text-xs text-[#B3E10F] underline"
                                                 >
                                                     Ver historial
                                                 </button>
+
+                                                {/* BOTÓN PARA CAMBIAR ESTADO */}
+                                                <select
+                                                    value={t.estado}
+                                                    onChange={(e) => cambiarEstado(t, e.target.value)}
+                                                    className="bg-gray-700 text-xs text-white px-4 py-1 rounded"
+                                                >
+                                                    {columnas.map((c) => (
+                                                        <option key={c} value={c}>{c}</option>
+                                                    ))}
+                                                </select>
                                             </div>
-                                        ))}
+                                        </div>
+                                    ))}
                                 </div>
                             ))}
-
                         </div>
                     ) : (
-                        <p className="text-gray-400 text-center mt-20">
-                            Selecciona un proyecto para ver su tablero.
-                        </p>
+                        <p className="text-gray-400 text-center mt-20">Selecciona un proyecto para ver su tablero.</p>
                     )}
 
-                    {/* ===========================
-                        MODAL HISTORIAL
-                    =========================== */}
+                    {/* MODAL HISTORIAL */}
                     {mostrarModal && (
                         <div className="fixed inset-0 bg-black/70 z-50 flex justify-center items-center">
                             <div className="bg-[#0B1120] border border-gray-700 rounded-xl p-6 w-full max-w-lg">
-
-                                <h2 className="text-xl font-bold text-[#2970E8] mb-4">
-                                    Historial — {tareaSeleccionada?.titulo}
-                                </h2>
-
+                                <h2 className="text-xl font-bold text-[#2970E8] mb-4">Historial — {tareaSeleccionada?.titulo}</h2>
                                 {historial.length ? (
                                     <ul className="space-y-3 max-h-[320px] overflow-y-auto pr-2">
                                         {historial.map((h: any) => (
-                                            <li
-                                                key={h.id}
-                                                className="bg-gray-800 border border-gray-700 p-3 rounded-lg text-sm"
-                                            >
+                                            <li key={h.id} className="bg-gray-800 border border-gray-700 p-3 rounded-lg text-sm">
                                                 <p>
-                                                    <span className="text-[#B3E10F] font-semibold">
-                                                        {h.usuario?.name ??
-                                                            "Desconocido"}
-                                                    </span>{" "}
-                                                    cambió de{" "}
-                                                    {h.estado_anterior} a{" "}
-                                                    <span className="text-[#2970E8]">
-                                                        {h.estado_nuevo}
-                                                    </span>
+                                                    <span className="text-[#B3E10F] font-semibold">{h.usuario?.name ?? "Desconocido"}</span> cambió de {h.estado_anterior} a <span className="text-[#2970E8]">{h.estado_nuevo}</span>
                                                 </p>
-
-                                                <p className="text-gray-500 text-xs mt-1">
-                                                    {new Date(
-                                                        h.fecha_cambio
-                                                    ).toLocaleString()}
-                                                </p>
+                                                <p className="text-gray-500 text-xs mt-1">{new Date(h.fecha_cambio).toLocaleString()}</p>
                                             </li>
                                         ))}
                                     </ul>
                                 ) : (
-                                    <p className="text-gray-400">
-                                        Sin registros aún.
-                                    </p>
+                                    <p className="text-gray-400">Sin registros aún.</p>
                                 )}
-
                                 <div className="flex justify-end mt-5">
-                                    <button
-                                        onClick={cerrarModal}
-                                        className="bg-red-700 px-4 py-2 rounded text-white hover:bg-red-600"
-                                    >
-                                        Cerrar
-                                    </button>
+                                    <button onClick={cerrarModal} className="bg-red-700 px-4 py-2 rounded text-white hover:bg-red-600">Cerrar</button>
                                 </div>
-
                             </div>
                         </div>
                     )}
-
                 </div>
             </div>
         </AuthenticatedLayout>
