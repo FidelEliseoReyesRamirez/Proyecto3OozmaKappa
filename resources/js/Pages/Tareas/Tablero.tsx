@@ -267,7 +267,7 @@ export default function Tablero() {
                                                 <select
                                                     value={t.estado}
                                                     onChange={(e) => cambiarEstado(t, e.target.value)}
-                                                    className="bg-gray-700 text-xs text-white px-4 py-1 rounded"
+                                                    className="bg-gray-700 text-xs text-white px-6 py-1 rounded"
                                                 >
                                                     {columnas.map((c) => (
                                                         <option key={c} value={c}>{c}</option>
