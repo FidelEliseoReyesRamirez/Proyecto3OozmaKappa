@@ -14,10 +14,11 @@ use App\Models\DescargaHistorial;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Services\FbxConverterService;
-
+use App\Traits\RegistraAuditoria;
 
 class PlanoController extends Controller
 {
+    use RegistraAuditoria;
     /**
      * Muestra la lista de planos BIM filtrados por rol y proyectos asociados.
      */
@@ -241,14 +242,8 @@ else {
                 'subido_por'    => Auth::id(),
             ]);
 
-            AuditoriaLog::create([
-                'user_id' => Auth::id(),
-                'accion' => "Creó un nuevo plano BIM: {$planoBim->nombre}",
-                'tabla_afectada' => 'planos_bim',
-                'id_registro_afectado' => $planoBim->id,
-                'fecha_accion' => now(),
-                'eliminado' => 0,
-            ]);
+      self::registrarAccionManual("Creó un nuevo plano BIM: {$planoBim->nombre}", 'planos_bim', $planoBim->id);
+
 
             return redirect()->route('planos.index')
                 ->with('success', 'Plano BIM registrado correctamente.');
@@ -407,14 +402,8 @@ else {
 
             $plano->update($updateData);
 
-            AuditoriaLog::create([
-                'user_id' => Auth::id(),
-                'accion' => "Actualizó el plano BIM: {$plano->nombre}",
-                'tabla_afectada' => 'planos_bim',
-                'id_registro_afectado' => $plano->id,
-                'fecha_accion' => now(),
-                'eliminado' => 0,
-            ]);
+            self::registrarAccionManual("Actualizó el plano BIM: {$plano->nombre}", 'planos_bim', $plano->id);
+
 
             return redirect()->route('planos.index')
                 ->with('success', 'Plano BIM actualizado exitosamente.');
@@ -443,19 +432,17 @@ else {
             abort(403, 'No tienes permiso para descargar este plano BIM.');
         }
 
-        if ($plano->tipo === 'URL' && $plano->enlace_externo) {
-            //  Auditoría
-            AuditoriaLog::create([
-                'user_id' => $user->id,
-                'accion' => "Accedió al enlace externo del plano BIM: {$plano->nombre}",
-                'tabla_afectada' => 'planos_bim',
-                'id_registro_afectado' => $plano->id,
-                'fecha_accion' => now(),
-                'eliminado' => 0,
-            ]);
+      if ($plano->tipo === 'URL' && $plano->enlace_externo) {
+    // Auditoría usando el trait
+    $this->registrarAccionManual(
+        "Accedió al enlace externo del plano BIM: {$plano->nombre}",
+        'planos_bim',
+        $plano->id
+    );
 
-            return redirect()->away($plano->enlace_externo);
-        }
+    return redirect()->away($plano->enlace_externo);
+}
+    
 
         $path = $plano->archivo_url ? str_replace('/storage/', '', $plano->archivo_url) : null;
 
@@ -471,14 +458,8 @@ else {
             ]);
 
             //  Auditoría
-            AuditoriaLog::create([
-                'user_id' => $user->id,
-                'accion' => "Descargó el plano BIM: {$plano->nombre}",
-                'tabla_afectada' => 'planos_bim',
-                'id_registro_afectado' => $plano->id,
-                'fecha_accion' => now(),
-                'eliminado' => 0,
-            ]);
+            self::registrarAccionManual("Descargó el plano BIM: {$plano->nombre}", 'planos_bim', $plano->id);
+
 
             $proyecto = Proyecto::find($plano->proyecto_id);
             if ($proyecto && $proyecto->responsable_id && $user) {
@@ -519,14 +500,7 @@ else {
         ]);
 
         //  Auditoría
-        AuditoriaLog::create([
-            'user_id' => Auth::id(),
-            'accion' => "Restauró el plano BIM: {$plano->nombre}",
-            'tabla_afectada' => 'planos_bim',
-            'id_registro_afectado' => $plano->id,
-            'fecha_accion' => now(),
-            'eliminado' => 0,
-        ]);
+        self::registrarAccionManual("Restauró el plano BIM: {$plano->nombre}", 'planos_bim', $plano->id);
 
         return back()->with('success', 'Plano BIM restaurado correctamente.');
     }
@@ -589,14 +563,8 @@ else {
             ]);
 
             //  Auditoría
-            AuditoriaLog::create([
-                'user_id' => Auth::id(),
-                'accion' => "Eliminó (movió a papelera) el plano BIM: {$plano->nombre}",
-                'tabla_afectada' => 'planos_bim',
-                'id_registro_afectado' => $plano->id,
-                'fecha_accion' => now(),
-                'eliminado' => 0,
-            ]);
+     self::registrarAccionManual("Eliminó (movió a papelera) el plano BIM: {$plano->nombre}", 'planos_bim', $plano->id);
+
 
             $proyecto = Proyecto::find($plano->proyecto_id);
 
@@ -645,15 +613,8 @@ else {
 
             $plano->delete();
 
-            // Auditoría
-            AuditoriaLog::create([
-                'user_id' => Auth::id(),
-                'accion' => "Eliminó permanentemente el plano BIM: {$plano->nombre}",
-                'tabla_afectada' => 'planos_bim',
-                'id_registro_afectado' => $plano->id,
-                'fecha_accion' => now(),
-                'eliminado' => 0,
-            ]);
+           self::registrarAccionManual("Eliminó permanentemente el plano BIM: {$plano->nombre}", 'planos_bim', $plano->id);
+
 
             return back()->with('success', 'Plano BIM eliminado permanentemente.');
         } catch (\Exception $e) {

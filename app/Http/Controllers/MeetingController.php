@@ -10,11 +10,11 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
 use App\Services\NotificationService;
-use App\Traits\RegistraAuditoria; // ← añadido
+use App\Traits\RegistraAuditoria; 
 
 class MeetingController extends Controller
 {
-    use RegistraAuditoria; // ← añadido
+    use RegistraAuditoria; 
 
     /**
      * Muestra el calendario con las reuniones.
@@ -163,7 +163,7 @@ class MeetingController extends Controller
                 'Nueva reunión programada'
             );
 
-            // 🧾 AUDITORÍA
+            // AUDITORÍA
             self::registrarAccionManual(
                 "Creó la reunión '{$meeting->titulo}' del proyecto '{$proyecto->nombre}'",
                 'reuniones',
@@ -232,7 +232,7 @@ class MeetingController extends Controller
             'Reunión actualizada'
         );
 
-        // 🧾 AUDITORÍA
+        //  AUDITORÍA
         self::registrarAccionManual(
             "Actualizó la reunión '{$meeting->titulo}' del proyecto '{$proyecto->nombre}'",
             'reuniones',
@@ -284,7 +284,7 @@ class MeetingController extends Controller
                 'Reunión cancelada'
             );
 
-            // 🧾 AUDITORÍA
+            //  AUDITORÍA
             self::registrarAccionManual(
                 "Eliminó la reunión '{$meeting->titulo}' del proyecto '{$proyecto->nombre}'",
                 'reuniones',

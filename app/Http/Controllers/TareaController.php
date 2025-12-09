@@ -12,11 +12,11 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\NotificationService;
-use App\Traits\RegistraAuditoria; // ← agregado
+use App\Traits\RegistraAuditoria; 
 
 class TareaController extends Controller
 {
-    use RegistraAuditoria; // ← agregado
+    use RegistraAuditoria; 
 
     /**
      * Muestra el tablero Kanban.
