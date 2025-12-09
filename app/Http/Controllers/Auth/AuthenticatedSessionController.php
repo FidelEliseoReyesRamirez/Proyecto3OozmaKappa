@@ -8,15 +8,17 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Mail\CuentaBloqueadaMail;
+use App\Traits\RegistraAuditoria;
 
 class AuthenticatedSessionController extends Controller
 {
+    use RegistraAuditoria;
+
     public function create(): Response
     {
         return Inertia::render('Auth/Login', [
@@ -55,6 +57,13 @@ class AuthenticatedSessionController extends Controller
                     // Enviar correo
                     Mail::to($user->email)->send(new CuentaBloqueadaMail($user, $resetUrl));
 
+                    // Registrar auditoría del bloqueo
+                    self::registrarAccionManual(
+                        "Cuenta bloqueada tras múltiples intentos fallidos",
+                        'users',
+                        $user->id
+                    );
+
                     return back()->withErrors([
                         'email' => 'Tu cuenta ha sido desactivada tras múltiples intentos fallidos. Revisa tu correo.',
                     ]);
@@ -63,12 +72,21 @@ class AuthenticatedSessionController extends Controller
                 $user->save();
             }
 
+            // Registrar intento fallido
+            if ($user) {
+                self::registrarAccionManual(
+                    "Intento de inicio de sesión fallido",
+                    'users',
+                    $user->id
+                );
+            }
+
             return back()->withErrors([
                 'email' => 'Las credenciales no son válidas.',
             ]);
         }
 
-        //  Login exitoso
+        // Login exitoso
         $request->session()->regenerate();
         $user = \App\Models\User::find(Auth::id());
 
@@ -76,32 +94,28 @@ class AuthenticatedSessionController extends Controller
             $user->intentos_fallidos = 0;
             $user->save();
 
-            //  Registrar inicio de sesión en auditoría
-            DB::table('auditoria_logs')->insert([
-                'user_id' => $user->id,
-                'accion' => 'Inicio de sesión',
-                'tabla_afectada' => 'users',
-                'id_registro_afectado' => $user->id,
-                'created_at' => now(),
-            ]);
+            // Registrar inicio de sesión en auditoría
+            self::registrarAccionManual(
+                'Inicio de sesión',
+                'users',
+                $user->id
+            );
         }
 
         return redirect()->route('dashboard');
     }
-
 
     public function destroy(Request $request): RedirectResponse
     {
         $user = Auth::user();
 
         if ($user) {
-            DB::table('auditoria_logs')->insert([
-                'user_id' => $user->id,
-                'accion' => 'Cierre de sesión',
-                'tabla_afectada' => 'users',
-                'id_registro_afectado' => $user->id,
-                'created_at' => now(),
-            ]);
+            // Registrar cierre de sesión en auditoría
+            self::registrarAccionManual(
+                'Cierre de sesión',
+                'users',
+                $user->id
+            );
         }
 
         Auth::guard('web')->logout();
