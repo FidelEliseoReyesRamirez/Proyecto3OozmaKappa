@@ -147,7 +147,7 @@ class PlanoController extends Controller
             ])->withInput();
         }
 
-        // 🚫 VALIDACIÓN: Solo 1 modelo 3D por proyecto
+        // VALIDACIÓN: Solo 1 modelo 3D por proyecto
         $esModelo3D = in_array($validated['archivo_tipo'], [
             'BIM-FBX',
             'BIM-GLB',
@@ -191,27 +191,30 @@ class PlanoController extends Controller
             $absoluteInput = storage_path('app/public/' . $path);
 
             // Si es FBX → convertir a GLB
-            if ($ext === 'fbx') {
+           if ($ext === 'fbx') {
+    $converter = new FbxConverterService();
 
-                $converter = new FbxConverterService();
+    // Carpeta dinámica del proyecto
+    $project_folder = 'planos/proyecto_' . $validated['proyecto_id'];
+    $glbName = uniqid('plano_') . '.glb';
+    $glbPath = storage_path('app/public/' . $project_folder . '/' . $glbName);
 
-                // Nuevo nombre convertivo
-                $glbName = uniqid('plano_') . '.glb';
-                $glbPath = storage_path('app/public/' . $project_folder . '/' . $glbName);
+    // Crear carpeta si no existe
+    if (!file_exists(dirname($glbPath))) {
+        mkdir(dirname($glbPath), 0755, true);
+    }
 
-                $ok = $converter->convertirFbxAGlb($absoluteInput, $glbPath);
+    $ok = $converter->convertirFbxAGlb($absoluteInput, $glbPath);
 
-                if ($ok) {
-                    // Borrar el FBX original
-                    Storage::disk('public')->delete($path);
-
-                    // Guardar URL final
-                    $archivo_url = '/storage/' . $project_folder . '/' . $glbName;
-                    $tipo = 'BIM-GLB';
-                } else {
-                    return back()->with('error', 'Falló la conversión del modelo FBX a GLB.');
-                }
-            } else {
+    if ($ok) {
+        Storage::disk('public')->delete($path); // eliminar FBX original
+        $archivo_url = '/storage/' . $project_folder . '/' . $glbName;
+        $tipo = 'BIM-GLB';
+    } else {
+        return back()->with('error', 'Falló la conversión del modelo FBX a GLB.');
+    }
+}
+else {
                 // Cualquier archivo NO FBX
                 $archivo_url = '/storage/' . $path;
             }
